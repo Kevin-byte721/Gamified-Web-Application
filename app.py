@@ -1,15 +1,34 @@
 from flask import Flask, request, jsonify, render_template_string
 from flask_cors import CORS
+import random 
 
 app = Flask(__name__)
-CORS(app) # Needed if you scale to separate deployment, but good practice.
+CORS(app) 
 
-# NOTE: Simulated database/score storage
-user_scores = {
-    "teacher_user_id_1": 50,
+# --- SCENARIO DATA (Used ONLY for score tracking and game state) ---
+SCENARIOS = [
+    {
+        "id": 101,
+        "is_phishing": True # The hardcoded content is always phishing
+    },
+    {
+        "id": 102,
+        "is_phishing": True 
+    },
+    # You can add more IDs here, but the visible email won't change.
+]
+
+# --- SIMULATED DATABASE/SCORE STORAGE ---
+user_data = {
+    "teacher_user_id_1": {
+        "score": 50,
+        "current_scenario_index": 0 
+    }
 }
+# ----------------------------------------
 
-# --- 1. PYTHON FUNCTION TO HANDLE API REQUESTS ---
+
+# 1. API route to update score
 @app.route('/api/updatescore', methods=['POST'])
 def update_score():
     """Receives points data from the frontend and updates the user's score."""
@@ -18,44 +37,77 @@ def update_score():
         user_id = "teacher_user_id_1"
         points = data.get('points')
         
+        if not isinstance(points, int):
+            return jsonify({"success": False, "message": "Invalid points value"}), 400
+
         # Update the score
-        user_scores[user_id] += points
+        user_data[user_id]["score"] += points
         
-        print(f"User {user_id} scored {points}. New Score: {user_scores[user_id]}")
+        print(f"User {user_id} scored {points}. New Score: {user_data[user_id]['score']}")
+
+        # Set the next scenario index for the next page load (for scoring persistence)
+        current_index = user_data[user_id]["current_scenario_index"]
+        available_indices = [i for i in range(len(SCENARIOS)) if i != current_index]
+        if available_indices:
+             new_index = random.choice(available_indices)
+             user_data[user_id]["current_scenario_index"] = new_index
 
         return jsonify({
             "success": True, 
-            "new_score": user_scores[user_id],
+            "new_score": user_data[user_id]["score"],
             "message": "Score updated successfully."
         })
 
     except Exception as e:
         return jsonify({"success": False, "message": f"An error occurred: {str(e)}"}), 500
 
-# --- 2. PYTHON FUNCTION TO SERVE THE HTML/JS PAGE ---
+
+# 2. Main route to serve the page
 @app.route('/')
 def index():
-    """
-    Renders the main application page by embedding HTML and JavaScript 
-    as a single string (template).
-    """
+    user_id = "teacher_user_id_1"
     
-    # We use Jinja templating here to allow Python variables (like the initial score)
-    # to be inserted directly into the HTML/JS.
-    current_score = user_scores.get("teacher_user_id_1", 0)
-    
-    # This entire block of content is a single Python string (the template)
+    current_score = user_data[user_id]["score"]
+    scenario_index = user_data[user_id]["current_scenario_index"]
+    scenario_data = SCENARIOS[scenario_index] # Used only for its ID and is_phishing status
+
+    # This template has the email content hardcoded to meet your requirement.
     template = f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Cybersecurity Simulation (Python-Embedded)</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cybersecurity Simulation</title>
         <style>
-            /* Basic styling */
+            /* --- LAYOUT AND CORE STYLES --- */
             .score-display {{ text-align: right; margin-bottom: 20px; font-size: 1.2em; font-weight: bold; color: #007bff; }}
-            .email-container {{ border: 1px solid #ccc; padding: 20px; max-width: 600px; margin: 20px auto; background-color: #f9f9f9; }}
+            .email-container {{ border: 1px solid #ccc; padding: 20px; max-width: 600px; margin: 20px auto; background-color: #f9f9f9; border-radius: 8px; }}
             .phishing-link {{ color: red; cursor: pointer; text-decoration: underline; }}
+
+            /* --- BUTTON STYLING --- */
+            .action-button {{
+                padding: 10px 15px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-weight: bold;
+                margin-right: 10px;
+                transition: background-color 0.2s, transform 0.1s;
+                text-transform: uppercase; 
+                letter-spacing: 0.5px;
+            }}
+            .action-button:active {{ transform: translateY(1px); }}
+            .action-button:disabled {{ opacity: 0.6; cursor: not-allowed; }}
+
+            .btn-safe {{ background-color: #28a745; color: white; }}
+            .btn-safe:hover {{ background-color: #218838; }}
+
+            .btn-danger {{ background-color: #dc3545; color: white; }}
+            .btn-danger:hover {{ background-color: #c82333; }}
+            
+            .btn-neutral {{ background-color: #6c757d; color: white; }}
+            .btn-neutral:hover {{ background-color: #5a6268; }}
         </style>
     </head>
     <body>
@@ -73,44 +125,64 @@ def index():
         <p>Dear Teacher, Please click the link below to verify your login credentials immediately to avoid payroll disruption.</p>
         
         <p>Click here: <a id="phishing-target" class="phishing-link" href="#">**[VERIFY PAYROLL]**</a></p>
-
         <hr>
-        <button onclick="checkAction('safe')">Report as Phishing</button>
-        <button onclick="checkAction('click')">Click Link (Simulated)</button>
-        <button onclick="window.location.reload()">Refresh Scenario</button>
+        
+        <button class="action-button btn-safe" onclick="checkAction('safe')">Report as Phishing</button>
+        <button class="action-button btn-danger" onclick="checkAction('click')">Click Link (Simulated)</button>
+        <button class="action-button btn-neutral" onclick="window.location.reload()">New Scenario</button>
     </div>
 
     <p id="result-message" style="text-align: center; margin-top: 20px; font-weight: bold;"></p>
 
     <script>
-        // --- JavaScript Code Embedded Here ---
-        let currentScore = {current_score};
-        const phishingScenarioID = 101; 
+        // --- EMBEDDED JAVASCRIPT LOGIC ---
+        let currentScore = {current_score}; 
+        const phishingScenarioID = {scenario_data['id']}; 
+        // We know the hardcoded email is always phishing: True
+        const isCurrentScenarioPhishing = 'true';
+        
         const scoreDisplay = document.getElementById('score-value');
 
         function checkAction(action) {{
             const resultMessage = document.getElementById('result-message');
-            const isPhishing = true; 
+            const isPhishing = isCurrentScenarioPhishing === 'true'; 
+
+            // Disable action buttons after user makes a choice
+            document.querySelectorAll('.action-button').forEach(btn => {{
+                if (!btn.classList.contains('btn-neutral')) {{
+                    btn.disabled = true;
+                }}
+            }});
 
             if (isPhishing) {{
                 if (action === 'click') {{
-                    resultMessage.textContent = "❌ Incorrect! Malicious link clicked. -5 Points!";
+                    resultMessage.textContent = "❌ Incorrect! Malicious link clicked. -5 Points! Check the sender address closely next time.";
                     resultMessage.style.color = 'red';
                     updateScore(-5); 
                 }} else if (action === 'safe') {{
-                    resultMessage.textContent = "✅ Correct! Phishing reported. +10 Points!";
+                    resultMessage.textContent = "✅ Correct! Phishing reported. +10 Points! You avoided a major threat.";
                     resultMessage.style.color = 'green';
                     updateScore(10); 
                 }}
+            }} else {{ 
+                // This path is technically not reached since isPhishing is hardcoded to 'true' in this version.
+                if (action === 'click') {{
+                    resultMessage.textContent = "✅ Correct. This was a safe link in a legitimate email. +5 Points!";
+                    resultMessage.style.color = 'green';
+                    updateScore(5); 
+                }} else if (action === 'safe') {{
+                    resultMessage.textContent = "⚠️ Caution. This email was actually legitimate, but good job checking the sender. +1 Point.";
+                    resultMessage.style.color = 'orange';
+                    updateScore(1); 
+                }}
             }}
-            // ... (You could add the legitimate path logic here too)
         }}
 
         function updateScore(points) {{
             currentScore += points;
             scoreDisplay.textContent = currentScore;
             
-            // API CALL TO PYTHON BACKEND
+            // API CALL TO PYTHON BACKEND to persist the score
             fetch('/api/updatescore', {{
                 method: 'POST',
                 headers: {{ 'Content-Type': 'application/json' }},
@@ -122,8 +194,6 @@ def index():
             .then(response => response.json())
             .then(data => {{
                 if (data.success) {{
-                    console.log(`Server Confirmed! New Score: ${{data.new_score}}`);
-                    // Ensure local score matches server score
                     currentScore = data.new_score;
                     scoreDisplay.textContent = currentScore;
                 }} else {{
@@ -143,5 +213,4 @@ def index():
 
 # --- 3. RUN THE APPLICATION ---
 if __name__ == '__main__':
-    print("Running Flask app. Access the application at: http://127.0.0.1:5000/")
     app.run(debug=True)
