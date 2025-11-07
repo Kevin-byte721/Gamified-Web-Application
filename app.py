@@ -13,11 +13,11 @@ SCENARIO_PHISHING = {
     "id": 101,
     "type": "phishing",
     "title": "🚨 Action Required: Urgent Payroll Update",
-    "instructions": "Review this email. Decide whether to **'Report as Phishing'** or **'Click Link (Simulated)'**.",
+    "instructions": "Review this email. Decide whether to 'Report as Phishing' or 'Click Link (Simulated)'.",
     "is_phishing": True, # Actual state of the email content
-    "email_sender": "IT Support <support@paninsingen-ps.com>",
+    "email_sender": "support@paninsinge-ps.com", #"IT Support <support@paninsinge-ps.com>"
     "email_subject": "Dear Teacher, Please click the link below to verify your login credentials immediately to avoid payroll disruption.",
-    "email_link_text": "**[VERIFY PAYROLL]**",
+    "email_link_text": "[VERIFY PAYROLL]",
     # Scoring for Phishing (Correctly reporting a phishing email gives +10, falling for it gives -5)
     "score_report_correct": "✅ Correct! Phishing reported. +10 Points! You avoided a major threat.",
     "score_accept_wrong": "❌ Incorrect! Malicious link clicked. -5 Points! Check the sender address closely next time.",
@@ -242,7 +242,7 @@ def index():
             </div>
 
             <p style="font-size: 0.9em; color: #888; margin-top: 15px;">
-                *The correct code is **{scenario_data['correct_code']}** for simulation purposes.
+                The correct code is {scenario_data['correct_code']} for simulation purposes.
             </p>
 
             <hr style="margin: 20px 0;">
@@ -301,11 +301,11 @@ def index():
             <p style="font-size: 1.1em; margin-bottom: 15px;">{scenario_data['instructions']}</p>
 
             <ul class="req-list">
-                <li>- Must be at least **12 characters** long</li>
-                <li>- Must contain **lowercase** letters</li>
-                <li>- Must contain **uppercase** letters</li>
-                <li>- Must contain at least one **number**</li>
-                <li>- Must contain at least one **special character** (!@#$%^&*)</li>
+                <li>- Must be at least 12 characters long</li>
+                <li>- Must contain lowercase letters</li>
+                <li>- Must contain UPPERCASE letters</li>
+                <li>- Must contain at least one number</li>
+                <li>- Must contain at least one special character (!@#$%^&*)</li>
             </ul>
 
             <div class="input-group">
@@ -417,7 +417,7 @@ def index():
 <div style="font-size: 3.5em; font-weight: 900; color: #007bff; margin-bottom: 30px; padding: 20px; border: 2px solid #007bff; border-radius: 8px; background-color: #e9f5ff;">
                 <div style="font-size: 0.4em; font-weight: 600; color: #666; margin-bottom: 10px;">Your Total Score</div>
                 <span id="final-score-value">{current_score}</span> 
-                <span style="font-size: 0.4em; font-weight: 600;">Points</span>
+                <span style="font-size: 0.3em; font-weight: 600;">Points</span>
             </div>
 
             <p style="font-style: italic; color: #6c757d; font-size: 0.9em;">
