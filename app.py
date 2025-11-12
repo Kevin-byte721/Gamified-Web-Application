@@ -163,7 +163,7 @@ Effective password protection extends beyond the password itself to include addi
             <p>
             Multi-Factor Authentication (MFA) is a security method that verifies a user's identity by requiring at least two distinct forms of proof before granting access to an account, asset, or system (IBM, n.d.). This process provides extra security layers beyond what a single password can offer. The required forms of evidence are called "authentication factors," and a true MFA system mandates factors from two or more different categories. These categories include knowledge factors (something the user knows, like a password or PIN), possession factors (something the user has, like a smartphone receiving a one-time passcode or a physical security key), and inherent factors (something the user is, like a fingerprint or face scan) (IBM, n.d.). The user is only granted access if every required factor checks out.
 
-MFA is critically important because standard single-factor authentication methods, which rely only on usernames and passwords, are easily compromised through attacks like phishing or brute-force hacking. With compromised credentials being a leading cause of data breaches, MFA provides a necessary defense: even if an attacker steals a user's password (a knowledge factor), they still lack the second, distinct factor—such as the user's mobile phone or biometric data—to gain unauthorized access (IBM, n.d.). The most common form of MFA is Two-Factor Authentication (2FA), which requires exactly two factors; however, some sensitive systems may require three or more factors to implement an even stronger defense, sometimes referred to as Adaptive MFA, which dynamically adjusts the required factors based on the risk level of the login attempt.
+MFA is critically important because standard single-factor authentication methods, which rely only on usernames and passwords, are easily compromised through attacks like phishing or brute-force hacking. With compromised credentials being a leading cause of data breaches, MFA provides a necessary defense: even if an attacker steals a user's password (a knowledge factor), they still lack the second, distinct factor—such as the user's mobile phone or biometric data—to gain unauthorized access (IBM, n.d.). The most common form of MFA is Two-Factor Authentication (2FA), which requires exactly two factors; however, some sensitive systems may require three or more factors to implement an even stronger defense, sometimes referred to as Adaptive MFA, which dynamically adjusts the required factors based on the risk level of the login attempt. 
             </p>
         </div>
         
@@ -208,7 +208,6 @@ MFA is critically important because standard single-factor authentication method
 </html>
 """
 
-# FIXED: Escaped curly braces in CSS (lines 235, 237-240)
 SCORE_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -221,24 +220,15 @@ SCORE_TEMPLATE = """
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body {{ font-family: 'Inter', sans-serif; background-color: #f0f4f8; }}
         .score-card {{ 
-            max-width: 600px; 
+            max-width: 450px; /* Reduced max width from 600px */
             background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
         }}
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
-    <div class="score-card text-white shadow-2xl rounded-xl p-10 md:p-16 w-full text-center">
-        <h1 class="text-5xl font-extrabold mb-4">Assessment Complete!</h1>
-        <p class="text-xl mb-8">You have successfully finished all **{total_scenarios}** cybersecurity scenarios.</p>
+    <div class="score-card text-white shadow-2xl rounded-xl p-8 md:p-10 w-full text-center"> <h1 class="text-4xl font-extrabold mb-3">Assessment Complete!</h1> <p class="text-lg mb-6">You have successfully finished all {total_scenarios} cybersecurity scenarios.</p> <div class="my-8 p-6 bg-white/20 rounded-lg backdrop-blur-sm"> <p class="text-xl font-semibold mb-2">Your Final Score:</p> <p class="text-6xl font-black" id="final-score">{final_score}</p> <p class="text-base mt-2">Points Earned</p> </div>
         
-        <div class="my-10 p-8 bg-white/20 rounded-lg backdrop-blur-sm">
-            <p class="text-2xl font-semibold mb-3">Your Final Score:</p>
-            <p class="text-7xl font-black" id="final-score">{final_score}</p>
-            <p class="text-lg mt-3">Points Earned</p>
-        </div>
-        
-        <p class="text-lg mb-8">
-            This score reflects your performance in identifying threats, creating secure credentials, and understanding modern authentication.
+        <p class="text-base mb-6"> This score reflects your performance in identifying threats, creating secure credentials, and understanding modern authentication.
             You can restart the assessment to try again.
         </p>
         
@@ -293,13 +283,12 @@ def get_phishing_template(scenarioData):
         <div class="flex justify-between items-center border-b pb-4 mb-4">
             <h1 class="text-2xl font-bold text-gray-800">{scenarioData['title']}</h1>
             <div class="text-lg font-semibold text-gray-700">
-                Score: <span id="score-display"><!-- CURRENT_SCORE_PLACEHOLDER --></span>
+                Score: <span id="score-display"></span>
             </div>
         </div>
         
         <p class="text-sm font-medium text-gray-500 mb-4 border-b pb-4">{scenarioData['instructions']}</p>
 
-        <!-- EMail Card -->
         <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-inner space-y-3">
             <p class="text-sm text-gray-600">
                 <span class="font-bold">From:</span> {scenarioData['email_sender']}
@@ -322,9 +311,7 @@ def get_phishing_template(scenarioData):
                 This message will self-destruct if not clicked within 2 hours.
             </p>
         </div>
-        <!-- End EMail Card -->
-
-        <div id="result-message" class="mt-6 p-4 text-center rounded-lg font-bold text-lg" style="display: none;"></div>
+        <div id="result-message" class="mt-6 p-4 text-center rounded-lg font-bold text-base" style="display: none;"></div>
 
         <div id="action-buttons" class="mt-6 flex justify-center space-x-4">
             <button id="report-btn" class="action-button bg-red-600 hover:bg-red-700 text-white">
@@ -465,7 +452,7 @@ def get_password_template(scenarioData):
         <div class="flex justify-between items-center border-b pb-4 mb-6">
             <h1 class="text-2xl font-bold text-gray-800">{scenarioData['title']}</h1>
             <div class="text-lg font-semibold text-gray-700">
-                Score: <span id="score-display"><!-- CURRENT_SCORE_PLACEHOLDER --></span>
+                Score: <span id="score-display"></span>
             </div>
         </div>
         
@@ -500,7 +487,7 @@ def get_password_template(scenarioData):
             </div>
         </div>
         
-        <div id="result-message" class="mt-6 p-4 text-center rounded-lg font-bold text-lg" style="display: none;"></div>
+        <div id="result-message" class="mt-6 p-4 text-center rounded-lg font-bold text-base" style="display: none;"></div>
 
         <div class="mt-8 pt-4 border-t flex justify-between items-center">
             <button id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300">
@@ -699,7 +686,7 @@ def get_mfa_template(scenarioData):
         <div class="flex justify-between items-center border-b pb-4 mb-6">
             <h1 class="text-2xl font-bold text-gray-800">{scenarioData['title']}</h1>
             <div class="text-lg font-semibold text-gray-700">
-                Score: <span id="score-display"><!-- CURRENT_SCORE_PLACEHOLDER --></span>
+                Score: <span id="score-display"></span>
             </div>
         </div>
         
@@ -709,7 +696,7 @@ def get_mfa_template(scenarioData):
             {options_html}
         </div>
         
-        <div id="result-message" class="mt-8 p-4 text-center rounded-lg font-bold text-lg" style="display: none;"></div>
+        <div id="result-message" class="mt-8 p-4 text-center rounded-lg font-bold text-base" style="display: none;"></div>
 
         <div class="mt-8 pt-4 border-t flex justify-end">
             <button class="next-scenario-btn bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300" style="display: none;">
@@ -809,7 +796,6 @@ def get_mfa_template(scenarioData):
     </body>
     </html>
     """
-
 # --- 3. MAIN ROUTE LOGIC ---
 
 @app.route('/')
