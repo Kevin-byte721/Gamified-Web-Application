@@ -1,10 +1,13 @@
 from flask import Flask, request, jsonify, render_template_string
 from flask_cors import CORS
 import json
-import random
+import random 
 
 app = Flask(__name__)
-CORS(app)
+CORS(app) 
+
+# --- GLOBAL CONSTANTS FOR FLOW CONTROL ---
+FINAL_SCORE_INDEX = 999
 
 # --- SCENARIO DATA DEFINITIONS ---
 
@@ -15,636 +18,522 @@ SCENARIO_PHISHING = {
     "title": "🚨 Action Required: Urgent Payroll Update",
     "instructions": "Review this email. Decide whether to 'Report as Phishing' or 'Click Link (Simulated)'.",
     "is_phishing": True, # Actual state of the email content
-    "email_sender": "support@paninsinge-ps.com", #"IT Support <support@paninsinge-ps.com>"
+    "email_sender": "IT Support <support@paninsinge-ps.com>", 
     "email_subject": "Dear Teacher, Please click the link below to verify your login credentials immediately to avoid payroll disruption.",
     "email_link_text": "[VERIFY PAYROLL]",
     # Scoring for Phishing (Correctly reporting a phishing email gives +10, falling for it gives -5)
     "score_report_correct": "✅ Correct! Phishing reported. +10 Points! You avoided a major threat.",
     "score_accept_wrong": "❌ Incorrect! Malicious link clicked. -5 Points! Check the sender address closely next time.",
     "score_report_wrong": "⚠️ Caution. This email was actually legitimate, but good job checking the sender. +1 Point.",
-    "score_accept_correct": "✅ Correct. This was a safe link in a legitimate email. +5 Points!"
+    "score_accept_correct": "✅ Correct. This was a legitimate request. +5 Points!",
 }
 
-# 2. Multi-Factor Authentication Scenario (ID 102)
-SCENARIO_MFA = {
-    "id": 102,
-    "type": "mfa",
-    "title": "📱 Multi-Factor Authentication Challenge",
-    "instructions": "You've attempted to log in from a new location. Enter the 6-digit code displayed on your authenticator app (or sent to your phone).",
-    "correct_code": "123456", # Simulated correct code for training purposes
-    "result_success": "✅ Success! MFA verified. +10 Points! Layered security is crucial.",
-    "result_failure": "❌ Failure. Incorrect code entered. -5 Points! Always verify the code carefully and be wary of unusual login attempts."
-}
-
-# 3. Password Strength Scenario (ID 106)
+# 2. Password Strength Scenario (ID 106)
 SCENARIO_PASSWORD = {
     "id": 106,
     "type": "password",
     "title": "🔐 Mandatory Password Update",
-    "instructions": "Please create a new, secure password for your staff account.",
+    "instructions": "Create a new password that meets all modern security requirements.",
     "result_strong": "✅ Success! Strong password created. +15 Points!",
-    "result_weak": "❌ Failure. Password too weak. -5 Points! Must contain upper, lower, number, and special characters."
+    "result_weak": "❌ Failure. Password too weak. -5 Points! Must contain upper, lower, number, and special characters.",
 }
 
-# 4. Final Score Scenario (ID 999) - NEW: Passive scenario to show results
-SCENARIO_FINAL_SCORE = {
-    "id": 999,
-    "type": "final_score",
-    "title": "🎉 Simulation Complete!",
-    "instructions": "You have successfully finished all training modules. Review your performance below."
+# 3. Multi-Factor Authentication Scenario (ID 108)
+SCENARIO_MFA = {
+    "id": 108,
+    "type": "mfa",
+    "title": "🛡️ Choose the Strongest MFA Method",
+    "instructions": "Which Multi-Factor Authentication method provides the highest level of security against phishing and credential theft?",
+    "options": [
+        {"text": "SMS Text Message Code (Least Secure)", "is_correct": False, "points": -5, "message": "❌ Incorrect. SMS codes can be intercepted (SIM-swap attacks). Avoid using text messages for MFA."},
+        {"text": "Authenticator App Code (e.g., Google Authenticator, Authy)", "is_correct": True, "points": 10, "message": "✅ Correct! App-generated codes (TOTP) are localized to your device and are much harder to steal than SMS."},
+        {"text": "Email Verification Link (Weak)", "is_correct": False, "points": -10, "message": "❌ Incorrect. This relies solely on email security, which is often the first thing attackers target. This isn't true multi-factor authentication."},
+    ]
 }
 
-# The main list defining the game flow
-SCENARIOS = [SCENARIO_PHISHING, SCENARIO_MFA, SCENARIO_PASSWORD, SCENARIO_FINAL_SCORE]
-NUM_SCENARIOS = len(SCENARIOS)
+
+# List of all assessment scenarios in order
+ALL_SCENARIOS = [
+    SCENARIO_PHISHING, # Index 0
+    SCENARIO_PASSWORD, # Index 1
+    SCENARIO_MFA       # Index 2 (NEW FINAL SCENARIO)
+]
+TOTAL_SCENARIOS = len(ALL_SCENARIOS)
 
 # --- SIMULATED DATABASE/SCORE STORAGE ---
 user_data = {
     "teacher_user_id_1": {
-        "score": 0, # SCORE STARTS AT ZERO
-        "current_scenario_index": 0
+        "score": 0,
+        "current_scenario_index": -1 # -1 means Module/Start Page
     }
 }
 # ----------------------------------------
 
 
-# 1. API route to update score and advance scenario
+# 1. API route to update score
 @app.route('/api/updatescore', methods=['POST'])
 def update_score():
-    """
-    Receives points data from the frontend, updates the user's score, and conditionally 
-    advances the scenario index if it's not the last scenario (the final_score screen).
-    """
+    """Receives points data from the frontend and updates the user's score, advancing the scenario index."""
     try:
         data = request.get_json()
-        user_id = "teacher_user_id_1"
+        user_id = "teacher_user_id_1" # Hardcoded user for this single-user demo
         points = data.get('points')
-
+        
         if not isinstance(points, int):
             return jsonify({"success": False, "message": "Invalid points value"}), 400
 
         # Update the score
-        user_data[user_id]["score"] += points
-
-        # Advance the scenario index ONLY if it's not the last one (the new final_score page)
-        current_index = user_data[user_id]["current_scenario_index"]
-
-        if current_index < NUM_SCENARIOS - 1:
-            # Advance to the next index (This will advance from Password to Final Score)
-            user_data[user_id]["current_scenario_index"] += 1
+        user_data[user_id]['score'] += points
+        new_score = user_data[user_id]['score']
+        
+        # Update the scenario index for the next step
+        current_index = user_data[user_id]['current_scenario_index']
+        
+        if current_index == (TOTAL_SCENARIOS - 1):
+            # This was the last assessment scenario. Set to final score state.
+            new_index = FINAL_SCORE_INDEX
         else:
-            # If it's the final score scenario, keep the index the same
-            pass
+            # Move to the next scenario
+            new_index = current_index + 1
+            
+        user_data[user_id]['current_scenario_index'] = new_index
 
         return jsonify({
-            "success": True,
-            "new_score": user_data[user_id]["score"],
-            "message": "Score updated successfully."
+            "success": True, 
+            "new_score": new_score,
+            "new_index": new_index
         })
-
     except Exception as e:
-        return jsonify({"success": False, "message": f"An error occurred: {str(e)}"}), 500
+        print(f"Error updating score: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
 
-# 2. API route to reset score and scenario
-@app.route('/api/resetgame', methods=['POST'])
-def reset_game():
-    """Resets the user's score to 0 and the scenario index to 0."""
+# 2. API route to advance from Module to first assessment
+@app.route('/api/advancescenario', methods=['POST'])
+def advance_scenario():
+    """Advances the scenario index, typically from Module (-1) to first scenario (0)."""
     user_id = "teacher_user_id_1"
-
-    # Reset the data
-    user_data[user_id]["score"] = 0
-    user_data[user_id]["current_scenario_index"] = 0
-
-    return jsonify({
-        "success": True,
-        "new_score": 0,
-        "message": "Game reset successfully."
-    })
+    
+    if user_data[user_id]['current_scenario_index'] == -1:
+        user_data[user_id]['current_scenario_index'] = 0
+        return jsonify({"success": True, "new_index": 0})
+    
+    return jsonify({"success": False, "message": "Not in a state to advance"}), 400
 
 
-# 3. Main route to serve the page
-@app.route('/')
-def index():
-    user_id = "teacher_user_id_1"
+# --- TEMPLATE DEFINITIONS ---
 
-    current_score = user_data[user_id]["score"]
-
-    # Get the scenario data based on the user's current index
-    scenario_index = user_data[user_id]["current_scenario_index"]
-    scenario_data = SCENARIOS[scenario_index]
-    scenario_json = json.dumps(scenario_data)
-
-    # Detection logic for button labels
-    is_final_results_screen = scenario_data["type"] == "final_score"
-    is_pre_final_scenario = scenario_index == NUM_SCENARIOS - 2
-
-    if is_final_results_screen:
-        next_button_label = "Simulation Complete" # Not displayed but defined
-    elif is_pre_final_scenario:
-        next_button_label = "Proceed to Results"
-    else:
-        next_button_label = "Next Scenario"
-
-    # --- DYNAMIC HTML CONTENT GENERATION (Inner part of the scenario card) ---
-    template_content = ""
-
-    if scenario_data["type"] == "phishing":
-
-        template_content = f"""
-        <div class="scenario-content email-container">
-
-            <h2 style="color: #dc3545; margin-bottom: 10px;">{scenario_data['title']}</h2>
-
-            <p style="font-size: 1.1em; margin-bottom: 15px;">{scenario_data['instructions']}</p>
-
-            <div class="email-body">
-                <p>From: {scenario_data['email_sender']}</p>
-                <p>{scenario_data['email_subject']}</p>
-
-                <p>
-                    Click here: <a id="phishing-target" class="phishing-link" href="#" onclick="event.preventDefault();">{{scenario_data['email_link_text']}}</a>
-                </p>
+# FIXED: Escaped curly braces in CSS (lines 191, 192)
+MODULE_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Module</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {{ font-family: 'Inter', sans-serif; background-color: #f7f7f7; }}
+        .module-container {{ max-width: 800px; }}
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="module-container bg-white shadow-2xl rounded-xl p-8 md:p-12 w-full">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h1 class="text-3xl font-bold text-indigo-700">Cybersecurity Training Module: Introduction</h1>
+            <div class="text-xl font-semibold text-gray-700">
+                Score: <span id="score-display">{current_score}</span>
             </div>
-            <hr style="margin: 15px 0;"> <div class="button-group" style="margin-top: 15px;"> <button class="action-button btn-safe" id="report-btn" onclick="checkPhishingAction(true)">Report as Phishing</button>
-                <button class="action-button btn-danger" id="click-btn" onclick="checkPhishingAction(false)">Click Link (Simulated)</button>
-                <button class="action-button btn-neutral next-scenario-btn" id="next-btn" style="display:none;">{next_button_label}</button>
-            </div>
-
-            <p id="result-message" class="result-message"></p>
         </div>
+        
+        <div class="text-gray-600 space-y-4 text-justify">
+            <h2 class="text-2xl font-semibold text-gray-800 mt-6">What is Phishing?</h2>
+            <p>
+Phishing is a prevalent type of cyber-attack that targets individuals through various communication channels, including email, text messages, and phone calls. Fundamentally, these threats rely on social engineering, exploiting human psychology and deception rather than technical vulnerabilities. In a phishing attack, a threat actor masquerades as a reputable or trusted entity, such as a company, to trick the recipient into performing a desired action. This action is usually designed to steal sensitive information, like financial data, system login credentials, or other private details. Phishing messages often inject a sense of urgency, for example, by threatening account suspension or loss of money, to compel users to act quickly without scrutinizing the demand or the source's legitimacy (Proofpoint, n.d.).
 
-        <script>
-            function checkPhishingAction(reportedPhishing) {{
-                const resultMessage = document.getElementById('result-message');
-                const reportBtn = document.getElementById('report-btn');
-                const clickBtn = document.getElementById('click-btn');
+Phishing attacks have evolved since the mid-1990s and are now categorized into different types based on their method and channel, including spear phishing (highly targeted), smishing (via text message), vishing (via voice call), and whaling (targeting high-profile executives). The core goal, however, remains to steal personal information or credentials. These attacks are a critical security challenge because they often serve as the initial entry point for a larger data breach, with research indicating that a large percentage of targeted attacks begin with a phishing email. Because of this focus on manipulating human behavior, training and advanced technical defenses are crucial for mitigating the risk associated with these constantly evolving threats (Proofpoint, n.d.).            </p>
+            
+            <h2 class="text-2xl font-semibold text-gray-800 mt-6">What is Password Security & Protection?</h2>
+            <p>
+Password security and protection are the essential practices, policies, and technologies designed to verify a user’s identity and safeguard digital accounts, devices, and sensitive data against unauthorized access (Cisco, n.d.). This framework is often referred to as the first line of defense in cybersecurity. A core component of this defense is creating strong, resilient passwords. A strong password must meet minimum criteria, typically being long (at least 12 characters is recommended) and complex, incorporating a mix of uppercase and lowercase letters, numbers, and symbols. Crucially, a secure password must also be unique to each account, as reusing credentials enables a hacker who compromises one account to access all others belonging to the user (Cisco, n.d.).
 
-                // Disable interaction elements
-                reportBtn.disabled = true;
-                clickBtn.disabled = true;
-
-                reportBtn.style.display = 'none';
-                clickBtn.style.display = 'none';
-
-                let pointsChange;
-                let resultText;
-                let resultColor;
-
-                const isPhishing = scenarioData.is_phishing;
-
-                // --- SCORING LOGIC ---
-                if (isPhishing) {{
-                    // Scenario is PHISHING (User should report)
-                    if (reportedPhishing) {{
-                        pointsChange = 10;
-                        resultText = scenarioData.score_report_correct;
-                        resultColor = 'green';
-                    }} else {{
-                        pointsChange = -5;
-                        resultText = scenarioData.score_accept_wrong;
-                        resultColor = 'red';
-                    }}
-                }} else {{
-                    // Scenario is LEGITIMATE
-                    if (!reportedPhishing) {{
-                        pointsChange = 5;
-                        resultText = scenarioData.score_accept_correct;
-                        resultColor = 'green';
-                    }} else {{
-                        pointsChange = -1;
-                        resultText = scenarioData.score_report_wrong;
-                        resultColor = 'orange';
-                    }}
-                }}
-                // --- END SCORING LOGIC ---
-
-                resultMessage.textContent = resultText;
-                resultMessage.style.color = resultColor;
-
-                // Trigger score update
-                updateScore(pointsChange);
-            }}
-        </script>
-        """
-
-    elif scenario_data["type"] == "mfa":
-
-        template_content = f"""
-        <div class="scenario-content mfa-container">
-
-            <h2 style="color: #6f42c1; margin-bottom: 10px;">{scenario_data['title']}</h2>
-
-            <p style="font-size: 1.1em; margin-bottom: 15px;">{scenario_data['instructions']}</p>
-
-            <div class="input-group" style="justify-content: center; display: flex;">
-                <input type="text" id="mfa-input" maxlength="6" pattern="\\d{{6}}" placeholder="Enter 6-digit code"
-                       style="width: 150px; text-align: center; font-size: 1.2em; padding: 10px; border: 2px solid #ccc;">
-            </div>
-
-            <p style="font-size: 0.9em; color: #888; margin-top: 15px;">
-                The correct code is {scenario_data['correct_code']} for simulation purposes.
+Effective password protection extends beyond the password itself to include additional security controls. The most vital supplemental measure is enabling Multi-Factor Authentication (MFA), which requires a user to provide two or more verification factors—such as a password and a one-time code sent to a mobile device—to log in, effectively blocking unauthorized access even if the password is stolen. Other best practices involve using a password manager to securely generate, encrypt, and store complex, unique credentials for all accounts, which mitigates the risk of human error or forgetfulness. By implementing these layered security measures, individuals and organizations can significantly reduce their vulnerability, as compromised credentials remain the leading cause of successful cyberattacks (Cisco, n.d.).
             </p>
+            <h2 class="text-2xl font-semibold text-gray-800 mt-6">What is Multifactor-Authentication?</h2>
+            <p>
+            Multi-Factor Authentication (MFA) is a security method that verifies a user's identity by requiring at least two distinct forms of proof before granting access to an account, asset, or system (IBM, n.d.). This process provides extra security layers beyond what a single password can offer. The required forms of evidence are called "authentication factors," and a true MFA system mandates factors from two or more different categories. These categories include knowledge factors (something the user knows, like a password or PIN), possession factors (something the user has, like a smartphone receiving a one-time passcode or a physical security key), and inherent factors (something the user is, like a fingerprint or face scan) (IBM, n.d.). The user is only granted access if every required factor checks out.
 
-            <hr style="margin: 20px 0;">
-
-            <div class="button-group">
-                <button class="action-button btn-mfa" id="verify-btn" onclick="checkMFAAction()">Verify Code</button>
-                <button class="action-button btn-neutral next-scenario-btn" id="next-btn" style="display:none;">{next_button_label}</button>
-            </div>
-
-            <p id="result-message" class="result-message"></p>
-        </div>
-
-        <script>
-            // --- MFA SCENARIO FUNCTIONS ---
-            function checkMFAAction() {{
-                const resultMessage = document.getElementById('result-message');
-                const mfaInput = document.getElementById('mfa-input');
-                const verifyBtn = document.getElementById('verify-btn');
-
-                mfaInput.disabled = true;
-                verifyBtn.style.display = 'none';
-
-                const enteredCode = mfaInput.value.trim();
-                const correctCode = scenarioData.correct_code;
-
-                let pointsChange;
-                let resultText;
-                let resultColor;
-
-                if (enteredCode === correctCode) {{
-                    pointsChange = 10;
-                    resultText = scenarioData.result_success;
-                    resultColor = 'green';
-                }} else {{
-                    pointsChange = -5;
-                    resultText = scenarioData.result_failure;
-                    resultColor = 'red';
-                }}
-
-                resultMessage.textContent = resultText;
-                resultMessage.style.color = resultColor;
-
-                // Trigger score update
-                updateScore(pointsChange);
-            }}
-        </script>
-        """
-
-    elif scenario_data["type"] == "password":
-
-        template_content = f"""
-        <div class="scenario-content password-container">
-
-            <h2 style="color: #007bff; margin-bottom: 10px;">{scenario_data['title']}</h2>
-
-            <p style="font-size: 1.1em; margin-bottom: 15px;">{scenario_data['instructions']}</p>
-
-            <ul class="req-list">
-                <li>- Must be at least 12 characters long</li>
-                <li>- Must contain lowercase letters</li>
-                <li>- Must contain UPPERCASE letters</li>
-                <li>- Must contain at least one number</li>
-                <li>- Must contain at least one special character (!@#$%^&*)</li>
-            </ul>
-
-            <div class="input-group">
-                <input type="password" id="password-input" placeholder="Enter new password here..." onkeyup="updateStrength()">
-                <span id="toggle-password" onclick="togglePasswordVisibility()">SHOW</span>
-            </div>
-
-            <div>
-                <div id="strength-bar"></div>
-                <div id="strength-text">Type to check strength...</div>
-
-                <hr style="margin: 20px 0;">
-
-                <div class="button-group">
-                    <button class="action-button btn-primary" id="check-btn" onclick="checkPasswordAction()">Submit Password</button>
-                    <button class="action-button btn-neutral next-scenario-btn" id="next-btn" style="display:none;">{next_button_label}</button>
-                </div>
-            </div>
-
-            <p id="result-message" class="result-message"></p>
-        </div>
-
-        <script>
-            // --- PASSWORD SCENARIO FUNCTIONS ---
-            function getPasswordScore(password) {{
-                let score = 0;
-                if (password.length >= 12) {{ score++; }}
-                if (/[a-z]/.test(password)) {{ score++; }}
-                if (/[A-Z]/.test(password)) {{ score++; }}
-                if (/[0-9]/.test(password)) {{ score++; }}
-                if (/[!@#$%^&*()]/.test(password)) {{ score++; }}
-                return score;
-            }}
-
-            function updateStrength() {{
-                const password = document.getElementById('password-input').value;
-                const score = getPasswordScore(password);
-                const scorePercentage = (score / 5) * 100;
-
-                const strengthBar = document.getElementById('strength-bar');
-                const strengthText = document.getElementById('strength-text');
-
-                strengthBar.style.width = scorePercentage + '%';
-
-                let color = '#ddd';
-                let text = 'Type to check strength...';
-
-                if (score === 5) {{ color = '#28a745'; text = 'STRONG'; }}
-                else if (score >= 3) {{ color = '#ffc107'; text = 'MEDIUM'; }}
-                else if (score >= 1) {{ color = '#dc3545'; text = 'WEAK'; }}
-                else if (password.length > 0) {{ text = 'Very Weak'; }}
-
-                strengthBar.style.backgroundColor = color;
-                strengthText.textContent = text;
-            }}
-
-            function togglePasswordVisibility() {{
-                const input = document.getElementById('password-input');
-                const icon = document.getElementById('toggle-password');
-                const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
-                input.setAttribute('type', type);
-                icon.textContent = type === 'password' ? 'SHOW' : 'HIDE';
-            }}
-
-            function checkPasswordAction() {{
-                const resultMessage = document.getElementById('result-message');
-                const password = document.getElementById('password-input').value;
-                const score = getPasswordScore(password);
-                const checkBtn = document.getElementById('check-btn');
-
-                let pointsChange;
-                let resultText;
-                let resultColor;
-
-                if (score === 5) {{
-                    pointsChange = 15;
-                    resultText = scenarioData.result_strong;
-                    resultColor = 'green';
-                }} else {{
-                    pointsChange = -5;
-                    resultText = scenarioData.result_weak;
-                    resultColor = 'red';
-                }}
-
-                resultMessage.textContent = resultText;
-                resultMessage.style.color = resultColor;
-
-                document.getElementById('password-input').disabled = true;
-                checkBtn.style.display = 'none';
-
-                // Trigger score update
-                updateScore(pointsChange);
-            }}
-
-            document.addEventListener('DOMContentLoaded', updateStrength);
-        </script>
-        """
-
-    elif scenario_data["type"] == "final_score": # Final score page update
-
-        template_content = f"""
-        <div class="scenario-content final-score-container">
-
-            <h2 style="color: #28a745; margin-bottom: 20px; font-size: 2em;">{scenario_data['title']}</h2>
-
-            <p style="font-size: 1.2em; margin-bottom: 30px; color: #333;">{scenario_data['instructions']}</p>
-
-
-<div style="font-size: 3.5em; font-weight: 900; color: #007bff; margin-bottom: 30px; padding: 20px; border: 2px solid #007bff; border-radius: 8px; background-color: #e9f5ff;">
-                <div style="font-size: 0.4em; font-weight: 600; color: #666; margin-bottom: 10px;">Your Total Score</div>
-                <span id="final-score-value">{current_score}</span> 
-                <span style="font-size: 0.3em; font-weight: 600;">Points</span>
-            </div>
-
-            <p style="font-style: italic; color: #6c757d; font-size: 0.9em;">
-                Click the "Restart Simulation" button above to begin a new training session.
+MFA is critically important because standard single-factor authentication methods, which rely only on usernames and passwords, are easily compromised through attacks like phishing or brute-force hacking. With compromised credentials being a leading cause of data breaches, MFA provides a necessary defense: even if an attacker steals a user's password (a knowledge factor), they still lack the second, distinct factor—such as the user's mobile phone or biometric data—to gain unauthorized access (IBM, n.d.). The most common form of MFA is Two-Factor Authentication (2FA), which requires exactly two factors; however, some sensitive systems may require three or more factors to implement an even stronger defense, sometimes referred to as Adaptive MFA, which dynamically adjusts the required factors based on the risk level of the login attempt.
             </p>
-
-
-</div>
-        """
-
-    else:
-        template_content = "<div class='scenario-content'><h2>Error: Scenario type not recognized.</h2></div>"
-
-
-    # --- BASE HTML TEMPLATE (Includes Styles and Common JS) ---
-    template = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Cybersecurity Simulation</title>
-        <style>
-            /* --- GLOBAL LAYOUT AND CORE STYLES --- */
-            body {{
-                font-family: sans-serif;
-                background-color: #f0f2f5;
-                padding: 20px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                min-height: 100vh;
-            }}
-
-            /* Main Card Wrapper */
-            .scenario-card {{
-                padding: 30px;
-                width: 95%;
-                max-width: 600px;
-                margin: 20px auto;
-                background-color: #ffffff;
-                border-radius: 12px;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-                box-sizing: border-box;
-                /* Set a minimum height for consistency across scenarios */
-                min-height: 450px;
-            }}
-
-            /* Score Header inside the card */
-            .score-header {{
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 25px;
-                border-bottom: 1px solid #eee; /* Visual separator */
-                padding-bottom: 15px;
-            }}
-
-            .score-display {{
-                font-size: 1.2em;
-                font-weight: bold;
-                color: #007bff;
-                text-align: left;
-                margin-bottom: 0;
-            }}
-
-            .reset-button {{
-                padding: 8px 15px;
-                background-color: #6c757d;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                font-weight: bold;
-                transition: background-color 0.2s;
-                font-size: 0.9em;
-            }}
-            .reset-button:hover {{ background-color: #5a6268; }}
-
-            /* --- Mobile Layout Adjustments (Score Header) --- */
-            @media (max-width: 500px) {{
-                .score-header {{
-                    flex-direction: column; /* Stack vertically on small screens */
-                    align-items: stretch;
-                }}
-                .score-display {{
-                    text-align: center; /* Center the score text */
-                    margin-bottom: 15px; /* Add space below score before button */
-                }}
-            }}
-
-
-            .scenario-content {{
-                text-align: center;
-            }}
-
-            .email-body p {{ text-align: left; line-height: 1.4; margin-bottom: 10px; }}
-            .phishing-link {{ color: #dc3545; cursor: pointer; text-decoration: underline; font-weight: bold; }}
-            .result-message {{ text-align: center; margin-top: 20px; font-weight: bold; min-height: 1.2em; }}
-
-            /* Password Requirement List Styles */
-            .req-list {{ text-align: left; margin: 15px 0 25px 0; padding-left: 20px; font-size: 0.9em; }}
-            .req-list li {{ list-style-type: none; margin-bottom: 5px; color: #444; }}
-
-            /* Password Input and Indicator */
-            .input-group {{ position: relative; margin-bottom: 15px; }}
-            #password-input {{ box-sizing: border-box; padding: 12px; width: 100%; padding-right: 60px; border: 1px solid #ccc; border-radius: 6px; font-size: 1.0em; }}
-            #toggle-password {{ position: absolute; top: 50%; right: 15px; transform: translateY(-50%); cursor: pointer; font-size: 0.8em; font-weight: 600; color: #007bff; user-select: none; }}
-            #strength-bar {{ height: 10px; width: 0; background-color: #ddd; border-radius: 5px; transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out; margin-bottom: 15px; }}
-            #strength-text {{ font-weight: bold; margin-bottom: 20px; min-height: 1.2em; color: #666; }}
-
-
-            /* --- RESPONSIVE BUTTON CONTAINER --- */
-            .button-group {{
-                display: flex;
-                flex-direction: column; /* MOBILE FIRST: Stack buttons vertically */
-                gap: 10px; /* Spacing between stacked buttons */
-                margin-top: 20px;
-            }}
-
-            /* --- BUTTON STYLING --- */
-            .action-button {{
-                padding: 12px 15px;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                font-weight: bold;
-                width: 100%; /* Full width on mobile */
-                transition: background-color 0.2s, transform 0.1s;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                margin: 0;
-            }}
-            .action-button:active {{ transform: translateY(1px); }}
-            .action-button:disabled {{ opacity: 0.6; cursor: not-allowed; }}
-
-            /* Desktop/Tablet Layout (Screen width > 500px) */
-            @media (min-width: 500px) {{
-                .button-group {{
-                    flex-direction: row; /* Switch to horizontal layout */
-                    justify-content: space-around;
-                }}
-                .action-button {{
-                    width: auto;
-                    flex-grow: 1;
-                    margin: 0 5px;
-                    max-width: 45%; /* Prevent buttons from getting too wide */
-                }}
-            }}
-
-            .btn-primary {{ background-color: #007bff; color: white; }}
-            .btn-primary:hover {{ background-color: #0056b3; }}
-            .btn-safe {{ background-color: #28a745; color: white; }}
-            .btn-safe:hover {{ background-color: #1e7e34; }}
-            .btn-danger {{ background-color: #dc3545; color: white; }}
-            .btn-danger:hover {{ background-color: #c82333; }}
-            .btn-neutral {{ background-color: #6c757d; color: white; }}
-            .btn-neutral:hover {{ background-color: #5a6268; }}
-            .btn-mfa {{ background-color: #6f42c1; color: white; }}
-            .btn-mfa:hover {{ background-color: #5a3598; }}
-        </style>
-    </head>
-    <body>
-
-    <div class="scenario-card">
-        <div class="score-header">
-            <div class="score-display">
-                Current Score: <span id="score-value">{current_score}</span> points 🏆
-            </div>
-            <button class="reset-button" onclick="resetGame()">Restart Simulation</button>
         </div>
-
-        {template_content}
+        
+        <div class="mt-8 pt-6 border-t flex justify-end">
+            <button id="start-assessment-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300">
+                Start Assessment Scenarios ({TOTAL_SCENARIOS} Total)
+            </button>
+        </div>
     </div>
 
-
     <script>
-        // --- COMMON JAVASCRIPT LOGIC ---
-        let currentScore = {current_score};
-        const scenarioData = {scenario_json};
-        const scoreDisplay = document.getElementById('score-value');
+        document.getElementById('start-assessment-btn').addEventListener('click', function() {{
+            const button = this;
+            button.disabled = true;
+            button.textContent = 'Starting...';
 
-        // Function to handle the "Next Scenario" button click (reloads page)
-        function handleNextScenario() {{
-            // Since the backend has already advanced the index in updateScore(),
-            // we just need to reload the page to load the next scenario state (which will be the final score page).
-            window.location.reload();
-        }}
-
-        // Function to handle the "Restart Simulation" button click (resets score and reloads)
-        function resetGame() {{
-            // API CALL TO PYTHON BACKEND to reset the game state
-            fetch('/api/resetgame', {{
+            // API Call to advance index from -1 (Module) to 0 (First Scenario)
+            fetch('/api/advancescenario', {{
                 method: 'POST',
-                headers: {{ 'Content-Type': 'application/json' }}
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{}}) // Empty body is fine
             }})
             .then(response => response.json())
             .then(data => {{
                 if (data.success) {{
-                    // Force a full reload to show the first scenario and new score
+                    // Reload the page, which will now load the first scenario (index 0)
                     window.location.reload();
                 }} else {{
-                    console.error('Game reset failed on server:', data.message);
+                    console.error('Could not start assessment:', data.message);
+                    button.disabled = false;
+                    button.textContent = 'Start Assessment Scenarios';
                 }}
             }})
             .catch(error => {{
-                console.error('Network or Fetch Error during reset:', error);
+                console.error('Network or Fetch Error:', error);
+                button.disabled = false;
+                button.textContent = 'Start Assessment Scenarios';
             }});
+        }});
+    </script>
+</body>
+</html>
+"""
+
+# FIXED: Escaped curly braces in CSS (lines 235, 237-240)
+SCORE_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Score</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {{ font-family: 'Inter', sans-serif; background-color: #f0f4f8; }}
+        .score-card {{ 
+            max-width: 600px; 
+            background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+        }}
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="score-card text-white shadow-2xl rounded-xl p-10 md:p-16 w-full text-center">
+        <h1 class="text-5xl font-extrabold mb-4">Assessment Complete!</h1>
+        <p class="text-xl mb-8">You have successfully finished all **{total_scenarios}** cybersecurity scenarios.</p>
+        
+        <div class="my-10 p-8 bg-white/20 rounded-lg backdrop-blur-sm">
+            <p class="text-2xl font-semibold mb-3">Your Final Score:</p>
+            <p class="text-7xl font-black" id="final-score">{final_score}</p>
+            <p class="text-lg mt-3">Points Earned</p>
+        </div>
+        
+        <p class="text-lg mb-8">
+            This score reflects your performance in identifying threats, creating secure credentials, and understanding modern authentication.
+            You can restart the assessment to try again.
+        </p>
+        
+        <button onclick="window.location.href='/'" class="bg-white text-purple-700 hover:bg-gray-100 font-bold py-3 px-8 rounded-lg shadow-xl transition duration-300 transform hover:scale-105">
+            Restart Assessment
+        </button>
+    </div>
+</body>
+</html>
+"""
+
+# --- SCENARIO TEMPLATE GENERATION FUNCTIONS ---
+
+def get_phishing_template(scenarioData):
+    """Generates the HTML for the Phishing scenario."""
+    
+    # Check if the email is actually phishing to determine the correct score messages
+    is_phishing = 'true' if scenarioData.get('is_phishing', False) else 'false'
+    
+    # Determine points for correct/incorrect action
+    if scenarioData.get('is_phishing', False):
+        # The correct action is 'report'
+        report_points = 10
+        accept_points = -5
+        report_msg = scenarioData['score_report_correct']
+        accept_msg = scenarioData['score_accept_wrong']
+    else:
+        # The correct action is 'accept/click'
+        report_points = 1
+        accept_points = 5
+        report_msg = scenarioData['score_report_wrong']
+        accept_msg = scenarioData['score_accept_correct']
+
+
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Scenario</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {{ font-family: 'Inter', sans-serif; background-color: #e2e8f0; }}
+        .email-container {{ max-width: 700px; }}
+        .action-button {{ padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 0.5rem; transition: background-color 0.3s, transform 0.1s; }}
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+    <div class="w-full email-container bg-white shadow-2xl rounded-xl p-6 md:p-8">
+        <div class="flex justify-between items-center border-b pb-4 mb-4">
+            <h1 class="text-2xl font-bold text-gray-800">{scenarioData['title']}</h1>
+            <div class="text-lg font-semibold text-gray-700">
+                Score: <span id="score-display"><!-- CURRENT_SCORE_PLACEHOLDER --></span>
+            </div>
+        </div>
+        
+        <p class="text-sm font-medium text-gray-500 mb-4 border-b pb-4">{scenarioData['instructions']}</p>
+
+        <!-- EMail Card -->
+        <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-inner space-y-3">
+            <p class="text-sm text-gray-600">
+                <span class="font-bold">From:</span> {scenarioData['email_sender']}
+            </p>
+            <p class="text-sm text-gray-600">
+                <span class="font-bold">Subject:</span> {scenarioData['email_subject']}
+            </p>
+            <hr class="my-2 border-gray-200">
+            <p class="text-base text-gray-800">
+                This is an urgent security notification. We have detected a potential compromise 
+                of your personnel account. Failure to act immediately may result in suspension 
+                of your payroll access.
+            </p>
+            <div class="text-center py-4">
+                <a href="#" id="email-link" class="text-blue-600 hover:text-blue-800 font-bold text-lg underline">
+                    {scenarioData['email_link_text']}
+                </a>
+            </div>
+            <p class="text-xs text-gray-500 italic mt-2">
+                This message will self-destruct if not clicked within 2 hours.
+            </p>
+        </div>
+        <!-- End EMail Card -->
+
+        <div id="result-message" class="mt-6 p-4 text-center rounded-lg font-bold text-lg" style="display: none;"></div>
+
+        <div id="action-buttons" class="mt-6 flex justify-center space-x-4">
+            <button id="report-btn" class="action-button bg-red-600 hover:bg-red-700 text-white">
+                Report as Phishing
+            </button>
+            <button id="click-btn" class="action-button bg-green-600 hover:bg-green-700 text-white">
+                Click Link (Simulated)
+            </button>
+        </div>
+
+        <div class="mt-6 pt-4 border-t flex justify-end">
+            <button class="next-scenario-btn action-button bg-indigo-600 hover:bg-indigo-700 text-white" style="display: none;">
+                Next Scenario
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Common JavaScript Code ---
+        let currentScore = parseInt(document.getElementById('score-display').textContent) || 0;
+        const scoreDisplay = document.getElementById('score-display');
+        const resultMessage = document.getElementById('result-message');
+        const actionButtons = document.getElementById('action-buttons');
+        const phishingScenarioID = {scenarioData['id']};
+        const TOTAL_SCENARIOS = {TOTAL_SCENARIOS};
+
+        function handleNextScenario() {{
+            window.location.reload(); 
         }}
 
-
-        document.addEventListener('DOMContentLoaded', () => {{
-             // Find all elements with the next-scenario-btn class and attach the click handler
-             document.querySelectorAll('.next-scenario-btn').forEach(btn => {{
-                btn.onclick = handleNextScenario;
-             }});
+        // Attach the handleNextScenario to the Next Scenario button
+        document.querySelectorAll('.next-scenario-btn').forEach(btn => {{
+            btn.onclick = handleNextScenario; 
         }});
 
         function updateScore(points) {{
-            currentScore += points;
-            scoreDisplay.textContent = currentScore;
-
-            // Show the next scenario button after scoring
-            document.querySelectorAll('.next-scenario-btn').forEach(btn => {{
-                btn.style.display = 'block';
+            // API CALL TO PYTHON BACKEND to persist the score and advance the index
+            fetch('/api/updatescore', {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{
+                    scenario: phishingScenarioID,
+                    points: points
+                }})
+            }})
+            .then(response => response.json())
+            .then(data => {{
+                if (data.success) {{
+                    currentScore = data.new_score;
+                    scoreDisplay.textContent = currentScore;
+                    
+                    // Show the next scenario button after scoring
+                    document.querySelectorAll('.next-scenario-btn').forEach(btn => {{
+                        btn.textContent = data.new_index === {FINAL_SCORE_INDEX} ? 'View Final Score' : 'Next Scenario';
+                        btn.style.display = 'block';
+                    }});
+                }} else {{
+                    console.error('Score update failed on server:', data.message);
+                }}
+            }})
+            .catch(error => {{
+                console.error('Network or Fetch Error:', error);
             }});
+        }}
+        // --- End of Common JavaScript Code ---
 
+        // --- Phishing Scenario Specific JavaScript ---
+        const isPhishing = {is_phishing};
+
+        document.getElementById('report-btn').addEventListener('click', () => {{
+            handleAction('report');
+        }});
+
+        document.getElementById('click-btn').addEventListener('click', () => {{
+            handleAction('click');
+        }});
+        
+        document.getElementById('email-link').addEventListener('click', (e) => {{
+            e.preventDefault(); 
+            handleAction('click');
+        }});
+
+
+        function handleAction(action) {{
+            // Disable buttons after action
+            document.getElementById('report-btn').disabled = true;
+            document.getElementById('click-btn').disabled = true;
+            actionButtons.style.display = 'none';
+
+            let message = "";
+            let points = 0;
+
+            if (action === 'report') {{
+                points = {report_points};
+                message = "{report_msg}";
+                resultMessage.style.backgroundColor = points > 0 ? '#d1e7dd' : (points < 0 ? '#f8d7da' : '#fff3cd');
+                resultMessage.style.color = points > 0 ? '#0f5132' : (points < 0 ? '#842029' : '#664d03');
+            }} else if (action === 'click') {{
+                points = {accept_points};
+                message = "{accept_msg}";
+                resultMessage.style.backgroundColor = points > 0 ? '#d1e7dd' : (points < 0 ? '#f8d7da' : '#fff3cd');
+                resultMessage.style.color = points > 0 ? '#0f5132' : (points < 0 ? '#842029' : '#664d03');
+            }}
+            
+            resultMessage.innerHTML = message;
+            resultMessage.style.display = 'block';
+            
+            updateScore(points);
+        }}
+        // --- End of Phishing Scenario Specific JavaScript ---
+    </script>
+    </body>
+    </html>
+    """
+
+def get_password_template(scenarioData):
+    """Generates the HTML for the Password scenario."""
+    
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Scenario</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {{ font-family: 'Inter', sans-serif; background-color: #f0f4f8; }}
+        .password-container {{ max-width: 500px; }}
+        .requirement-met {{ color: #10b981; }} /* green-500 */
+        .requirement-unmet {{ color: #f87171; }} /* red-400 */
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+    <div class="w-full password-container bg-white shadow-2xl rounded-xl p-8">
+        <div class="flex justify-between items-center border-b pb-4 mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">{scenarioData['title']}</h1>
+            <div class="text-lg font-semibold text-gray-700">
+                Score: <span id="score-display"><!-- CURRENT_SCORE_PLACEHOLDER --></span>
+            </div>
+        </div>
+        
+        <p class="text-sm font-medium text-gray-500 mb-6">Enter a password and click 'Submit' to test its strength against our security standards.</p>
+
+        <div class="space-y-4">
+            <input type="password" id="password-input" 
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg" 
+                   placeholder="Enter new password" oninput="updateStrength()">
+                   
+            <div id="strength-bar" class="w-full h-3 rounded-full bg-gray-200">
+                <div id="strength-indicator" class="h-full rounded-full transition-all duration-300" style="width: 0%; background-color: #f87171;"></div>
+            </div>
+            <p id="strength-text" class="text-sm font-medium text-gray-500 text-center">Strength: Very Weak</p>
+        </div>
+
+        <div id="requirements-list" class="mt-6 space-y-2">
+            <div id="req-length" class="text-gray-600 flex items-center">
+                <span class="mr-2">❌</span> Minimum 10 characters
+            </div>
+            <div id="req-upper" class="text-gray-600 flex items-center">
+                <span class="mr-2">❌</span> At least one uppercase letter (A-Z)
+            </div>
+            <div id="req-lower" class="text-gray-600 flex items-center">
+                <span class="mr-2">❌</span> At least one lowercase letter (a-z)
+            </div>
+            <div id="req-number" class="text-gray-600 flex items-center">
+                <span class="mr-2">❌</span> At least one number (0-9)
+            </div>
+            <div id="req-special" class="text-gray-600 flex items-center">
+                <span class="mr-2">❌</span> At least one special character (!@#$...)
+            </div>
+        </div>
+        
+        <div id="result-message" class="mt-6 p-4 text-center rounded-lg font-bold text-lg" style="display: none;"></div>
+
+        <div class="mt-8 pt-4 border-t flex justify-between items-center">
+            <button id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300">
+                Submit Password
+            </button>
+            <button class="next-scenario-btn bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300" style="display: none;">
+                Next Scenario
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- Common JavaScript Code ---
+        let currentScore = parseInt(document.getElementById('score-display').textContent) || 0;
+        const scoreDisplay = document.getElementById('score-display');
+        const passwordInput = document.getElementById('password-input');
+        const strengthIndicator = document.getElementById('strength-indicator');
+        const strengthText = document.getElementById('strength-text');
+        const resultMessage = document.getElementById('result-message');
+        const submitBtn = document.getElementById('submit-btn');
+        const scenarioData = {json.dumps(scenarioData)};
+        const TOTAL_SCENARIOS = {TOTAL_SCENARIOS};
+
+        function handleNextScenario() {{
+            window.location.reload(); 
+        }}
+
+        // Attach the handleNextScenario to the Next Scenario button
+        document.querySelectorAll('.next-scenario-btn').forEach(btn => {{
+            btn.onclick = handleNextScenario; 
+        }});
+
+        function updateScore(points) {{
             // API CALL TO PYTHON BACKEND to persist the score and advance the index
             fetch('/api/updatescore', {{
                 method: 'POST',
@@ -659,6 +548,12 @@ def index():
                 if (data.success) {{
                     currentScore = data.new_score;
                     scoreDisplay.textContent = currentScore;
+                    
+                    // Show the next scenario button after scoring
+                    document.querySelectorAll('.next-scenario-btn').forEach(btn => {{
+                        btn.textContent = data.new_index === {FINAL_SCORE_INDEX} ? 'View Final Score' : 'Next Scenario';
+                        btn.style.display = 'block';
+                    }});
                 }} else {{
                     console.error('Score update failed on server:', data.message);
                 }}
@@ -668,12 +563,303 @@ def index():
             }});
         }}
         // --- End of Common JavaScript Code ---
-    </script>
 
+        // --- Password Scenario Specific JavaScript ---
+        const reqs = {{
+            length: document.getElementById('req-length'),
+            upper: document.getElementById('req-upper'),
+            lower: document.getElementById('req-lower'),
+            number: document.getElementById('req-number'),
+            special: document.getElementById('req-special')
+        }};
+
+        function checkRequirement(el, condition) {{
+            if (condition) {{
+                el.classList.remove('requirement-unmet');
+                el.classList.add('requirement-met');
+                el.innerHTML = '<span class="mr-2">✅</span>' + el.textContent.substring(el.textContent.indexOf(' '));
+            }} else {{
+                el.classList.remove('requirement-met');
+                el.classList.add('requirement-unmet');
+                el.innerHTML = '<span class="mr-2">❌</span>' + el.textContent.substring(el.textContent.indexOf(' '));
+            }}
+            return condition;
+        }}
+
+        function updateStrength() {{
+            const password = passwordInput.value;
+            let score = 0;
+
+            const meetsLength = checkRequirement(reqs.length, password.length >= 10);
+            const meetsUpper = checkRequirement(reqs.upper, /[A-Z]/.test(password));
+            const meetsLower = checkRequirement(reqs.lower, /[a-z]/.test(password));
+            const meetsNumber = checkRequirement(reqs.number, /[0-9]/.test(password));
+            const meetsSpecial = checkRequirement(reqs.special, /[^A-Za-z0-9]/.test(password));
+
+            const totalRequirements = 5;
+            let metCount = [meetsLength, meetsUpper, meetsLower, meetsNumber, meetsSpecial].filter(b => b).length;
+            
+            let percentage = (metCount / totalRequirements) * 100;
+
+            let color = '#f87171'; // Red (Very Weak/Weak)
+            let text = 'Very Weak';
+            
+            if (metCount >= 2) {{
+                color = '#fbbf24'; // Amber (Moderate)
+                text = 'Moderate';
+            }}
+            if (metCount >= 4) {{
+                color = '#3b82f6'; // Blue (Strong)
+                text = 'Strong';
+            }}
+            if (metCount === totalRequirements) {{
+                color = '#10b981'; // Green (Very Strong)
+                text = 'Very Strong';
+            }}
+
+            strengthIndicator.style.width = percentage + '%';
+            strengthIndicator.style.backgroundColor = color;
+            strengthText.textContent = 'Strength: ' + text;
+        }}
+
+        submitBtn.addEventListener('click', () => {{
+            submitBtn.disabled = true;
+            passwordInput.disabled = true;
+            
+            const password = passwordInput.value;
+            const isStrong = password.length >= 10 &&
+                             /[A-Z]/.test(password) &&
+                             /[a-z]/.test(password) &&
+                             /[0-9]/.test(password) &&
+                             /[^A-Za-z0-9]/.test(password);
+
+            let message = "";
+            let pointsChange = 0;
+
+            if (isStrong) {{
+                message = scenarioData.result_strong;
+                pointsChange = 15;
+                resultMessage.style.backgroundColor = '#d1e7dd'; // Light Green
+                resultMessage.style.color = '#0f5132'; // Dark Green
+            }} else {{
+                message = scenarioData.result_weak;
+                pointsChange = -5;
+                resultMessage.style.backgroundColor = '#f8d7da'; // Light Red
+                resultMessage.style.color = '#842029'; // Dark Red
+            }}
+
+            resultMessage.innerHTML = message;
+            resultMessage.style.display = 'block';
+
+            // Send final calculated points to the server
+            updateScore(pointsChange);
+        }});
+        
+        // Ensure strength updates on initial load/typing
+        document.addEventListener('DOMContentLoaded', updateStrength);
+
+
+        // --- End of Password Scenario Specific JavaScript ---
+    </script>
     </body>
     </html>
     """
-    return render_template_string(template)
+
+def get_mfa_template(scenarioData):
+    """Generates the HTML for the Multi-Factor Authentication (MFA) scenario."""
+    
+    options_html = ""
+    for i, option in enumerate(scenarioData['options']):
+        # Encode the option data for use in the onclick handler
+        option_json = json.dumps(option)
+        
+        options_html += f"""
+        <button onclick='handleSelection({option_json}, this)'
+                class="option-btn w-full text-left p-4 mb-3 border-2 border-indigo-300 bg-white hover:bg-indigo-50 rounded-lg transition duration-200 shadow-md focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:opacity-75 disabled:cursor-not-allowed">
+            <span class="font-semibold text-lg text-gray-800">{option['text']}</span>
+        </button>
+        """
+
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MFA Scenario</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {{ font-family: 'Inter', sans-serif; background-color: #e5e7eb; }}
+        .mfa-container {{ max-width: 600px; }}
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+    <div class="w-full mfa-container bg-white shadow-2xl rounded-xl p-8">
+        <div class="flex justify-between items-center border-b pb-4 mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">{scenarioData['title']}</h1>
+            <div class="text-lg font-semibold text-gray-700">
+                Score: <span id="score-display"><!-- CURRENT_SCORE_PLACEHOLDER --></span>
+            </div>
+        </div>
+        
+        <p class="text-base text-gray-600 mb-8 font-medium">{scenarioData['instructions']}</p>
+
+        <div id="options-container" class="space-y-3">
+            {options_html}
+        </div>
+        
+        <div id="result-message" class="mt-8 p-4 text-center rounded-lg font-bold text-lg" style="display: none;"></div>
+
+        <div class="mt-8 pt-4 border-t flex justify-end">
+            <button class="next-scenario-btn bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300" style="display: none;">
+                Next Scenario
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- Common JavaScript Code ---
+        let currentScore = parseInt(document.getElementById('score-display').textContent) || 0;
+        const scoreDisplay = document.getElementById('score-display');
+        const resultMessage = document.getElementById('result-message');
+        const optionsContainer = document.getElementById('options-container');
+        const scenarioData = {json.dumps(scenarioData)};
+        const TOTAL_SCENARIOS = {TOTAL_SCENARIOS};
+
+        function handleNextScenario() {{
+            window.location.reload(); 
+        }}
+
+        // Attach the handleNextScenario to the Next Scenario button
+        document.querySelectorAll('.next-scenario-btn').forEach(btn => {{
+            btn.onclick = handleNextScenario; 
+        }});
+
+        function updateScore(points, new_index) {{
+            // API CALL TO PYTHON BACKEND to persist the score and advance the index
+            fetch('/api/updatescore', {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{
+                    scenario: scenarioData.id,
+                    points: points
+                }})
+            }})
+            .then(response => response.json())
+            .then(data => {{
+                if (data.success) {{
+                    currentScore = data.new_score;
+                    scoreDisplay.textContent = currentScore;
+                    
+                    // Show the next scenario button after scoring
+                    document.querySelectorAll('.next-scenario-btn').forEach(btn => {{
+                        btn.textContent = data.new_index === {FINAL_SCORE_INDEX} ? 'View Final Score' : 'Next Scenario';
+                        btn.style.display = 'block';
+                    }});
+                }} else {{
+                    console.error('Score update failed on server:', data.message);
+                }}
+            }})
+            .catch(error => {{
+                console.error('Network or Fetch Error:', error);
+            }});
+        }}
+        // --- End of Common JavaScript Code ---
+
+        // --- MFA Scenario Specific JavaScript ---
+        function handleSelection(option, button) {{
+            // Disable all buttons to prevent double-clicking
+            document.querySelectorAll('.option-btn').forEach(btn => {{
+                btn.disabled = true;
+                btn.classList.remove('hover:bg-indigo-50');
+                btn.classList.remove('focus:ring-4');
+            }});
+
+            const message = option.message;
+            const points = option.points;
+            const isCorrect = option.is_correct;
+
+            // Apply color to the selected button
+            if (isCorrect) {{
+                button.classList.add('border-green-500', 'bg-green-100', 'shadow-xl');
+                resultMessage.style.backgroundColor = '#d1e7dd'; // Light Green
+                resultMessage.style.color = '#0f5132'; // Dark Green
+            }} else {{
+                button.classList.add('border-red-500', 'bg-red-100', 'shadow-xl');
+                resultMessage.style.backgroundColor = '#f8d7da'; // Light Red
+                resultMessage.style.color = '#842029'; // Dark Red
+                
+                // Highlight the correct answer
+                document.querySelectorAll('.option-btn').forEach(btn => {{
+                    const btnOption = JSON.parse(btn.getAttribute('onclick').match(/\((.*), this\)/)[1]);
+                    if (btnOption.is_correct) {{
+                        btn.classList.add('border-green-500', 'bg-green-100');
+                    }}
+                }});
+            }}
+            
+            resultMessage.innerHTML = message;
+            resultMessage.style.display = 'block';
+
+            updateScore(points);
+        }}
+        // --- End of MFA Scenario Specific JavaScript ---
+    </script>
+    </body>
+    </html>
+    """
+
+# --- 3. MAIN ROUTE LOGIC ---
+
+@app.route('/')
+def index():
+    user_id = "teacher_user_id_1" # Hardcoded user for this single-user demo
+    
+    # Check if user data exists, initialize if not (for robustness)
+    if user_id not in user_data:
+        user_data[user_id] = {"score": 0, "current_scenario_index": -1}
+        
+    current_index = user_data[user_id]['current_scenario_index']
+    current_score = user_data[user_id]['score']
+    
+    if current_index == -1:
+        # Render Module Page
+        return render_template_string(MODULE_TEMPLATE.format(current_score=current_score, TOTAL_SCENARIOS=TOTAL_SCENARIOS))
+        
+    elif current_index == FINAL_SCORE_INDEX:
+        # Render Final Score Page
+        final_score_value = current_score
+        
+        # Reset user data for next playthrough
+        user_data[user_id]['score'] = 0
+        user_data[user_id]['current_scenario_index'] = -1
+        
+        return render_template_string(SCORE_TEMPLATE.format(final_score=final_score_value, total_scenarios=TOTAL_SCENARIOS))
+        
+    elif 0 <= current_index < TOTAL_SCENARIOS:
+        # Render a specific Assessment Scenario
+        scenario_data = ALL_SCENARIOS[current_index]
+        
+        if scenario_data['type'] == 'phishing':
+            template = get_phishing_template(scenario_data)
+        elif scenario_data['type'] == 'password':
+            template = get_password_template(scenario_data)
+        elif scenario_data['type'] == 'mfa':
+            template = get_mfa_template(scenario_data)
+        else:
+            return "Scenario type not found.", 404
+        
+        # Inject common data into the template
+        template = template.replace(
+            '<!-- CURRENT_SCORE_PLACEHOLDER -->', str(current_score)
+        )
+        return render_template_string(template)
+        
+    else:
+        # Fallback to the start
+        user_data[user_id]['current_scenario_index'] = -1
+        return render_template_string(MODULE_TEMPLATE.format(current_score=current_score, TOTAL_SCENARIOS=TOTAL_SCENARIOS))
 
 # --- 4. RUN THE APPLICATION ---
 if __name__ == '__main__':
