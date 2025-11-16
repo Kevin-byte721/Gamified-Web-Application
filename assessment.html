@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cybersecurity Assessment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
+        /* Consistent max-width for all scenarios */
+        .container-main { max-width: 600px; } 
+        .action-button { padding: 0.75rem 1.5rem; font-weight: 600; border-radius: 0.5rem; transition: background-color 0.3s, transform 0.1s; }
+        .requirement-met { color: #10b981; }
+        .requirement-unmet { color: #f87171; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
+
+    <div id="scenario-container" class="w-full container-main bg-white shadow-2xl rounded-xl p-6 md:p-8">
+        <div class="flex justify-between items-center border-b pb-4 mb-4">
+            <h1 class="text-2xl font-bold text-gray-800" id="scenario-title">Loading Scenario...</h1>
+            <div class="text-lg font-semibold text-gray-700">
+                Score: <span id="score-display">0</span>
+            </div>
+        </div>
+        
+        <div id="dynamic-content">
+            </div>
+
+        <div id="result-message-container" 
+             class="mt-6 p-4 rounded-lg font-bold text-sm" 
+             style="display: none;">
+             
+            <div class="flex items-center justify-between">
+                <span id="result-message-text"></span>
+                
+                <button id="next-scenario-btn" class="action-button bg-indigo-600 hover:bg-indigo-700 text-white flex-shrink-0 ml-4" 
+                        style="display: none;">
+                    Next Scenario
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL CONSTANTS ---
+        const USER_ID = "teacher_user_id_1";
+        const FINAL_SCORE_INDEX = 999;
+
+        // SCENARIO DATA (Copied from app.py)
+        const SCENARIO_PHISHING = {
+            "id": 101, "type": "phishing", "title": "🚨 Action Required: Urgent Payroll Update", "instructions": "Review this email. Decide whether to 'Report as Phishing' or 'Click Link (Simulated)'.", "is_phishing": true, "email_sender": "IT Support <support@paninsinge-ps.com>", "email_subject": "Dear Teacher, Please click the link below to verify your login credentials immediately to avoid payroll disruption.", "email_link_text": "[VERIFY PAYROLL]",
+            "score_report_correct": "✅ Correct! Phishing reported. +10 Points! You avoided a major threat.", "score_accept_wrong": "❌ Incorrect! Malicious link clicked. -5 Points! Check the sender address closely next time.", "score_report_wrong": "⚠️ Caution. This email was actually legitimate, but good job checking the sender. +1 Point.", "score_accept_correct": "✅ Correct. This was a legitimate request. +5 Points!",
+        };
+        const SCENARIO_PASSWORD = {
+            "id": 106, "type": "password", "title": "🔐 Mandatory Password Update", "instructions": "Create a new password that meets all modern security requirements.",
+            "result_strong": "✅ Success! Strong password created. +15 Points!", "result_weak": "❌ Failure. Password too weak. -5 Points! Must contain upper, lower, number, and special characters.",
+        };
+        const SCENARIO_MFA = {
+            "id": 108, "type": "mfa", "title": "🛡️ Choose the Strongest MFA Method", "instructions": "Which Multi-Factor Authentication method provides the highest level of security against phishing and credential theft?",
+            "options": [
+                {"text": "SMS Text Message Code (Least Secure)", "is_correct": false, "points": -5, "message": "❌ Incorrect. SMS codes can be intercepted (SIM-swap attacks). Avoid using text messages for MFA."},
+                {"text": "Authenticator App Code (e.g., Google Authenticator, Authy)", "is_correct": true, "points": 10, "message": "✅ Correct! App-generated codes time-based one time password (TOTP) are localized to your device and are much harder to steal than SMS."},
+                {"text": "Email Verification Link (Weak)", "is_correct": false, "points": -10, "message": "❌ Incorrect. This relies solely on email security, which is often the first thing attackers target. This isn't true multi-factor authentication."},
+            ]
+        };
+        const ALL_SCENARIOS = [SCENARIO_PHISHING, SCENARIO_PASSWORD, SCENARIO_MFA];
+        const TOTAL_SCENARIOS = ALL_SCENARIOS.length;
+        
+        // --- STATE MANAGEMENT ---
+        let userData = {};
+
+        function loadState() {
+            const data = localStorage.getItem(USER_ID);
+            userData = data ? JSON.parse(data) : { score: 0, current_scenario_index: -1 };
+            document.getElementById('score-display').textContent = userData.score;
+            return userData;
+        }
+
+        function updateState(points) {
+            let new_index;
+            if (userData.current_scenario_index === (TOTAL_SCENARIOS - 1)) {
+                new_index = FINAL_SCORE_INDEX;
+            } else {
+                new_index = userData.current_scenario_index + 1;
+            }
+
+            userData.score += points;
+            userData.current_scenario_index = new_index;
+            
+            localStorage.setItem(USER_ID, JSON.stringify(userData));
+            document.getElementById('score-display').textContent = userData.score;
+            
+            // Get the button
+            const nextBtn = document.getElementById('next-scenario-btn');
+            
+            // Update next scenario button appearance
+            nextBtn.textContent = new_index === FINAL_SCORE_INDEX ? 'View Final Score' : 'Next Scenario';
+            
+            // Show the button
+            nextBtn.style.display = 'block';
+        }
+
+        // --- NAVIGATION HANDLERS ---
+        document.getElementById('next-scenario-btn').addEventListener('click', () => {
+            if (userData.current_scenario_index === FINAL_SCORE_INDEX) {
+                window.location.href = 'score.html';
+            } else {
+                window.location.reload(); // Reloads to render the next scenario
+            }
+        });
+
+        // Helper function to display the result message
+        function displayResult(message, isSuccess) {
+            const container = document.getElementById('result-message-container');
+            const textSpan = document.getElementById('result-message-text');
+
+            if (isSuccess === true) {
+                container.style.backgroundColor = '#d1e7dd'; // Light Green
+                container.style.color = '#0f5132'; // Dark Green
+            } else if (isSuccess === false) {
+                container.style.backgroundColor = '#f8d7da'; // Light Red
+                container.style.color = '#842029'; // Dark Red
+            } else { // Neutral/Caution
+                container.style.backgroundColor = '#fff3cd'; // Light Yellow
+                container.style.color = '#664d03'; // Dark Yellow
+            }
+            
+            textSpan.textContent = message;
+            container.style.display = 'block';
+        }
+
+
+        // --- SCENARIO RENDERING FUNCTIONS ---
+
+        function renderPhishing(scenario) {
+            document.getElementById('scenario-title').textContent = scenario.title;
+            
+            const isPhishing = scenario.is_phishing;
+            let report_points = isPhishing ? 10 : 1;
+            let accept_points = isPhishing ? -5 : 5;
+            let report_msg = isPhishing ? scenario.score_report_correct : scenario.score_report_wrong;
+            let accept_msg = isPhishing ? scenario.score_accept_wrong : scenario.score_accept_correct;
+
+            const html = `
+                <p class="text-sm font-medium text-gray-500 mb-4 border-b pb-4">${scenario.instructions}</p>
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-inner space-y-3">
+                    <p class="text-sm text-gray-600">
+                        <span class="font-bold">From:</span> ${scenario.email_sender}
+                    </p>
+                    <p class="text-sm text-gray-600">
+                        <span class="font-bold">Subject:</span> ${scenario.email_subject}
+                    </p>
+                    <hr class="my-2 border-gray-200">
+                    <p class="text-base text-gray-800">
+                        This is an urgent security notification. We have detected a potential compromise 
+                        of your personnel account. Failure to act immediately may result in suspension 
+                        of your payroll access.
+                    </p>
+                    <div class="text-center py-4">
+                        <a href="#" id="email-link" class="text-blue-600 hover:text-blue-800 font-bold text-lg underline">
+                            ${scenario.email_link_text}
+                        </a>
+                    </div>
+                    <p class="text-xs text-gray-500 italic mt-2">
+                        This message will self-destruct if not clicked within 2 hours.
+                    </p>
+                </div>
+                <div id="action-buttons" class="mt-6 flex justify-center space-x-4">
+                    <button id="report-btn" class="action-button bg-red-600 hover:bg-red-700 text-white">
+                        Report as Phishing
+                    </button>
+                    <button id="click-btn" class="action-button bg-green-600 hover:bg-green-700 text-white">
+                        Click Link (Simulated)
+                    </button>
+                </div>
+            `;
+            document.getElementById('dynamic-content').innerHTML = html;
+
+            function handleAction(action) {
+                document.getElementById('report-btn').disabled = true;
+                document.getElementById('click-btn').disabled = true;
+                document.getElementById('action-buttons').style.display = 'none';
+
+                let points = 0;
+                let message = "";
+                let isSuccess = null;
+
+                if (action === 'report') {
+                    points = report_points;
+                    message = report_msg;
+                    isSuccess = isPhishing; 
+                } else if (action === 'click') {
+                    points = accept_points;
+                    message = accept_msg;
+                    isSuccess = !isPhishing; 
+                }
+                
+                displayResult(message, isSuccess);
+                updateState(points);
+            }
+
+            document.getElementById('report-btn').addEventListener('click', () => handleAction('report'));
+            document.getElementById('click-btn').addEventListener('click', () => handleAction('click'));
+            document.getElementById('email-link').addEventListener('click', (e) => { e.preventDefault(); handleAction('click'); });
+        }
+
+
+        function renderPassword(scenario) {
+            document.getElementById('scenario-title').textContent = scenario.title;
+
+            const html = `
+                <p class="text-sm font-medium text-gray-500 mb-6">${scenario.instructions}</p>
+                <div class="space-y-4">
+                    <input type="password" id="password-input" 
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg" 
+                           placeholder="Enter new password">
+                    <div class="flex items-center mt-2">
+                        <input type="checkbox" id="show-password-checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="show-password-checkbox" class="ml-2 block text-sm text-gray-900">
+                            Show Password
+                        </label>
+                    </div>
+                    <div id="strength-bar" class="w-full h-3 rounded-full bg-gray-200">
+                        <div id="strength-indicator" class="h-full rounded-full transition-all duration-300" style="width: 0%; background-color: #f87171;"></div>
+                    </div>
+                    <p id="strength-text" class="text-sm font-medium text-gray-500 text-center">Strength: Very Weak</p>
+                </div>
+
+                <div id="requirements-list" class="mt-6 space-y-2">
+                    <div id="req-length" class="text-gray-600 flex items-center"><span class="mr-2">❌</span> Minimum 10 characters</div>
+                    <div id="req-upper" class="text-gray-600 flex items-center"><span class="mr-2">❌</span> At least one uppercase letter (A-Z)</div>
+                    <div id="req-lower" class="text-gray-600 flex items-center"><span class="mr-2">❌</span> At least one lowercase letter (a-z)</div>
+                    <div id="req-number" class="text-gray-600 flex items-center"><span class="mr-2">❌</span> At least one number (0-9)</div>
+                    <div id="req-special" class="text-gray-600 flex items-center"><span class="mr-2">❌</span> At least one special character (!@#$...)</div>
+                </div>
+
+                <div class="mt-8 pt-4 border-t flex justify-start">
+                    <button id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300">
+                        Submit Password
+                    </button>
+                </div>
+            `;
+            document.getElementById('dynamic-content').innerHTML = html;
+
+            const passwordInput = document.getElementById('password-input');
+            const submitBtn = document.getElementById('submit-btn');
+
+            document.getElementById('show-password-checkbox').addEventListener('change', () => {
+                passwordInput.type = document.getElementById('show-password-checkbox').checked ? 'text' : 'password';
+            });
+
+            const reqs = {
+                length: document.getElementById('req-length'), upper: document.getElementById('req-upper'),
+                lower: document.getElementById('req-lower'), number: document.getElementById('req-number'),
+                special: document.getElementById('req-special')
+            };
+
+            function checkRequirement(el, condition) {
+                const icon = condition ? '✅' : '❌';
+                const className = condition ? 'requirement-met' : 'requirement-unmet';
+                el.classList.remove('requirement-met', 'requirement-unmet');
+                el.classList.add(className);
+                
+                const textContent = el.textContent.substring(el.textContent.indexOf(' '));
+                el.innerHTML = `<span class="mr-2">${icon}</span>${textContent}`;
+                return condition;
+            }
+
+            function updateStrength() {
+                const password = passwordInput.value;
+                const meetsLength = checkRequirement(reqs.length, password.length >= 10);
+                const meetsUpper = checkRequirement(reqs.upper, /[A-Z]/.test(password));
+                const meetsLower = checkRequirement(reqs.lower, /[a-z]/.test(password));
+                const meetsNumber = checkRequirement(reqs.number, /[0-9]/.test(password));
+                const meetsSpecial = checkRequirement(reqs.special, /[^A-Za-z0-9]/.test(password));
+
+                const totalRequirements = 5;
+                let metCount = [meetsLength, meetsUpper, meetsLower, meetsNumber, meetsSpecial].filter(b => b).length;
+                let percentage = (metCount / totalRequirements) * 100;
+
+                let color = '#f87171'; 
+                let text = 'Very Weak';
+                
+                if (metCount >= 2) { color = '#fbbf24'; text = 'Moderate'; }
+                if (metCount >= 4) { color = '#3b82f6'; text = 'Strong'; }
+                if (metCount === totalRequirements) { color = '#10b981'; text = 'Very Strong'; }
+
+                document.getElementById('strength-indicator').style.width = percentage + '%';
+                document.getElementById('strength-indicator').style.backgroundColor = color;
+                document.getElementById('strength-text').textContent = 'Strength: ' + text;
+            }
+
+            submitBtn.addEventListener('click', () => {
+                submitBtn.disabled = true;
+                passwordInput.disabled = true;
+                
+                const password = passwordInput.value;
+                const isStrong = password.length >= 10 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password);
+
+                let pointsChange = 0;
+                let message = "";
+                let isSuccess = isStrong;
+
+                if (isStrong) {
+                    message = scenario.result_strong;
+                    pointsChange = 15;
+                } else {
+                    message = scenario.result_weak;
+                    pointsChange = -5;
+                }
+
+                displayResult(message, isSuccess);
+                updateState(pointsChange);
+            });
+            
+            passwordInput.addEventListener('input', updateStrength);
+            updateStrength(); // Initial check
+        }
+
+
+        function renderMFA(scenario) {
+            document.getElementById('scenario-title').textContent = scenario.title;
+            
+            let optionsHtml = scenario.options.map(option => {
+                const optionJson = JSON.stringify(option).replace(/'/g, "\\'"); 
+                return `
+                    <button onclick='handleSelection(${optionJson}, this)'
+                            class="option-btn w-full text-left p-4 mb-3 border-2 border-indigo-300 bg-white hover:bg-indigo-50 rounded-lg transition duration-200 shadow-md focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:opacity-75 disabled:cursor-not-allowed">
+                        <span class="font-semibold text-lg text-gray-800">${option.text}</span>
+                    </button>
+                `;
+            }).join('');
+
+            const html = `
+                <p class="text-base text-gray-600 mb-8 font-medium">${scenario.instructions}</p>
+                <div id="options-container" class="space-y-3">${optionsHtml}</div>
+            `;
+            document.getElementById('dynamic-content').innerHTML = html;
+
+            window.handleSelection = function(option, button) {
+                // Disable all buttons
+                document.querySelectorAll('.option-btn').forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.remove('hover:bg-indigo-50', 'focus:ring-4');
+                });
+
+                const isCorrect = option.is_correct;
+
+                // Apply color to the selected button
+                if (isCorrect) {
+                    button.classList.add('border-green-500', 'bg-green-100', 'shadow-xl');
+                } else {
+                    button.classList.add('border-red-500', 'bg-red-100', 'shadow-xl');
+                    
+                    // Highlight the correct answer
+                    document.querySelectorAll('.option-btn').forEach(btn => {
+                        const btnText = btn.querySelector('span').textContent; 
+                        const correctOption = scenario.options.find(opt => opt.is_correct);
+
+                        if (correctOption && btnText === correctOption.text) {
+                            btn.classList.add('border-green-500', 'bg-green-100');
+                        }
+                    });
+                }
+                
+                displayResult(option.message, isCorrect);
+                updateState(option.points);
+            }
+        }
+
+        // --- MAIN APPLICATION LOGIC ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            const index = userData.current_scenario_index;
+
+            // Hide the result container and button on initial load
+            document.getElementById('result-message-container').style.display = 'none';
+            document.getElementById('next-scenario-btn').style.display = 'none';
+
+            if (index === -1) {
+                window.location.href = 'index.html'; 
+            } else if (index === FINAL_SCORE_INDEX) {
+                window.location.href = 'score.html';
+            } else if (index >= 0 && index < TOTAL_SCENARIOS) {
+                const scenario = ALL_SCENARIOS[index];
+                if (scenario.type === 'phishing') {
+                    renderPhishing(scenario);
+                } else if (scenario.type === 'password') {
+                    renderPassword(scenario);
+                } else if (scenario.type === 'mfa') {
+                    renderMFA(scenario);
+                }
+            } else {
+                document.getElementById('dynamic-content').innerHTML = '<p class="text-red-500">Error: Scenario index is out of bounds. Restarting module.</p>';
+                userData.current_scenario_index = -1;
+                localStorage.setItem(USER_ID, JSON.stringify(userData));
+                setTimeout(() => window.location.href = 'index.html', 2000);
+            }
+        });
+    </script>
+</body>
+</html>

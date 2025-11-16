@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cybersecurity Training Module: Introduction</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
+        /* UPDATED: Consistent width across all sections, matching assessment.html */
+        .module-container { max-width: 600px; } 
+        .slide { display: none; } /* Initially hide all slides */
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="module-container bg-white shadow-2xl rounded-xl p-8 md:p-12 w-full">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h1 class="text-3xl font-bold text-indigo-700">Cybersecurity Training Module</h1>
+            <div class="text-xl font-semibold text-gray-700">
+                Score: <span id="score-display">0</span>
+            </div>
+        </div>
+
+        <div id="slideshow-content">
+            
+            <div class="slide text-center"> 
+                <h2 class="text-3xl font-bold text-gray-800 mb-4 text-purple-700">👋 Welcome to Your Cybersecurity Assessment!</h2>
+                <p class="text-xl text-gray-600 mb-8">
+                    This training module covers three essential pillars of digital security.
+                </p>
+                <ul class="list-disc list-inside text-left mx-auto max-w-md space-y-2 text-lg text-gray-700">
+                    <li>Phishing : Recognizing malicious emails.</li>
+                    <li>Passwords : Creating strong, unique credentials.</li>
+                    <li>MFA : Understanding multi-factor protection.</li>
+                </ul>
+                <div class="mt-8 text-sm text-gray-500 italic">
+                    Use the 'Next' button below to continue to the instructions.
+                </div>
+            </div>
+
+            <div class="slide">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4 text-purple-700"> Instructions & Flow</h2>
+                <ol class="list-decimal list-inside space-y-4 text-gray-600 text-justify text-sm">
+                    <li>Module Review (Slides 3-5): Click 'Next' to quickly review the key concepts for Phishing, Passwords, and MFA.</li>
+                    <li>Assessment Start: After the last module slide, the 'Next' button will change to 'Start Assessment'.</li>
+                    <li>Scenarios (3 Total): You will face one scenario for each module topic.</li>
+                    <li>Scoring: Your score will update dynamically based on your correct/incorrect choices. The final score will be displayed at the end.</li>
+                </ol>
+                <p class="mt-6 text-center text-xl font-semibold text-red-600">
+                    Your goal is to maximize your score by making secure decisions.
+                </p>
+            </div>
+
+            <div class="slide">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">1. What is Phishing? </h2>
+                <p class="text-gray-600 text-justify space-y-4">
+                    Phishing relies on social engineering, exploiting human psychology to steal information. The threat actor masquerades as a trusted entity (like a company) to trick the recipient into performing a desired action. Phishing messages often inject a sense of urgency (e.g., threatening account suspension) to compel users to act quickly without scrutiny.
+                </p>
+            </div>
+
+            <div class="slide">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">2. What is Password Security & Protection? </h2>
+                <p class="text-gray-600 text-justify space-y-4">
+                    A strong password must be long (at least 12 characters) and complex. It must also be unique to each account. The most vital supplemental measure is enabling Multi-Factor Authentication (MFA) and using a password manager to securely generate and store complex credentials.
+                </p>
+            </div>
+
+            <div class="slide">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">3. What is Multi-Factor Authentication (MFA)? </h2>
+                <p class="text-gray-600 text-justify space-y-4">
+                    MFA requires at least two distinct forms of proof before granting access, adding extra security layers beyond a single password. These factors are Knowledge, Possession, and Inherence. MFA is critical because it prevents an attacker from gaining access even if they steal your password.
+                </p>
+            </div>
+
+        </div>
+        <div class="mt-8 pt-6 border-t flex justify-between items-center">
+            <div class="flex space-x-2">
+                <button id="prev-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg transition duration-300 disabled:opacity-50">
+                    &larr; Previous
+                </button>
+                <button id="next-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 disabled:opacity-50">
+                    Next &rarr;
+                </button>
+            </div>
+
+            <div class="text-sm font-semibold">
+                Slide <span id="slide-number">1</span> of <span id="total-slides"></span>
+            </div>
+            
+            <button id="start-assessment-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300" style="display: none;">
+                Start Assessment Scenarios
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL CONSTANTS ---
+        const USER_ID = "teacher_user_id_1";
+        
+        // --- SLIDESHOW LOGIC ---
+        let slideIndex = 1; 
+        const slides = document.getElementsByClassName("slide");
+        const totalSlides = slides.length; 
+        
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const startAssessmentBtn = document.getElementById('start-assessment-btn');
+        const slideNumberDisplay = document.getElementById('slide-number');
+        document.getElementById('total-slides').textContent = totalSlides;
+
+        function showSlides(n) {
+            if (n > totalSlides) { slideIndex = totalSlides; }
+            if (n < 1) { slideIndex = 1; }
+            
+            // Hide all slides
+            for (let i = 0; i < totalSlides; i++) {
+                slides[i].style.display = "none";
+            }
+            // Show the current slide
+            slides[slideIndex - 1].style.display = "block";
+            
+            // Update navigation UI
+            // Requirement: Disable/Hide Previous button when on the first slide.
+            prevBtn.disabled = slideIndex === 1;
+            prevBtn.style.visibility = (slideIndex === 1) ? 'hidden' : 'visible'; 
+
+            // Show/Hide Assessment Button based on the last slide
+            if (slideIndex === totalSlides) {
+                startAssessmentBtn.style.display = 'inline-block';
+                nextBtn.style.display = 'none';
+            } else {
+                startAssessmentBtn.style.display = 'none';
+                nextBtn.style.display = 'inline-block';
+            }
+
+            // Update slide number display
+            slideNumberDisplay.textContent = slideIndex;
+        }
+        
+        // Function to move the slide index
+        function plusSlides(n) {
+            showSlides(slideIndex += n);
+        }
+
+        // Attach event listeners to buttons
+        prevBtn.addEventListener('click', () => plusSlides(-1));
+        nextBtn.addEventListener('click', () => plusSlides(1));
+        
+        // --- STATE MANAGEMENT & ASSESSMENT START LOGIC (Original) ---
+        
+        function initializeState() {
+            let userData = JSON.parse(localStorage.getItem(USER_ID));
+            if (!userData) {
+                userData = {
+                    score: 0,
+                    current_scenario_index: -1 // -1 means Module/Start Page
+                };
+                localStorage.setItem(USER_ID, JSON.stringify(userData));
+            }
+            document.getElementById('score-display').textContent = userData.score;
+            return userData;
+        }
+
+        startAssessmentBtn.addEventListener('click', function() {
+            const button = this;
+            button.disabled = true;
+            button.textContent = 'Starting...';
+
+            let userData = initializeState();
+            
+            // Set index to 0 to start the first assessment scenario
+            userData.current_scenario_index = 0; 
+            localStorage.setItem(USER_ID, JSON.stringify(userData));
+            
+            // Navigate to the assessment page
+            window.location.href = 'assessment.html';
+        });
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeState();
+            showSlides(slideIndex); // Initialize the slideshow on load
+        });
+    </script>
+</body>
+</html>
