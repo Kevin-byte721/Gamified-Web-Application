@@ -462,12 +462,7 @@ def get_password_template(scenarioData):
             <input type="password" id="password-input" 
                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg" 
                    placeholder="Enter new password" oninput="updateStrength()">
-        <div class="flex items-center mt-2">
-                <input type="checkbox" id="show-password-checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                <label for="show-password-checkbox" class="ml-2 block text-sm text-gray-900">
-                    Show Password
-                </label>
-            </div>
+                   
             <div id="strength-bar" class="w-full h-3 rounded-full bg-gray-200">
                 <div id="strength-indicator" class="h-full rounded-full transition-all duration-300" style="width: 0%; background-color: #f87171;"></div>
             </div>
@@ -557,15 +552,6 @@ def get_password_template(scenarioData):
         // --- End of Common JavaScript Code ---
 
         // --- Password Scenario Specific JavaScript ---
-        const showPasswordCheckbox = document.getElementById('show-password-checkbox');
-
-        showPasswordCheckbox.addEventListener('change', () => {{
-            if (showPasswordCheckbox.checked) {{
-                passwordInput.type = 'text';
-            }} else {{
-                passwordInput.type = 'password';
-            }}
-        }});
         const reqs = {{
             length: document.getElementById('req-length'),
             upper: document.getElementById('req-upper'),
