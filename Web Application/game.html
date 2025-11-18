@@ -19,7 +19,7 @@
             color: white;
             padding: 20px;
             border-radius: 20px;
-            margin-bottom: 30px;
+            margin-bottom: 15px; /* REDUCED from 30px */
             box-shadow: 0 10px 20px rgba(0, 74, 152, 0.3);
         }
 
@@ -40,21 +40,21 @@
 
         .game-container {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(6, 1fr); /* Change to 6 columns */
             gap: 4%;
-            max-width: 700px;
-            margin: 30px auto;
+            max-width: 1000px; /* Increase max-width to accommodate 6 columns */
+            margin: 30px auto; /* REDUCED from 30px auto */
             perspective: 1000px;
         }
 
         .card {
             width: 100%;
-            height: 160px;
+            height: 140px;
             position: relative;
             transform-style: preserve-3d;
             transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             cursor: pointer;
-            border: 8px solid #ce1126;           /* Red border - Philippine flag */
+            border: 6px solid #ce1126;           /* Red border - Philippine flag */
             border-radius: 20px;
             background: white;
             box-shadow: 0 8px 20px rgba(0,0,0,0.2);
@@ -88,18 +88,39 @@
             background-position: center;
         }
 
+        .card-back .card-image {
+            width: 100%; /* Make the image take 100% of the card-back width */
+            height: auto; /* Maintain aspect ratio */
+            max-height: 80%; /* Limit the height so the name can still show, adjust as needed */
+            object-fit: contain; /* Ensures the whole image is visible without cropping */
+            display: block; /* Remove extra space below the image */
+            margin-bottom: 5px; /* Add a little space between image and name */
+        }
+
+        .card-name {
+            font-size: 0.9em; /* Adjust font size if necessary */
+            text-align: center;
+            color: #fff;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background for readability */
+            padding: 2px 5px;
+            position: absolute; /* Position the name at the bottom */
+            bottom: 5px;
+            left: 0;
+            right: 0;
+        }
+        
         .card-front {
             background: white;
             transform: rotateY(180deg);
-            padding: 10px;
+            /* Removed previous padding */
             box-sizing: border-box;
         }
 
         .card-front img {
-            max-width: 90%;
-            max-height: 90%;
+            max-width: 100%; /* Image fills container width */
+            max-height: 100%; /* Image fills container height */
             object-fit: contain;
-            border-radius: 10px;
+            border-radius: 10px; /* Keep the rounded corners */
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
 
@@ -116,7 +137,7 @@
         }
 
         #reset-button {
-            margin-top: 20px;
+            margin-top: -10%;
             padding: 15px 40px;
             background: #fcd116;
             color: #004a98;
@@ -151,13 +172,74 @@
 
     <script src="script.js"></script>
 
-    <!-- Reset cybersecurity score when this game loads -->
     <script>
         const USER_ID = "teacher_user_id_1";
+        const ASSESSMENT_UNLOCKED_KEY = 'assessmentUnlocked';
+        const TOTAL_PAIRS = 6;
+
+        // --- Original Code to Reset Cybersecurity Score (Kept) ---
         localStorage.setItem(USER_ID, JSON.stringify({
             score: 0,
             current_scenario_index: -1
         }));
+        // ---------------------------------------------------------
+        
+        // Function to check if the game is complete and handle the unlock
+        function checkGameCompletion() {
+            // This relies on the assumption that the main script.js updates the #matches element.
+            const matchesElement = document.getElementById('matches');
+            if (!matchesElement) {
+                console.error("Matches element not found. Cannot check completion.");
+                return;
+            }
+
+            const currentMatches = parseInt(matchesElement.textContent.trim());
+
+            if (currentMatches >= TOTAL_PAIRS) {
+                // Game is COMPLETE!
+                
+                // 1. Set the flag in Local Storage IMMEDIATELY
+                localStorage.setItem(ASSESSMENT_UNLOCKED_KEY, 'true');
+                
+                // 2. Use setTimeout to delay the alert and redirect (2000ms = 2 seconds)
+                setTimeout(() => {
+                    
+                    // Alert the user
+                    alert('Congratulations! You found all the pairs. The Assessment is now unlocked!');
+                    
+                    // Redirect to the main assessment
+                    window.location.href = 'assessment.html'; 
+                    
+                }, 2000); // 💡 MODIFIED: Added 2000ms delay
+            }
+        }
+        
+        // We need to monitor when the score changes. 
+        // Since we don't have access to script.js, we'll try to use a MutationObserver 
+        // to watch for changes to the #matches counter.
+        const matchesObserver = new MutationObserver((mutationsList, observer) => {
+            for(const mutation of mutationsList) {
+                if (mutation.type === 'characterData' || mutation.type === 'childList') {
+                    // Check completion every time the displayed score changes
+                    checkGameCompletion();
+                }
+            }
+        });
+
+        // Start observing the target node for changes in its content
+        const targetNode = document.getElementById('matches');
+        if (targetNode) {
+            matchesObserver.observe(targetNode, { 
+                childList: true, 
+                subtree: true, 
+                characterData: true 
+            });
+        }
+        
+        // Optional: Also ensure we check on page load if somehow the game finished 
+        // and the redirect failed (e.g., if we were debugging).
+        checkGameCompletion();
+
     </script>
 </body>
 </html>

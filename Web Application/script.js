@@ -27,12 +27,6 @@ function handleGameWin() {
     // Show win message (defined in game.html)
     const winMessage = document.getElementById('win-message');
     if (winMessage) winMessage.style.display = 'block';
-
-    // Celebrate and redirect to the beautiful training module
-    setTimeout(() => {
-        alert(`🎉 Amazing! You matched all Filipino heroes!\n\nYou earned ${gamePoints} bonus points!\n\nNow let's begin your Cybersecurity Training Module.`);
-        window.location.href = 'index.html';  // ← Goes to the 5-slide training
-    }, 3000);
 }
 
 // ===============================================

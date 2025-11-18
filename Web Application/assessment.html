@@ -18,27 +18,37 @@
 <body class="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
 
     <div id="scenario-container" class="w-full container-main bg-white shadow-2xl rounded-xl p-6 md:p-8">
-        <div class="flex justify-between items-center border-b pb-4 mb-4">
-            <h1 class="text-2xl font-bold text-gray-800" id="scenario-title">Loading Scenario...</h1>
-            <div class="text-lg font-semibold text-gray-700">
-                Score: <span id="score-display">0</span>
-            </div>
+        <div id="lock-screen" style="display: none;" class="text-center p-10">
+            <h2 class="text-3xl font-bold text-red-600 mb-4">Assessment Locked 🔒</h2>
+            <p class="text-lg text-gray-700 mb-6">You must first complete the **PH Cyber Heroes Memory Match** game to unlock the assessment.</p>
+            <a href="game.html" class="action-button bg-yellow-500 hover:bg-yellow-600 text-gray-800 font-bold">
+                Go to Game
+            </a>
         </div>
         
-        <div id="dynamic-content">
+        <div id="assessment-content" style="display: none;">
+            <div class="flex justify-between items-center border-b pb-4 mb-4">
+                <h1 class="text-2xl font-bold text-gray-800" id="scenario-title">Loading Scenario...</h1>
+                <div class="text-lg font-semibold text-gray-700">
+                    Score: <span id="score-display">0</span>
+                </div>
+            </div>
+            
+            <div id="dynamic-content">
             </div>
 
-        <div id="result-message-container" 
-             class="mt-6 p-4 rounded-lg font-bold text-sm" 
-             style="display: none;">
-             
-            <div class="flex items-center justify-between">
-                <span id="result-message-text"></span>
+            <div id="result-message-container" 
+                class="mt-6 p-4 rounded-lg font-bold text-sm" 
+                style="display: none;">
                 
-                <button id="next-scenario-btn" class="action-button bg-indigo-600 hover:bg-indigo-700 text-white flex-shrink-0 ml-4" 
-                        style="display: none;">
-                    Next Scenario
-                </button>
+                <div class="flex items-center justify-between">
+                    <span id="result-message-text"></span>
+                    
+                    <button id="next-scenario-btn" class="action-button bg-indigo-600 hover:bg-indigo-700 text-white flex-shrink-0 ml-4" 
+                            style="display: none;">
+                        Next Scenario
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -47,6 +57,8 @@
         // --- GLOBAL CONSTANTS ---
         const USER_ID = "teacher_user_id_1";
         const FINAL_SCORE_INDEX = 999;
+        // NEW CONSTANT: Key used by game.html to signal completion
+        const ASSESSMENT_UNLOCKED_KEY = 'assessmentUnlocked';
 
         // SCENARIO DATA (Copied from app.py)
         const SCENARIO_PHISHING = {
@@ -372,6 +384,24 @@
 
         // --- MAIN APPLICATION LOGIC ---
         document.addEventListener('DOMContentLoaded', () => {
+            
+            // 🚨 NEW LOCK CHECK IMPLEMENTATION 🚨
+            const isAssessmentUnlocked = localStorage.getItem(ASSESSMENT_UNLOCKED_KEY);
+            const assessmentContent = document.getElementById('assessment-content');
+            const lockScreen = document.getElementById('lock-screen');
+
+            if (isAssessmentUnlocked !== 'true') {
+                // Assessment is locked. Show the lock screen and hide the content.
+                assessmentContent.style.display = 'none';
+                lockScreen.style.display = 'block';
+                return; // Stop execution of the rest of the script
+            }
+
+            // Assessment is unlocked. Hide the lock screen and show the content.
+            assessmentContent.style.display = 'block';
+            lockScreen.style.display = 'none';
+            // END OF NEW LOCK CHECK
+            
             loadState();
             const index = userData.current_scenario_index;
 
@@ -380,7 +410,7 @@
             document.getElementById('next-scenario-btn').style.display = 'none';
 
             if (index === -1) {
-                window.location.href = 'index.html'; 
+                window.location.href = 'game.html'; 
             } else if (index === FINAL_SCORE_INDEX) {
                 window.location.href = 'score.html';
             } else if (index >= 0 && index < TOTAL_SCENARIOS) {
@@ -393,12 +423,16 @@
                     renderMFA(scenario);
                 }
             } else {
+                // Error condition: Scenario index is out of bounds.
                 document.getElementById('dynamic-content').innerHTML = '<p class="text-red-500">Error: Scenario index is out of bounds. Restarting module.</p>';
+                // Reset user data to force a restart from the beginning of the module
                 userData.current_scenario_index = -1;
                 localStorage.setItem(USER_ID, JSON.stringify(userData));
-                setTimeout(() => window.location.href = 'index.html', 2000);
+                // Redirect to the game (start of the module) 
+                setTimeout(() => window.location.href = 'game.html', 2000); // 💡 MODIFIED: Redirects to game.html
             }
         });
+        
     </script>
 </body>
 </html>
