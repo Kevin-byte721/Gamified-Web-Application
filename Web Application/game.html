@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PH Cyber Heroes Memory Match PH</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(to bottom, #e6f0ff, #ffffff);
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #004a98; /* Philippine blue */
+            color: white;
+            padding: 20px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px rgba(0, 74, 152, 0.3);
+        }
+
+        h1 {
+            font-size: 3em;
+            margin: 0;
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
+        }
+
+        .subtitle {
+            font-size: 1.4em;
+            color: #fcd116; /* Philippine yellow */
+            margin: 15px 0;
+            font-weight: bold;
+        }
+
+        .game-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4%;
+            max-width: 700px;
+            margin: 30px auto;
+            perspective: 1000px;
+        }
+
+        .card {
+            width: 100%;
+            height: 160px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            cursor: pointer;
+            border: 8px solid #ce1126;           /* Red border - Philippine flag */
+            border-radius: 20px;
+            background: white;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched {
+            cursor: default;
+            animation: glowPulse 2s infinite alternate;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #004a98, #ce1126);
+            background-image: url('images/card_back.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .card-front {
+            background: white;
+            transform: rotateY(180deg);
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .card-front img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .info-panel {
+            margin-top: 40px;
+            font-size: 1.5em;
+            color: #004a98;
+            font-weight: bold;
+        }
+
+        #matches {
+            color: #ce1126;
+            font-size: 1.3em;
+        }
+
+        #reset-button {
+            margin-top: 20px;
+            padding: 15px 40px;
+            background: #fcd116;
+            color: #004a98;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.3em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 15px rgba(252, 209, 22, 0.4);
+            transition: all 0.3s;
+        }
+
+        #reset-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(252, 209, 22, 0.6);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>PH Cyber Heroes Memory Match PH</h1>
+        <div class="subtitle">Find all the pairs to become a true Cyber Hero!</div>
+    </header>
+
+    <div class="game-container"></div>
+
+    <div class="info-panel">
+        <p>Pairs Found: <span id="matches">0</span> / 6</p>
+        <button id="reset-button">Reset Game</button>
+    </div>
+
+    <script src="script.js"></script>
+
+    <!-- Reset cybersecurity score when this game loads -->
+    <script>
+        const USER_ID = "teacher_user_id_1";
+        localStorage.setItem(USER_ID, JSON.stringify({
+            score: 0,
+            current_scenario_index: -1
+        }));
+    </script>
+</body>
+</html>

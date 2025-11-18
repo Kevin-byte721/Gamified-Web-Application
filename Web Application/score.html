@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Score</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; }
+        .score-card { 
+            max-width: 450px; 
+            background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="score-card text-white shadow-2xl rounded-xl p-8 md:p-10 w-full text-center"> 
+        <h1 class="text-4xl font-extrabold mb-3">Assessment Complete!</h1> 
+        <p class="text-lg mb-6">You have successfully finished all 3 cybersecurity scenarios.</p> 
+        
+        <div class="my-8 p-6 bg-white/20 rounded-lg backdrop-blur-sm"> 
+            <p class="text-xl font-semibold mb-2">Your Final Score:</p> 
+            <p class="text-6xl font-black" id="final-score">0</p> 
+            <p class="text-base mt-2">Points Earned</p> 
+        </div>
+        
+        <p class="text-base mb-6"> This score reflects your performance in identifying threats, creating secure credentials, and understanding modern authentication.
+            You can restart the assessment to try again.
+        </p>
+        
+        <button onclick="restartAssessment()" class="bg-white text-purple-700 hover:bg-gray-100 font-bold py-3 px-8 rounded-lg shadow-xl transition duration-300 transform hover:scale-105">
+            Restart Assessment
+        </button>
+    </div>
+
+    <script>
+        const USER_ID = "teacher_user_id_1";
+        const TOTAL_SCENARIOS = 3;
+        
+        function loadScoreAndReset() {
+            let userData = JSON.parse(localStorage.getItem(USER_ID));
+            let finalScore = 0;
+
+            if (userData) {
+                finalScore = userData.score;
+                
+                // Reset user data for next playthrough
+                userData.score = 0;
+                userData.current_scenario_index = -1;
+                localStorage.setItem(USER_ID, JSON.stringify(userData));
+            }
+
+            document.getElementById('final-score').textContent = finalScore;
+            // The score count in the paragraph is static (3) for simplicity, as it's a constant.
+        }
+
+        function restartAssessment() {
+            // Navigate back to the module page (index.html)
+            window.location.href = 'index.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', loadScoreAndReset);
+    </script>
+</body>
+</html>
