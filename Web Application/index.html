@@ -8,9 +8,8 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
-        /* UPDATED: Consistent width across all sections, matching assessment.html */
         .module-container { max-width: 600px; } 
-        .slide { display: none; } /* Initially hide all slides */
+        .slide { display: none; }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
@@ -23,9 +22,8 @@
         </div>
 
         <div id="slideshow-content">
-            
             <div class="slide text-center"> 
-                <h2 class="text-3xl font-bold text-gray-800 mb-4 text-purple-700">👋 Welcome to Your Cybersecurity Assessment!</h2>
+                <h2 class="text-3xl font-bold text-gray-800 mb-4 text-purple-700">Welcome to Your Cybersecurity Assessment!</h2>
                 <p class="text-xl text-gray-600 mb-8">
                     This training module covers three essential pillars of digital security.
                 </p>
@@ -72,15 +70,15 @@
                     MFA requires at least two distinct forms of proof before granting access, adding extra security layers beyond a single password. These factors are Knowledge, Possession, and Inherence. MFA is critical because it prevents an attacker from gaining access even if they steal your password.
                 </p>
             </div>
-
         </div>
+
         <div class="mt-8 pt-6 border-t flex justify-between items-center">
             <div class="flex space-x-2">
                 <button id="prev-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg transition duration-300 disabled:opacity-50">
-                    &larr; Previous
+                    ← Previous
                 </button>
                 <button id="next-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 disabled:opacity-50">
-                    Next &rarr;
+                    Next →
                 </button>
             </div>
 
@@ -95,10 +93,7 @@
     </div>
 
     <script>
-        // --- GLOBAL CONSTANTS ---
         const USER_ID = "teacher_user_id_1";
-        
-        // --- SLIDESHOW LOGIC ---
         let slideIndex = 1; 
         const slides = document.getElementsByClassName("slide");
         const totalSlides = slides.length; 
@@ -110,22 +105,17 @@
         document.getElementById('total-slides').textContent = totalSlides;
 
         function showSlides(n) {
-            if (n > totalSlides) { slideIndex = totalSlides; }
-            if (n < 1) { slideIndex = 1; }
+            if (n > totalSlides) slideIndex = totalSlides;
+            if (n < 1) slideIndex = 1;
             
-            // Hide all slides
             for (let i = 0; i < totalSlides; i++) {
                 slides[i].style.display = "none";
             }
-            // Show the current slide
             slides[slideIndex - 1].style.display = "block";
             
-            // Update navigation UI
-            // Requirement: Disable/Hide Previous button when on the first slide.
             prevBtn.disabled = slideIndex === 1;
             prevBtn.style.visibility = (slideIndex === 1) ? 'hidden' : 'visible'; 
 
-            // Show/Hide Assessment Button based on the last slide
             if (slideIndex === totalSlides) {
                 startAssessmentBtn.style.display = 'inline-block';
                 nextBtn.style.display = 'none';
@@ -134,53 +124,40 @@
                 nextBtn.style.display = 'inline-block';
             }
 
-            // Update slide number display
             slideNumberDisplay.textContent = slideIndex;
         }
         
-        // Function to move the slide index
         function plusSlides(n) {
             showSlides(slideIndex += n);
         }
 
-        // Attach event listeners to buttons
         prevBtn.addEventListener('click', () => plusSlides(-1));
         nextBtn.addEventListener('click', () => plusSlides(1));
         
-        // --- STATE MANAGEMENT & ASSESSMENT START LOGIC (Original) ---
-        
-        function initializeState() {
-            let userData = JSON.parse(localStorage.getItem(USER_ID));
-            if (!userData) {
-                userData = {
-                    score: 0,
-                    current_scenario_index: -1 // -1 means Module/Start Page
-                };
-                localStorage.setItem(USER_ID, JSON.stringify(userData));
-            }
-            document.getElementById('score-display').textContent = userData.score;
-            return userData;
-        }
-
+        // <<< CRITICAL CHANGE: Sets intro_completed flag >>>
         startAssessmentBtn.addEventListener('click', function() {
-            const button = this;
-            button.disabled = true;
-            button.textContent = 'Starting...';
+            this.disabled = true;
+            this.textContent = 'Starting...';
 
-            let userData = initializeState();
-            
-            // Set index to 0 to start the first assessment scenario
-            userData.current_scenario_index = 0; 
+            let userData = JSON.parse(localStorage.getItem(USER_ID)) || { score: 0, current_scenario_index: -1 };
+
+            userData.intro_completed = true;       // This unlocks assessment.html
+            userData.current_scenario_index = 0;   // Start first scenario
+            userData.score = 0;                    // Reset score on new attempt (optional)
+
             localStorage.setItem(USER_ID, JSON.stringify(userData));
-            
-            // Navigate to the assessment page
+            document.getElementById('score-display').textContent = '0';
+
             window.location.href = 'assessment.html';
         });
 
-        // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
-            initializeState();
-            showSlides(slideIndex); // Initialize the slideshow on load
+            const stored = localStorage.getItem(USER_ID);
+            if (stored) {
+                const userData = JSON.parse(stored);
+                document.getElementById('score-display').textContent = userData.score || 0;
+            }
+            showSlides(slideIndex);
         });
     </script>
 </body>
