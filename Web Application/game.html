@@ -184,36 +184,22 @@
         }));
         // ---------------------------------------------------------
         
-        // Function to check if the game is complete and handle the unlock
-        function checkGameCompletion() {
-            // This relies on the assumption that the main script.js updates the #matches element.
-            const matchesElement = document.getElementById('matches');
-            if (!matchesElement) {
-                console.error("Matches element not found. Cannot check completion.");
-                return;
-            }
+        function handleGameWin() {
+            const gamePoints = matchesFound * POINTS_PER_MATCH;
+            let user = JSON.parse(localStorage.getItem('cyber_student') || '{"score":0, "gamePoints":0}');
+            user.gamePoints = gamePoints;
+            user.score = gamePoints;
+            localStorage.setItem('cyber_student', JSON.stringify(user));
 
-            const currentMatches = parseInt(matchesElement.textContent.trim());
+            // === THIS LINE UNLOCKS THE ASSESSMENT ===
+            localStorage.setItem('assessmentUnlocked', 'true');
+            // =======================================
 
-            if (currentMatches >= TOTAL_PAIRS) {
-                // Game is COMPLETE!
-                
-                // 1. Set the flag in Local Storage IMMEDIATELY
-                localStorage.setItem(ASSESSMENT_UNLOCKED_KEY, 'true');
-                
-                // 2. Use setTimeout to delay the alert and redirect (2000ms = 2 seconds)
-                setTimeout(() => {
-                    
-                    // Alert the user
-                    alert('Congratulations! You found all the pairs. The Assessment is now unlocked!');
-                    
-                    // Redirect to the main assessment
-                    window.location.href = 'assessment.html'; 
-                    
-                }, 2000); // 💡 MODIFIED: Added 2000ms delay
-            }
+            setTimeout(() => {
+                alert(`🎉 Amazing! You matched all Filipino heroes!\nNow let's begin your Cybersecurity Training Module.`);
+                window.location.href = 'index.html';
+            }, 3000);
         }
-        
         // We need to monitor when the score changes. 
         // Since we don't have access to script.js, we'll try to use a MutationObserver 
         // to watch for changes to the #matches counter.
