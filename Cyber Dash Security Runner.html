@@ -1,4 +1,4 @@
-<!DOCTYPE ahtml>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -46,7 +46,7 @@
             color: #555;
         }
 
-        /* --- MODAL STYLES (Applies to #messageBox, #startMenu, #studyMode, #moduleMode) --- */
+        /* --- MODAL STYLES (Applies to #messageBox, #startMenu, #studyMode) --- */
         .full-overlay-modal {
             position: absolute;
             top: 0;
@@ -118,21 +118,29 @@
             box-shadow: 4px 4px 0px #333;
             transition: all 0.1s;
             margin-bottom: 10px;
+            /* Ensure all buttons are focusable for accessibility */
+            outline: none; 
+        }
+        
+        /* Focus state for keyboard navigation */
+        .button-style:focus, .option-button:focus {
+            /* Updated for Black/White high-contrast focus glow */
+            box-shadow: 
+                0 0 0 5px #fff,  /* White inner glow for contrast */
+                0 0 0 8px #000,  /* Black outer ring */
+                4px 4px 0px #333; /* Original shadow preserved */
+            transform: translate(0, 0); 
         }
         
         /* Specific button colors for modes */
         #quizModeButton { background-color: #007bff; }
         #studyModeButton { background-color: #ff9800; }
-        #moduleModeButton { background-color: #f39c12; } /* New: Amber/Orange for Scenario Mode */
         
         #quizModeButton:hover { background-color: #0056b3; }
         #studyModeButton:hover { background-color: #e68900; }
-        #moduleModeButton:hover { background-color: #e08e0b; }
         
         #exitStudyButton { background-color: #777; }
         #exitStudyButton:hover { background-color: #555; }
-        #exitModuleButton { background-color: #999; } /* Darker gray for module exit */
-        #exitModuleButton:hover { background-color: #666; }
         
         /* Game Over Buttons */
         /* Margin-top removed to rely on flex gap below */
@@ -141,7 +149,6 @@
         /* Margin-top removed to rely on flex gap below */
         #backToMenuButton { background-color: #007bff; margin-top: 0; } 
         #backToMenuButton:hover { background-color: #0056b3; }
-
 
         .button-style:hover {
             background-color: #45a049;
@@ -166,6 +173,7 @@
             line-height: 1.2;
             width: 100%;
             white-space: normal; 
+            outline: none; /* remove default focus ring */
         }
 
         .option-button:hover:not(:disabled) {
@@ -186,7 +194,6 @@
             background-color: #ff0000 !important; 
             color: white;
         }
-
 
         #gameOverScreen {
             position: absolute;
@@ -219,30 +226,30 @@
         }
         
         /* Study Mode Specific Styles */
-        #studyContent, #scenarioContent {
+        #studyContent {
             background-color: #f0f8ff; /* Light blue background */
             padding: 20px;
             border: 3px dashed #007bff;
             margin-top: 15px;
             min-height: 150px;
         }
-        #cisIndex, #scenarioIndex {
+        #cisIndex {
             font-size: 10px;
             margin-bottom: 5px;
             color: #007bff;
         }
-        #cisTitle, #scenarioTitle {
+        #cisTitle {
             font-size: 14px;
             color: #000080; /* Dark blue */
             margin-bottom: 10px;
             text-transform: uppercase;
         }
-        #cisDescription, #scenarioText {
+        #cisDescription {
             font-size: 10px;
             line-height: 1.6;
             text-align: left;
         }
-        #studyInstructions, #moduleInstructions {
+        #studyInstructions {
              font-size: 8px;
              margin-top: 20px;
              color: #666;
@@ -283,10 +290,10 @@
                 padding-left: 10px; 
                 padding-right: 10px;
             }
-            #cisTitle, #scenarioTitle {
+            #cisTitle {
                 font-size: 12px;
             }
-            #cisDescription, #scenarioText {
+            #cisDescription {
                 font-size: 8px;
             }
         }
@@ -305,20 +312,21 @@
             <div class="modal-content">
                 <h3 class="modal-title">SELECT MODE</h3>
                 <p class="modal-text" style="margin-bottom: 25px;">Choose your operation type.</p>
-                <div style="display: flex; flex-direction: column; gap: 15px;">
-                    <button id="quizModeButton" class="button-style" style="margin-top: 0;">
+                <div id="startMenuButtons" style="display: flex; flex-direction: column; gap: 15px;">
+                    <!-- Added tabindex="0" to all interactive buttons for keyboard focus -->
+                    <button id="quizModeButton" class="button-style" style="margin-top: 0;" tabindex="0">
                         Quiz Mode (Start)
                     </button>
-                    <button id="studyModeButton" class="button-style" style="margin-top: 0;">
+                    <button id="studyModeButton" class="button-style" style="margin-top: 0;" tabindex="0">
                         Study Mode (CIS Controls)
-                    </button>
-                    <!-- NEW BUTTON FOR MODULE MODE -->
-                    <button id="moduleModeButton" class="button-style" style="margin-top: 0;">
-                        Module Mode (Scenario)
                     </button>
                 </div>
                 <p id="startInstructions" class="modal-text" style="font-size: 10px; margin-top: 30px; color: #666;">
-                    <!-- Instructions updated via JS on load -->
+                    Quiz Mode: Jump to avoid vulnerabilities and answer questions at checkpoints.
+                    <br><br>
+                    Study Mode: Review foundational CIS Controls.
+                    <br><br>
+                    Use &uarr; / &darr; to navigate menus and ENTER to select.
                 </p>
             </div>
         </div>
@@ -338,32 +346,9 @@
                     Use &larr; and &rarr; arrow keys to navigate. Press ENTER or the button below to exit.
                 </p>
                 
-                <button id="exitStudyButton" class="button-style">Exit Study Mode</button>
+                <button id="exitStudyButton" class="button-style" tabindex="0">Exit Study Mode</button>
             </div>
         </div>
-        
-        <!-- MODULE MODE SCREEN (NEW) -->
-        <div id="moduleMode" class="full-overlay-modal">
-            <div class="modal-content">
-                <h3 class="modal-title" style="color: #f39c12;">CYBER SCENARIO MODULE</h3>
-                
-                <div id="scenarioContent">
-                    <div id="scenarioIndex">SCENARIO X OF Y</div>
-                    <div id="scenarioTitle" style="font-size: 14px; color: #333; margin: 10px 0;"></div>
-                    <div id="scenarioText" style="font-size: 10px; line-height: 1.6; text-align: left;"></div>
-                    <div id="scenarioQuestion" style="font-size: 10px; line-height: 1.6; text-align: left; font-weight: bold; margin-top: 15px; color: #ff0000;"></div>
-                </div>
-
-                <p id="moduleInstructions" style="font-size: 8px; margin-top: 20px; color: #666;">
-                    Use &larr; and &rarr; arrow keys to navigate scenarios. Press the button to reveal the solution.
-                </p>
-                
-                <!-- Reveal Button will be injected here by JS -->
-                
-                <button id="exitModuleButton" class="button-style" style="background-color: #999;">Exit Module Mode</button>
-            </div>
-        </div>
-
 
         <!-- Cybersecurity Modal / Pause Screen -->
         <div id="messageBox" class="full-overlay-modal">
@@ -380,7 +365,7 @@
 
                 <div id="feedbackText" class="modal-answer modal-text" style="display: none;"></div>
                 
-                <button id="continueButton" class="button-style" style="display: none;">Continue Run</button>
+                <button id="continueButton" class="button-style" style="display: none;" tabindex="0">Continue Run</button>
             </div>
         </div>
 
@@ -390,8 +375,8 @@
             <p>You tripped over a vulnerability at <span id="finalScore">0</span> points.</p>
             
             <div class="game-over-buttons">
-                <button id="restartButton" class="button-style">Retry Scan</button>
-                <button id="backToMenuButton" class="button-style">Back to Main Menu</button>
+                <button id="restartButton" class="button-style" tabindex="0">Retry Scan</button>
+                <button id="backToMenuButton" class="button-style" tabindex="0">Back to Main Menu</button>
             </div>
         </div>
     </div>
@@ -405,23 +390,15 @@
         
         // Modal & Screen elements
         const startMenu = document.getElementById('startMenu');
+        const startMenuButtons = document.getElementById('startMenuButtons');
         const quizModeButton = document.getElementById('quizModeButton');
         const studyModeButton = document.getElementById('studyModeButton');
-        const moduleModeButton = document.getElementById('moduleModeButton'); // New reference
         
         const studyMode = document.getElementById('studyMode');
         const cisIndex = document.getElementById('cisIndex');
         const cisTitle = document.getElementById('cisTitle');
         const cisDescription = document.getElementById('cisDescription');
         const exitStudyButton = document.getElementById('exitStudyButton');
-        
-        const moduleMode = document.getElementById('moduleMode'); // New modal reference
-        const scenarioContent = document.getElementById('scenarioContent');
-        const scenarioIndex = document.getElementById('scenarioIndex');
-        const scenarioTitle = document.getElementById('scenarioTitle');
-        const scenarioText = document.getElementById('scenarioText');
-        const scenarioQuestion = document.getElementById('scenarioQuestion');
-        const exitModuleButton = document.getElementById('exitModuleButton');
         
         const messageBox = document.getElementById('messageBox');
         const modalTitle = document.getElementById('modalTitle');
@@ -433,13 +410,14 @@
         const feedbackText = document.getElementById('feedbackText');
         const continueButton = document.getElementById('continueButton');
         const gameOverScreen = document.getElementById('gameOverScreen');
+        const gameOverButtons = gameOverScreen.querySelector('.game-over-buttons');
         const restartButton = document.getElementById('restartButton');
         const backToMenuButton = document.getElementById('backToMenuButton');
         const finalScoreSpan = document.getElementById('finalScore');
         
         // Use a persistent object for game state
         let gameState = {
-            mode: 'start', // 'start', 'quiz', 'study', or 'module'
+            mode: 'start', // 'start', 'quiz', or 'study'
             score: 0,
             highScore: localStorage.getItem('cyberDashHighScore') || 0,
             isRunning: false,
@@ -452,9 +430,7 @@
             checkpointsCleared: 0,
             currentQuestionSet: [],
             // Study Mode State
-            currentCisIndex: 0,
-            // Module Mode State
-            currentModuleIndex: 0,
+            currentCisIndex: 0
         };
 
         const GROUND_Y = canvas.height - 30;
@@ -468,7 +444,7 @@
         const OBSTACLE_COLOR = '#8B0000'; 
         const GROUND_COLOR = '#333';
         
-        // --- GAME ENTITIES (Unchanged Classes) ---
+        // --- GAME ENTITIES ---
 
         class Dinosaur {
             constructor() {
@@ -510,7 +486,7 @@
         }
 
         class Obstacle {
-            constructor(width, height) {
+             constructor(width, height) {
                 this.x = canvas.width;
                 this.y = GROUND_Y - height;
                 this.width = width;
@@ -529,7 +505,6 @@
         }
 
         // --- CYBERSECURITY DATA (Quiz Mode) ---
-
         const CYBER_TOPICS = [
             {
                 topic: "Phishing Awareness",
@@ -572,7 +547,7 @@
             },
             {
                 topic: "Software Updates & Patching",
-                cisControl: "CIS Control 7: Vulnerability Management",
+                cisControl: "CIS Control 7: Continuous Vulnerability Management",
                 question: "What is the main reason security experts recommend immediate software updates?",
                 options: [
                     "To introduce new graphical features.",
@@ -640,59 +615,96 @@
         
         // --- CIS CONTROL DATA (Study Mode) ---
         const CIS_CONTROLS_STUDY = [
-            { 
-                number: 6, 
-                title: "CIS Control 6: Access Control Management", 
-                description: "This control focuses on managing user identities and the authorization to access system resources. Implement strong account management processes, use unique passwords for all systems, and utilize Multi-Factor Authentication (MFA) to prevent unauthorized entry."
-            },
-            { 
-                number: 7, 
-                title: "CIS Control 7: Vulnerability Management", 
-                description: "Proactively identify, prioritize, and remediate vulnerabilities in operating systems and applications. This includes immediate installation of security patches and updates to close known security holes before attackers can exploit them."
-            },
-            { 
-                number: 10, 
-                title: "CIS Control 10: Malware Defenses", 
-                description: "Prevent or control the installation, spread, and execution of malicious software. Deploy and manage anti-malware software on all devices and ensure all incoming data (email, file downloads) is scanned for threats."
-            },
-            { 
-                number: 13, 
-                title: "CIS Control 13: Network Monitoring and Defense", 
-                description: "Monitor and control network ports, protocols, and services. Use network firewalls and deploy intrusion detection/prevention systems. When operating on public networks (like Wi-Fi), always use a Virtual Private Network (VPN)."
-            },
-            { 
-                number: 14, 
-                title: "CIS Control 14: Security Awareness and Skills Training", 
-                description: "Develop and maintain security awareness training for all personnel to minimize human error. Train employees to recognize social engineering tactics like phishing and baiting, as well as proper handling of sensitive data."
-            }
-        ];
-        
-        // --- MODULE SCENARIOS DATA (Module Mode) ---
-        const MODULE_SCENARIOS = [
-            {
-                number: 1,
-                title: "The Urgent IT Ticket Scam",
-                description: "You receive an email claiming to be from IT Support. It says your account is locked due to 'suspicious activity' and you must click a link immediately to verify your password and unlock it. The email address looks slightly off: 'it-support@companyname.co' instead of 'it-support@companyname.com'.",
-                question: "What is the safest immediate action?",
-                answer: "Do not click the link. Report the email as phishing immediately, then call the official IT support desk using a verified number (not the one in the email) to confirm if your account is truly locked.",
-                control: "CIS Control 14: Security Awareness and Skills Training"
-            },
-            {
-                number: 2,
-                title: "The USB Drive in the Parking Lot",
-                description: "On your way into the office, you find a brand new, unlabeled USB drive lying next to your car in the parking lot. You are curious to know what files might be on it.",
-                question: "What should you do with the USB drive?",
-                answer: "Never plug unknown USB drives into your work or personal computer. These drives are often 'bait' loaded with malware. Turn it over to your security team or discard it according to company policy.",
-                control: "CIS Control 10: Malware Defenses"
-            },
-            {
-                number: 3,
-                title: "The Public Wi-Fi Password Leak",
-                description: "You're traveling and decide to work from an airport lounge. You successfully connect to the lounge's free Wi-Fi and open your banking website to check a balance. You notice the website address starts with 'http://' instead of 'https://'.",
-                question: "What is the security risk, and how should you stop?",
-                answer: "The risk is that 'http://' means your data is unencrypted, making it vulnerable to interception (sniffing) on the public network. Stop immediately and only proceed with sensitive activities (like banking) after connecting via a Virtual Private Network (VPN).",
-                control: "CIS Control 13: Network Monitoring and Defense"
-            }
+        {
+            number: 1,
+            title: "CIS Control 1: Inventory and Control of Enterprise Assets",
+            description: "Identify, track, and manage all hardware assets connected to the network. Unmanaged devices pose security risks and may be exploited by attackers. Maintain an accurate inventory to ensure only authorized systems are granted access to enterprise resources."
+        },
+        {
+            number: 2,
+            title: "CIS Control 2: Inventory and Control of Software Assets",
+            description: "Maintain a complete inventory of authorized software. Prevent installation or execution of unauthorized applications. Regularly audit software usage and licensing to reduce vulnerabilities and ensure compliance with organizational policies and security standards across all systems."
+        },
+        {
+            number: 3,
+            title: "CIS Control 3: Data Protection",
+            description: "Protect sensitive data through classification, encryption, and access controls. Ensure secure handling, storage, and disposal of information. Implement safeguards for data in transit and at rest to prevent unauthorized access, leaks, or breaches across enterprise systems."
+        },
+        {
+            number: 4,
+            title: "CIS Control 4: Secure Configuration of Enterprise Assets and Software",
+            description: "Establish and maintain secure configurations for hardware and software. Disable unnecessary services, ports, and default accounts. Regularly review and update configurations to reduce attack surfaces and ensure systems operate within defined security baselines."
+        },
+        {
+            number: 5,
+            title: "CIS Control 5: Account Management",
+            description: "Manage user accounts with centralized tools. Create, monitor, and remove accounts based on role and need. Enforce least privilege principles and regularly audit account activity to prevent unauthorized access or privilege escalation within enterprise environments."
+        },
+        {
+            number: 6,
+            title: "CIS Control 6: Access Control Management",
+            description: "Control access to systems and data using strong authentication. Implement Multi-Factor Authentication (MFA), enforce unique credentials, and restrict access based on roles. Monitor access logs to detect anomalies and prevent unauthorized entry into critical systems."
+        },
+        {
+            number: 7,
+            title: "CIS Control 7: Continuous Vulnerability Management",
+            description: "Regularly scan systems for known vulnerabilities. Prioritize and remediate issues based on risk. Apply patches promptly and maintain awareness of emerging threats to reduce exposure and strengthen the organization’s overall security posture."
+        },
+        {
+            number: 8,
+            title: "CIS Control 8: Audit Log Management",
+            description: "Collect, manage, and analyze audit logs from systems and applications. Ensure logs are protected from tampering and retained for investigations. Use centralized logging to detect suspicious activity and support incident response and forensic analysis."
+        },
+        {
+            number: 9,
+            title: "CIS Control 9: Email and Web Browser Protections",
+            description: "Secure email clients and web browsers against threats. Disable unnecessary features, apply filters, and enforce safe browsing practices. Prevent access to malicious content and reduce exposure to phishing, malware, and drive-by downloads through configuration controls."
+        },
+        {
+            number: 10,
+            title: "CIS Control 10: Malware Defenses",
+            description: "Deploy anti-malware solutions across all systems. Scan incoming files, emails, and downloads. Prevent execution of unauthorized software and monitor for signs of infection. Keep malware definitions updated to defend against evolving threats and attack vectors."
+        },
+        {
+            number: 11,
+            title: "CIS Control 11: Data Recovery",
+            description: "Implement reliable backup solutions for critical data. Follow the 3-2-1 rule: three copies, two media types, one offsite. Test recovery procedures regularly to ensure business continuity and minimize data loss during incidents or disasters."
+        },
+        {
+            number: 12,
+            title: "CIS Control 12: Network Infrastructure Management",
+            description: "Secure network devices and configurations. Limit administrative access, disable unused ports, and enforce strong credentials. Monitor changes and maintain documentation to ensure network integrity and reduce risks from misconfigurations or unauthorized modifications."
+        },
+        {
+            number: 13,
+            title: "CIS Control 13: Network Monitoring and Defense",
+            description: "Monitor network traffic for anomalies and threats. Use firewalls, intrusion detection systems, and segmentation to isolate sensitive assets. Analyze logs and alerts to detect attacks early and respond effectively to potential breaches or disruptions."
+        },
+        {
+            number: 14,
+            title: "CIS Control 14: Security Awareness and Skills Training",
+            description: "Educate personnel on cybersecurity risks and best practices. Conduct regular training on phishing, social engineering, and data handling. Reinforce a security-first culture to reduce human error and improve organizational resilience against evolving threats."
+        },
+        {
+            number: 15,
+            title: "CIS Control 15: Service Provider Management",
+            description: "Assess and monitor third-party service providers. Ensure contracts include security requirements and data protection clauses. Review vendor practices regularly to confirm compliance and reduce risks from external dependencies or supply chain vulnerabilities."
+        },
+        {
+            number: 16,
+            title: "CIS Control 16: Application Software Security",
+            description: "Secure applications throughout their lifecycle. Apply secure coding practices, conduct code reviews, and test for vulnerabilities. Ensure updates are applied promptly and that software behaves as intended without exposing sensitive data or system functions."
+        },
+        {
+            number: 17,
+            title: "CIS Control 17: Incident Response Management",
+            description: "Develop and maintain an incident response plan. Define roles, communication protocols, and escalation procedures. Conduct tabletop exercises and post-incident reviews to improve readiness and minimize impact from security breaches or operational disruptions."
+        },
+        {
+            number: 18,
+            title: "CIS Control 18: Penetration Testing",
+            description: "Conduct regular penetration tests to identify weaknesses. Simulate real-world attacks to evaluate defenses. Use findings to improve security controls, validate remediation efforts, and ensure systems can withstand targeted exploitation attempts."
+        }
         ];
 
 
@@ -700,6 +712,34 @@
         let obstacles = [];
         let lastTimestamp = 0;
         let currentTopic = null; 
+
+        // --- KEYBOARD NAVIGATION HELPERS ---
+
+        function getFocusableElements(container) {
+            return container.querySelectorAll('button:not([disabled])');
+        }
+
+        function setFocus(element) {
+            if (element && element.focus) {
+                element.focus();
+            }
+        }
+
+        function handleMenuNavigation(key, container) {
+            const focusable = getFocusableElements(container);
+            const currentFocus = document.activeElement;
+            let currentIndex = Array.from(focusable).indexOf(currentFocus);
+
+            if (key === 'ArrowUp') {
+                currentIndex = (currentIndex > 0) ? currentIndex - 1 : focusable.length - 1;
+                setFocus(focusable[currentIndex]);
+            } else if (key === 'ArrowDown') {
+                currentIndex = (currentIndex < focusable.length - 1) ? currentIndex + 1 : 0;
+                setFocus(focusable[currentIndex]);
+            } else if (key === 'Enter' && currentFocus.tagName === 'BUTTON') {
+                currentFocus.click();
+            }
+        }
 
         // --- UTILITY: SHUFFLE AND SELECT ---
         
@@ -722,11 +762,16 @@
             messageBox.style.display = 'none';
             gameOverScreen.style.display = 'none';
             studyMode.style.display = 'none';
-            moduleMode.style.display = 'none'; // New: Hide module mode
 
             // Show start menu
             startMenu.style.display = 'flex';
             
+            // Set initial focus for keyboard navigation
+            const startButtons = getFocusableElements(startMenuButtons);
+            if (startButtons.length > 0) {
+                setFocus(startButtons[0]);
+            }
+
             // Reset game state for a clean start
             gameState.isRunning = false;
             gameState.isPausedBySystem = false;
@@ -736,13 +781,13 @@
             gameState.highScore = localStorage.getItem('cyberDashHighScore') || 0;
             scoreDisplay.innerHTML = `Score: 0 | High: ${gameState.highScore}`;
             
-            // Update instructions for the new mode
+            // Update instructions for the available modes
             document.getElementById('startInstructions').innerHTML = `
                 Quiz Mode: Jump to avoid vulnerabilities and answer questions at checkpoints.
                 <br><br>
                 Study Mode: Review foundational CIS Controls.
                 <br><br>
-                Module Mode: Explore real-world cyber security scenarios and best practices.
+                Use &uarr; / &darr; to navigate menus and ENTER to select.
             `;
         }
         
@@ -758,6 +803,9 @@
             startMenu.style.display = 'none';
             studyMode.style.display = 'flex';
             displayCisControl(gameState.currentCisIndex);
+            
+            // Set initial focus on the exit button
+            setFocus(exitStudyButton);
         }
         
         function exitStudyMode() {
@@ -765,81 +813,35 @@
             showStartMenu();
         }
         
-        function startModuleMode() {
-            gameState.mode = 'module';
-            gameState.currentModuleIndex = 0;
-            startMenu.style.display = 'none';
-            moduleMode.style.display = 'flex'; // Show the new modal
-            displayScenario(gameState.currentModuleIndex);
-        }
-        
-        function exitModuleMode() {
-            moduleMode.style.display = 'none';
-            showStartMenu();
-        }
-        
         function displayCisControl(index) {
-            const control = CIS_CONTROLS_STUDY[index];
-            if (!control) {
-                exitStudyMode(); // Should not happen if boundaries are checked
-                return;
-            }
-            
-            cisIndex.textContent = `CIS CONTROL ${index + 1} OF ${CIS_CONTROLS_STUDY.length}`;
-            cisTitle.textContent = control.title;
-            cisDescription.textContent = control.description;
-        }
-        
-        function displayScenario(index) {
-            const scenario = MODULE_SCENARIOS[index];
-            if (!scenario) {
-                exitModuleMode();
-                return;
-            }
-            
-            // Update Text Content
-            scenarioIndex.textContent = `SCENARIO ${index + 1} OF ${MODULE_SCENARIOS.length}`;
-            scenarioTitle.textContent = scenario.title;
-            scenarioText.innerHTML = `<strong>Situation:</strong> ${scenario.description} <br><br> <strong>Control Focus:</strong> ${scenario.control}`;
-            scenarioQuestion.textContent = `Question: ${scenario.question}`;
-            
-            // Answer Reveal Logic
-            let answerReveal = document.getElementById('answerReveal');
-            let revealButton = document.getElementById('revealButton');
+    const control = CIS_CONTROLS_STUDY[index];
+    if (!control) {
+        exitStudyMode();
+        return;
+    }
 
-            if (!answerReveal) {
-                answerReveal = document.createElement('div');
-                answerReveal.id = 'answerReveal';
-                answerReveal.style.marginTop = '20px';
-                answerReveal.style.borderTop = '2px dashed #ccc';
-                answerReveal.style.paddingTop = '10px';
-                answerReveal.style.textAlign = 'left';
-                answerReveal.style.fontSize = '10px';
-                answerReveal.style.color = '#006400';
-                scenarioContent.appendChild(answerReveal);
-            }
-            
-            if (!revealButton) {
-                revealButton = document.createElement('button');
-                revealButton.id = 'revealButton';
-                revealButton.classList.add('button-style');
-                revealButton.style.backgroundColor = '#2c3e50'; // Dark color
-                revealButton.style.marginTop = '20px';
-                revealButton.style.fontSize = '10px';
-                revealButton.style.marginBottom = '10px';
-                revealButton.onclick = () => {
-                    const isHidden = answerReveal.style.display === 'none';
-                    answerReveal.style.display = isHidden ? 'block' : 'none';
-                    revealButton.textContent = isHidden ? 'Hide Solution' : 'Reveal Solution';
-                };
-                moduleMode.querySelector('.modal-content').insertBefore(revealButton, exitModuleButton);
-            }
+    cisIndex.textContent = `CIS CONTROL ${index + 1} OF ${CIS_CONTROLS_STUDY.length}`;
+    cisTitle.textContent = control.title;
+    cisDescription.textContent = control.description;
 
-            // Reset state and content for the current scenario
-            revealButton.textContent = 'Reveal Solution';
-            answerReveal.style.display = 'none'; 
-            answerReveal.innerHTML = `<strong>Solution:</strong> ${scenario.answer}`;
-        }
+    // Remove any previously added image
+    const existingImage = document.getElementById('cisImage');
+    if (existingImage) {
+        existingImage.remove();
+    }
+
+    // Conditionally add image for CIS Control 1
+    /*if (control.number === 1) {
+        const img = document.createElement('img');
+        img.src = "https://media.wired.com/photos/5ceeed5b0bdd96c34c6174a3/master/w_1600%2Cc_limit/01_Ferrari_SF90_03.jpg";
+        img.alt = "Illustration for CIS Control 1";
+        img.id = "cisImage";
+        img.style.maxWidth = "150px";
+        img.style.marginTop = "10px";
+        img.style.border = "2px solid #333";
+        cisDescription.parentNode.appendChild(img);
+    } */
+}
 
 
         // --- QUIZ GAME LOGIC ---
@@ -972,7 +974,7 @@
                 gameOverScreen.querySelector('h2').style.color = '#006400'; 
                 gameOverScreen.querySelector('p').innerHTML = `You successfully cleared all security checkpoints with a final score of <span id="finalScore">${Math.floor(gameState.score)}</span>!`;
                 restartButton.textContent = 'Start New Scan';
-                backToMenuButton.style.backgroundColor = '#007bff'; // Change color for success screen
+                backToMenuButton.style.backgroundColor = '#007bff';
             } else {
                 gameOverScreen.querySelector('h2').textContent = 'GAME OVER!';
                 gameOverScreen.querySelector('h2').style.color = '#ff0000'; 
@@ -986,6 +988,12 @@
             gameState.isRunning = false;
             setGameOverScreen(false);
             gameOverScreen.style.display = 'flex';
+            
+            // Set initial focus on restart button
+            const focusable = getFocusableElements(gameOverButtons);
+            if (focusable.length > 0) {
+                setFocus(focusable[0]);
+            }
 
             if (Math.floor(gameState.score) > gameState.highScore) {
                 gameState.highScore = Math.floor(gameState.score);
@@ -1000,6 +1008,12 @@
             gameState.isRunning = false;
             setGameOverScreen(true); 
             gameOverScreen.style.display = 'flex';
+            
+            // Set initial focus on restart button
+            const focusable = getFocusableElements(gameOverButtons);
+            if (focusable.length > 0) {
+                setFocus(focusable[0]);
+            }
 
             if (Math.floor(gameState.score) > gameState.highScore) {
                 gameState.highScore = Math.floor(gameState.score);
@@ -1038,12 +1052,19 @@
                 button.textContent = optionText;
                 button.classList.add('option-button');
                 button.dataset.index = index;
-                
+                button.tabIndex = 0; // Make it focusable
+
                 button.addEventListener('click', handleAnswer);
                 optionContainer.appendChild(button);
             });
             
             messageBox.style.display = 'flex';
+            
+            // Set initial focus on the first option
+            const options = getFocusableElements(optionContainer);
+            if (options.length > 0) {
+                setFocus(options[0]);
+            }
         }
 
         function handleAnswer(event) {
@@ -1079,6 +1100,9 @@
             }
 
             scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore}`;
+            
+            // Shift focus to the continue button
+            setFocus(continueButton);
         }
         
         function resumeGame() {
@@ -1100,72 +1124,81 @@
         // --- EVENT LISTENERS ---
 
         document.addEventListener('keydown', (e) => {
-            // Check for Quiz Mode controls
-            if (gameState.mode === 'quiz') {
-                if (e.code === 'Space' || e.code === 'ArrowUp') {
+            const key = e.code;
+            
+            // Game Running Controls (Jump)
+            if (gameState.mode === 'quiz' && gameState.isRunning) {
+                if (key === 'Space' || key === 'ArrowUp') {
                     e.preventDefault(); 
-                    if (gameState.isRunning) {
-                        dino.jump();
+                    dino.jump();
+                }
+                return; 
+            }
+            
+            // --- MENU NAVIGATION LOGIC ---
+            if (['ArrowUp', 'ArrowDown', 'Enter'].includes(key)) {
+                e.preventDefault(); 
+
+                if (gameState.mode === 'start' && startMenu.style.display === 'flex') {
+                    handleMenuNavigation(key, startMenuButtons);
+                } 
+                else if (gameOverScreen.style.display === 'flex') {
+                    handleMenuNavigation(key, gameOverButtons);
+                }
+                else if (gameState.isPausedBySystem && messageBox.style.display === 'flex') {
+                    const optionsDisabled = optionContainer.querySelector('.option-button[disabled]');
+                    
+                    if (!optionsDisabled) {
+                        // Options are active (before answering)
+                        handleMenuNavigation(key, optionContainer);
+                    } else {
+                        // Options are answered, focus is on Continue Button
+                        if (key === 'Enter' && document.activeElement === continueButton) {
+                            continueButton.click();
+                        }
+                    }
+                }
+                else if (gameState.mode === 'study' && studyMode.style.display === 'flex' && key === 'Enter') {
+                    // Allows ENTER to trigger Exit Study button if focused
+                    if (document.activeElement === exitStudyButton) {
+                        exitStudyButton.click();
                     }
                 }
             } 
-            
-            // Check for Study Mode controls
-            else if (gameState.mode === 'study') {
-                const totalControls = CIS_CONTROLS_STUDY.length;
-                if (e.code === 'ArrowRight') {
-                    gameState.currentCisIndex = (gameState.currentCisIndex + 1) % totalControls;
+            // --- STUDY CONTENT NAVIGATION (ArrowLeft/ArrowRight) ---
+            else if (['ArrowLeft', 'ArrowRight'].includes(key)) {
+                if (gameState.mode === 'study' && studyMode.style.display === 'flex') {
+                    const totalControls = CIS_CONTROLS_STUDY.length;
+                    if (key === 'ArrowRight') {
+                        gameState.currentCisIndex = (gameState.currentCisIndex + 1) % totalControls;
+                    } else if (key === 'ArrowLeft') {
+                        gameState.currentCisIndex = (gameState.currentCisIndex - 1 + totalControls) % totalControls;
+                    }
                     displayCisControl(gameState.currentCisIndex);
-                } else if (e.code === 'ArrowLeft') {
-                    gameState.currentCisIndex = (gameState.currentCisIndex - 1 + totalControls) % totalControls;
-                    displayCisControl(gameState.currentCisIndex);
-                } else if (e.code === 'Enter' || e.code === 'Escape') {
-                    exitStudyMode();
+                    setFocus(exitStudyButton); // Keep focus on exit button after content change
                 }
-            }
-            
-            // Check for Module Mode controls (NEW)
-            else if (gameState.mode === 'module') {
-                const totalModules = MODULE_SCENARIOS.length;
-                if (e.code === 'ArrowRight') {
-                    gameState.currentModuleIndex = (gameState.currentModuleIndex + 1) % totalModules;
-                    displayScenario(gameState.currentModuleIndex);
-                } else if (e.code === 'ArrowLeft') {
-                    gameState.currentModuleIndex = (gameState.currentModuleIndex - 1 + totalModules) % totalModules;
-                    displayScenario(gameState.currentModuleIndex);
-                } else if (e.code === 'Enter' || e.code === 'Escape') {
-                    exitModuleMode();
-                }
-            }
-            
-            // Check for universal controls (Game Over / Start Menu)
-            else if (gameState.mode === 'start') {
-                 if (e.code === 'Space' || e.code === 'ArrowUp') {
-                     e.preventDefault();
-                     startQuizMode(); // Default to quiz mode from start menu on jump/space
-                 }
             }
         });
 
         canvas.addEventListener('click', (e) => {
-             if (gameState.mode === 'quiz' && gameState.isRunning) {
+             // Only allow jump/start if not in a menu and not paused by system
+             if (gameState.mode === 'quiz' && gameState.isRunning && !gameState.isPausedBySystem) {
                 dino.jump();
-            } else if (gameState.mode === 'start') {
-                startQuizMode(); // Default to quiz mode from start menu on click
+            } else if (gameState.mode === 'start' && startMenu.style.display === 'flex') {
+                // If canvas is clicked while in the start menu, default to Quiz Mode
+                startQuizMode(); 
             }
         });
 
-        // Button listeners
+        // Button listeners (kept for mouse/touch functionality)
         quizModeButton.addEventListener('click', startQuizMode);
         studyModeButton.addEventListener('click', startStudyMode);
-        moduleModeButton.addEventListener('click', startModuleMode); // New Listener
         
         exitStudyButton.addEventListener('click', exitStudyMode);
-        exitModuleButton.addEventListener('click', exitModuleMode); // New Listener
         
         continueButton.addEventListener('click', resumeGame);
         restartButton.addEventListener('click', initGame); // Retry Scan button starts the game again
-        backToMenuButton.addEventListener('click', showStartMenu); // New: Back to menu button goes to start menu
+        backToMenuButton.addEventListener('click', showStartMenu); // Back to menu button goes to start menu
 
         // --- INITIAL DISPLAY ---
         
@@ -1190,8 +1223,6 @@
             gameState.highScore = localStorage.getItem('cyberDashHighScore') || 0;
             
             // Start the game loop only to draw the initial screen and handle resizes
-            gameLoop(performance.now());
-            
             showStartMenu();
         };
 
