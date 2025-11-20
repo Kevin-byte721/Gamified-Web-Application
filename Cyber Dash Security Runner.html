@@ -1,4 +1,4 @@
-<!DOCTYPE ahtml>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -46,29 +46,29 @@
             color: #555;
         }
 
-        #messageBox {
+        /* --- MODAL STYLES (Applies to #messageBox, #startMenu, #studyMode) --- */
+        .full-overlay-modal {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            display: none; /* Hidden by default */
+            display: none; 
             background: rgba(0, 0, 0, 0.7);
-            
-            /* --- MODIFICATION: Changed to 'center' for perfect vertical balance --- */
             align-items: center; 
-            padding-top: 0; /* Removed custom offset */
-            /* ------------------------------------------------------------------ */
-
-            box-sizing: border-box;
             justify-content: center;
             z-index: 100;
+            box-sizing: border-box;
+        }
+        
+        #messageBox {
+            /* Retains specific collision modal properties */
+            padding-top: 0;
         }
 
         .modal-content {
             background-color: #fff;
             padding: 30px;
-            /* Increase bottom padding for extra space */
             padding-bottom: 40px; 
             border: 4px solid #333;
             box-shadow: 15px 15px 0px rgba(255, 0, 0, 0.8);
@@ -77,7 +77,7 @@
             color: #333;
             animation: fadeIn 0.3s ease-out;
         }
-
+        
         .modal-title {
             font-size: 18px;
             color: #ff0000;
@@ -93,22 +93,18 @@
         
         /* CSS to prevent words like Wi-Fi from splitting */
         #questionText {
-            /* Inherits modal-text styles */
-            word-break: normal; /* Ensure standard breaking rules are used */
-            overflow-wrap: break-word; /* Allows long words to break if necessary, but prioritizes spaces */
+            word-break: normal; 
+            overflow-wrap: break-word; 
             margin-bottom: 20px;
         }
 
         .modal-answer {
-            /* Used for the feedback/explanation text */
             margin-top: 20px;
         }
 
-        /* Base style for Continue and Retry Buttons */
+        /* Base style for Buttons */
         .button-style {
-            /* --- FONT CHANGE APPLIED HERE --- */
             font-family: 'Press Start 2P', cursive;
-            /* -------------------------------- */
             background-color: #4CAF50;
             color: white;
             padding: 10px 20px;
@@ -116,15 +112,30 @@
             text-decoration: none;
             display: inline-block;
             font-size: 14px;
-            /* Increased top margin for extra space after feedback */
             margin-top: 30px; 
             cursor: pointer;
             border: 3px solid #333;
             box-shadow: 4px 4px 0px #333;
             transition: all 0.1s;
-            /* Add margin-bottom for space below the button */
             margin-bottom: 10px;
         }
+        
+        /* Specific button colors for modes */
+        #quizModeButton { background-color: #007bff; }
+        #studyModeButton { background-color: #ff9800; }
+        #quizModeButton:hover { background-color: #0056b3; }
+        #studyModeButton:hover { background-color: #e68900; }
+        #exitStudyButton { background-color: #777; }
+        #exitStudyButton:hover { background-color: #555; }
+        
+        /* Game Over Buttons */
+        /* Margin-top removed to rely on flex gap below */
+        #restartButton { background-color: #ff0000; margin-top: 0; } 
+        #restartButton:hover { background-color: #cc0000; }
+        /* Margin-top removed to rely on flex gap below */
+        #backToMenuButton { background-color: #007bff; margin-top: 0; } 
+        #backToMenuButton:hover { background-color: #0056b3; }
+
 
         .button-style:hover {
             background-color: #45a049;
@@ -135,23 +146,20 @@
             transform: translate(4px, 4px);
         }
         
-        /* Style for Multiple Choice Option Buttons */
         .option-button {
-            /* This was already updated to the pixel font in the last turn */
             font-family: 'Press Start 2P', cursive; 
-            
-            background-color: #007bff; /* Blue for options */
+            background-color: #007bff; 
             color: white;
             padding: 8px 15px;
             text-align: center;
-            font-size: 8px; /* Slightly smaller font to fit the pixel style */
+            font-size: 8px; 
             cursor: pointer;
             border: 3px solid #333;
             box-shadow: 3px 3px 0px #333;
             transition: all 0.1s;
             line-height: 1.2;
             width: 100%;
-            white-space: normal; /* Allow text to wrap */
+            white-space: normal; 
         }
 
         .option-button:hover:not(:disabled) {
@@ -163,14 +171,13 @@
             transform: translate(3px, 3px);
         }
         
-        /* Feedback colors */
         .correct-answer {
-            background-color: #008000 !important; /* Green for correct */
+            background-color: #008000 !important; 
             color: white;
         }
 
         .incorrect-answer {
-            background-color: #ff0000 !important; /* Red for incorrect */
+            background-color: #ff0000 !important; 
             color: white;
         }
 
@@ -187,14 +194,14 @@
             align-items: center;
             justify-content: center;
             z-index: 101;
-            /* Add padding-bottom to the whole screen for space below button */
             padding-bottom: 20px; 
         }
         
         #gameOverScreen h2 {
             font-size: 24px;
             color: #ff0000;
-            margin-bottom: 15px;
+            /* Added top margin for space above the text */
+            margin: 30px 0 15px 0; 
         }
 
         #gameOverScreen p {
@@ -203,6 +210,44 @@
             padding-left: 20px; 
             padding-right: 20px; 
             text-align: center; 
+        }
+        
+        /* Study Mode Specific Styles */
+        #studyContent {
+            background-color: #f0f8ff; /* Light blue background */
+            padding: 20px;
+            border: 3px dashed #007bff;
+            margin-top: 15px;
+            min-height: 150px;
+        }
+        #cisIndex {
+            font-size: 10px;
+            margin-bottom: 5px;
+            color: #007bff;
+        }
+        #cisTitle {
+            font-size: 14px;
+            color: #000080; /* Dark blue */
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        #cisDescription {
+            font-size: 10px;
+            line-height: 1.6;
+            text-align: left;
+        }
+        #studyInstructions {
+             font-size: 8px;
+             margin-top: 20px;
+             color: #666;
+        }
+        
+        .game-over-buttons {
+            display: flex;
+            flex-direction: column;
+            /* Reduced gap between buttons */
+            gap: 8px; 
+            align-items: center;
         }
 
         /* Mobile adjustments */
@@ -232,6 +277,12 @@
                 padding-left: 10px; 
                 padding-right: 10px;
             }
+            #cisTitle {
+                font-size: 12px;
+            }
+            #cisDescription {
+                font-size: 8px;
+            }
         }
     </style>
 </head>
@@ -242,30 +293,76 @@
     <div class="game-container">
         <div id="scoreDisplay">Score: 0 | High: 0</div>
         <canvas id="gameCanvas" width="600" height="150"></canvas>
+        
+        <!-- START MENU SCREEN (New) -->
+        <div id="startMenu" class="full-overlay-modal" style="display: flex;">
+            <div class="modal-content">
+                <h3 class="modal-title">SELECT MODE</h3>
+                <p class="modal-text" style="margin-bottom: 25px;">Choose your operation type.</p>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <button id="quizModeButton" class="button-style" style="margin-top: 0;">
+                        Quiz Mode (Start)
+                    </button>
+                    <button id="studyModeButton" class="button-style" style="margin-top: 0;">
+                        Study Mode (CIS Controls)
+                    </button>
+                </div>
+                <p id="startInstructions" class="modal-text" style="font-size: 10px; margin-top: 30px; color: #666;">
+                    Quiz Mode: Jump to avoid vulnerabilities and answer questions at checkpoints.
+                </p>
+            </div>
+        </div>
 
-        <!-- Cybersecurity Modal / Pause Screen --><div id="messageBox">
+        <!-- STUDY MODE SCREEN (New) -->
+        <div id="studyMode" class="full-overlay-modal">
+            <div class="modal-content">
+                <h3 class="modal-title" style="color: #007bff;">CIS CONTROL STUDY MODULE</h3>
+                
+                <div id="studyContent">
+                    <div id="cisIndex">CIS CONTROL X OF Y</div>
+                    <div id="cisTitle"></div>
+                    <div id="cisDescription"></div>
+                </div>
+
+                <p id="studyInstructions">
+                    Use &larr; and &rarr; arrow keys to navigate. Press ENTER or the button below to exit.
+                </p>
+                
+                <button id="exitStudyButton" class="button-style">Exit Study Mode</button>
+            </div>
+        </div>
+
+
+        <!-- Cybersecurity Modal / Pause Screen -->
+        <div id="messageBox" class="full-overlay-modal">
             <div class="modal-content">
                 <h3 id="modalTitle" class="modal-title">SECURITY CHECKPOINT REACHED!</h3>
-                <!-- Question Counter Added Here -->
-                <div id="questionCounter" class="modal-text" style="font-size: 10px; margin-bottom: 5px; font-weight: bold;"></div>
+                <div id="questionCounter" class="modal-text" style="font-size: 10px; font-weight: bold;"></div>
                 <div id="topicText" class="modal-text"></div>
-                <!-- NEW CIS CONTROL DISPLAY -->
                 <div id="cisControlText" class="modal-text" style="font-size: 10px; margin-bottom: 10px; color: #007bff; font-weight: bold;"></div>
                 <div id="questionText" class="modal-text"></div>
                 
-                <!-- Multiple Choice Option Container --><div id="optionContainer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
-                    <!-- Options will be inserted here by JS --></div>
+                <div id="optionContainer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                    <!-- Options will be inserted here by JS -->
+                </div>
 
-                <!-- Feedback/Answer Text --><div id="feedbackText" class="modal-answer modal-text" style="display: none;"></div>
+                <div id="feedbackText" class="modal-answer modal-text" style="display: none;"></div>
                 
                 <button id="continueButton" class="button-style" style="display: none;">Continue Run</button>
             </div>
         </div>
 
-        <!-- Game Over Screen --><div id="gameOverScreen">
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen">
             <h2>GAME OVER!</h2>
             <p>You tripped over a vulnerability at <span id="finalScore">0</span> points.</p>
-            <button id="restartButton" class="button-style">Retry Scan</button>
+            
+            <div class="game-over-buttons">
+                <!-- Keep the Retry button for quick restarts -->
+                <button id="restartButton" class="button-style">Retry Scan</button>
+                <!-- New button to go back to the Start Menu -->
+                <button id="backToMenuButton" class="button-style">Back to Main Menu</button>
+            </div>
         </div>
     </div>
 
@@ -275,51 +372,63 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreDisplay = document.getElementById('scoreDisplay');
+        
+        // Modal & Screen elements
+        const startMenu = document.getElementById('startMenu');
+        const quizModeButton = document.getElementById('quizModeButton');
+        const studyModeButton = document.getElementById('studyModeButton');
+        
+        const studyMode = document.getElementById('studyMode');
+        const cisIndex = document.getElementById('cisIndex');
+        const cisTitle = document.getElementById('cisTitle');
+        const cisDescription = document.getElementById('cisDescription');
+        const exitStudyButton = document.getElementById('exitStudyButton');
+        
         const messageBox = document.getElementById('messageBox');
         const modalTitle = document.getElementById('modalTitle');
         const questionCounter = document.getElementById('questionCounter');
         const topicText = document.getElementById('topicText');
-        const cisControlText = document.getElementById('cisControlText'); // New element reference
+        const cisControlText = document.getElementById('cisControlText');
         const questionText = document.getElementById('questionText');
         const optionContainer = document.getElementById('optionContainer');
         const feedbackText = document.getElementById('feedbackText');
         const continueButton = document.getElementById('continueButton');
         const gameOverScreen = document.getElementById('gameOverScreen');
         const restartButton = document.getElementById('restartButton');
+        // New button reference
+        const backToMenuButton = document.getElementById('backToMenuButton');
         const finalScoreSpan = document.getElementById('finalScore');
         
         // Use a persistent object for game state
         let gameState = {
+            mode: 'start', // 'start', 'quiz', or 'study'
             score: 0,
             highScore: localStorage.getItem('cyberDashHighScore') || 0,
             isRunning: false,
             animationFrameId: null,
             timeSinceLastObstacle: 0,
-            obstacleGenerationInterval: 1200, // Initial time in ms
+            obstacleGenerationInterval: 1200, 
             speed: 5,
             isPausedBySystem: false,
-            // State tracking for obstacle-based checkpoint
             obstaclesPassedCount: 0,
-            // New state tracking for question progress
             checkpointsCleared: 0,
-            // New state for the current randomized question set
             currentQuestionSet: [],
+            // Study Mode State
+            currentCisIndex: 0,
         };
 
         const GROUND_Y = canvas.height - 30;
         const DINO_WIDTH = 20;
         const DINO_HEIGHT = 40;
-
-        // Configuration constants for difficulty/progression
         const BLOCKS_PER_CHECKPOINT = 5; 
-        const MAX_CHECKPOINTS = 5; // The total number of unique questions the player must answer
+        const MAX_CHECKPOINTS = 5; 
         
         // Colors
-        const DINO_COLOR = '#006400'; // Dark Green
-        const OBSTACLE_COLOR = '#8B0000'; // Dark Red
+        const DINO_COLOR = '#006400'; 
+        const OBSTACLE_COLOR = '#8B0000'; 
         const GROUND_COLOR = '#333';
         
-        // --- GAME ENTITIES ---
+        // --- GAME ENTITIES (Unchanged Classes) ---
 
         class Dinosaur {
             constructor() {
@@ -336,7 +445,6 @@
             draw() {
                 ctx.fillStyle = DINO_COLOR;
                 ctx.fillRect(this.x, this.y, this.width, this.height);
-                // Simple Eye/Icon for character
                 ctx.fillStyle = '#fff';
                 ctx.fillRect(this.x + this.width / 2 - 2, this.y + 5, 4, 4);
             }
@@ -345,8 +453,6 @@
                 if (this.isJumping) {
                     this.y += this.velocityY;
                     this.velocityY += this.gravity;
-
-                    // Check for ground collision
                     if (this.y >= GROUND_Y - this.height) {
                         this.y = GROUND_Y - this.height;
                         this.isJumping = false;
@@ -369,7 +475,6 @@
                 this.y = GROUND_Y - height;
                 this.width = width;
                 this.height = height;
-                // Add a flag to track if the obstacle has been successfully passed and counted
                 this.passed = false;
             }
 
@@ -383,7 +488,7 @@
             }
         }
 
-        // --- CYBERSECURITY DATA (Expanded for more variety) ---
+        // --- CYBERSECURITY DATA (Quiz Mode) ---
 
         const CYBER_TOPICS = [
             {
@@ -492,65 +597,128 @@
                 explanation: "The 3-2-1 rule is the industry standard: keep 3 copies of your data, on 2 different storage types, with 1 copy located offsite (e.g., in the cloud or a different location)."
             }
         ];
+        
+        // --- CIS CONTROL DATA (Study Mode) ---
+        const CIS_CONTROLS_STUDY = [
+            { 
+                number: 6, 
+                title: "CIS Control 6: Access Control Management", 
+                description: "This control focuses on managing user identities and the authorization to access system resources. Implement strong account management processes, use unique passwords for all systems, and utilize Multi-Factor Authentication (MFA) to prevent unauthorized entry."
+            },
+            { 
+                number: 7, 
+                title: "CIS Control 7: Vulnerability Management", 
+                description: "Proactively identify, prioritize, and remediate vulnerabilities in operating systems and applications. This includes immediate installation of security patches and updates to close known security holes before attackers can exploit them."
+            },
+            { 
+                number: 10, 
+                title: "CIS Control 10: Malware Defenses", 
+                description: "Prevent or control the installation, spread, and execution of malicious software. Deploy and manage anti-malware software on all devices and ensure all incoming data (email, file downloads) is scanned for threats."
+            },
+            { 
+                number: 13, 
+                title: "CIS Control 13: Network Monitoring and Defense", 
+                description: "Monitor and control network ports, protocols, and services. Use network firewalls and deploy intrusion detection/prevention systems. When operating on public networks (like Wi-Fi), always use a Virtual Private Network (VPN)."
+            },
+            { 
+                number: 14, 
+                title: "CIS Control 14: Security Awareness and Skills Training", 
+                description: "Develop and maintain security awareness training for all personnel to minimize human error. Train employees to recognize social engineering tactics like phishing and baiting, as well as proper handling of sensitive data."
+            }
+        ];
+
 
         let dino;
         let obstacles = [];
         let lastTimestamp = 0;
-        let currentTopic = null; // Stores the active question data
+        let currentTopic = null; 
 
         // --- UTILITY: SHUFFLE AND SELECT ---
         
-        // Function to randomly select and shuffle MAX_CHECKPOINTS unique topics
         function shuffleAndSelectTopics() {
-            // 1. Create a copy of the topics and shuffle them
             const shuffled = [...CYBER_TOPICS]
                 .map(value => ({ value, sort: Math.random() }))
                 .sort((a, b) => a.sort - b.sort)
                 .map(({ value }) => value);
             
-            // 2. Return only the number of questions required (MAX_CHECKPOINTS, which is 5)
             return shuffled.slice(0, MAX_CHECKPOINTS);
         }
 
-        // --- GAME FUNCTIONS ---
+        // --- GAME FLOW FUNCTIONS ---
 
-        function setGameOverScreen(isWin = false) {
-            finalScoreSpan.textContent = Math.floor(gameState.score);
-            if (isWin) {
-                gameOverScreen.querySelector('h2').textContent = 'MISSION COMPLETE!';
-                gameOverScreen.querySelector('h2').style.color = '#006400'; // Green for win
-                gameOverScreen.querySelector('p').innerHTML = `You successfully cleared all security checkpoints with a final score of <span id="finalScore">${Math.floor(gameState.score)}</span>!`;
-                restartButton.textContent = 'Start New Scan';
-            } else {
-                gameOverScreen.querySelector('h2').textContent = 'GAME OVER!';
-                gameOverScreen.querySelector('h2').style.color = '#ff0000'; // Red for lose
-                gameOverScreen.querySelector('p').innerHTML = `You tripped over a vulnerability at <span id="finalScore">${Math.floor(gameState.score)}</span> points.`;
-                restartButton.textContent = 'Retry Scan';
-            }
+        function showStartMenu() {
+             // Reset canvas message
+            drawInitialMessage(); 
+            
+            // Hide all overlays
+            messageBox.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            studyMode.style.display = 'none';
+
+            // Show start menu
+            startMenu.style.display = 'flex';
+            
+            // Reset game state for a clean start
+            gameState.isRunning = false;
+            gameState.isPausedBySystem = false;
+            gameState.mode = 'start';
+            
+            // Update the static score display
+            gameState.highScore = localStorage.getItem('cyberDashHighScore') || 0;
+            scoreDisplay.innerHTML = `Score: 0 | High: ${gameState.highScore}`;
+        }
+        
+        function startQuizMode() {
+            gameState.mode = 'quiz';
+            startMenu.style.display = 'none';
+            initGame();
         }
 
+        function startStudyMode() {
+            gameState.mode = 'study';
+            gameState.currentCisIndex = 0; // Start at the first control
+            startMenu.style.display = 'none';
+            studyMode.style.display = 'flex';
+            displayCisControl(gameState.currentCisIndex);
+        }
+        
+        function displayCisControl(index) {
+            const control = CIS_CONTROLS_STUDY[index];
+            if (!control) {
+                exitStudyMode(); // Should not happen if boundaries are checked
+                return;
+            }
+            
+            cisIndex.textContent = `CIS CONTROL ${index + 1} OF ${CIS_CONTROLS_STUDY.length}`;
+            cisTitle.textContent = control.title;
+            cisDescription.textContent = control.description;
+        }
+
+        function exitStudyMode() {
+            studyMode.style.display = 'none';
+            showStartMenu();
+        }
+
+        // --- QUIZ GAME LOGIC ---
+
         function initGame() {
-            // Reset game state
+            // Reset game state for the runner
             gameState.score = 0;
             gameState.isRunning = true;
             gameState.isPausedBySystem = false;
             gameState.speed = 5;
-            gameState.obstaclesPassedCount = 0; // Reset obstacle count
-            gameState.checkpointsCleared = 0; // Reset question count
+            gameState.obstaclesPassedCount = 0; 
+            gameState.checkpointsCleared = 0; 
             obstacles = [];
             
-            // *** NEW: Select and randomize 5 unique questions for this run ***
             gameState.currentQuestionSet = shuffleAndSelectTopics(); 
             
-            // Reset the Game Over screen text to default 'Game Over' state
-            setGameOverScreen(false);
+            setGameOverScreen(false); // Reset to loss message
+            messageBox.style.display = 'none';
+            gameOverScreen.style.display = 'none';
 
             // Initialize entities
             dino = new Dinosaur();
-
-            // Hide screens
-            messageBox.style.display = 'none';
-            gameOverScreen.style.display = 'none';
 
             // Start the main loop
             if (gameState.animationFrameId) {
@@ -559,7 +727,7 @@
             lastTimestamp = performance.now();
             gameLoop(lastTimestamp);
         }
-
+        
         function drawGround() {
             ctx.strokeStyle = GROUND_COLOR;
             ctx.lineWidth = 2;
@@ -591,12 +759,10 @@
         }
         
         function updateSpeedAndDifficulty() {
-            // Increase speed every 100 points
             if (gameState.score > 0 && Math.floor(gameState.score) % 100 === 0) {
-                // To prevent speed increasing every frame for a score of 100, 200, etc.
                 if (Math.floor(gameState.score) !== gameState.lastScoreBeforeSpeedIncrease) {
-                    gameState.speed = Math.min(gameState.speed + 0.5, 10); // Cap speed at 10
-                    gameState.lastScoreBeforeSpeedIncrease = Math.floor(gameState.score); // Track when speed was last increased
+                    gameState.speed = Math.min(gameState.speed + 0.5, 10); 
+                    gameState.lastScoreBeforeSpeedIncrease = Math.floor(gameState.score); 
                 }
             }
         }
@@ -605,7 +771,6 @@
             const deltaTime = timestamp - lastTimestamp;
             lastTimestamp = timestamp;
 
-            // Update score display regardless of run state
             scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore}`;
             
             if (gameState.isRunning && !gameState.isPausedBySystem) {
@@ -620,7 +785,7 @@
                 dino.draw();
 
                 // 4. Update Score
-                gameState.score += 0.05; // Increment score based on time/frame
+                gameState.score += 0.05; 
                 updateSpeedAndDifficulty();
                 
                 // 5. Obstacle Logic
@@ -628,7 +793,6 @@
                 if (gameState.timeSinceLastObstacle > gameState.obstacleGenerationInterval) {
                     generateObstacle();
                     gameState.timeSinceLastObstacle = 0;
-                    // Slightly decrease the interval to increase difficulty
                     gameState.obstacleGenerationInterval = Math.max(800, gameState.obstacleGenerationInterval * 0.98);
                 }
 
@@ -636,41 +800,50 @@
                     obstacle.update();
                     obstacle.draw();
 
-                    // Check for collision
                     if (checkCollision(dino, obstacle)) {
                         gameOver();
-                        return; // Stop processing further
+                        return; 
                     }
 
-                    // Check if obstacle has been successfully passed
-                    // Only count if it's past the dino's x position and hasn't been counted yet
                     if (obstacle.x + obstacle.width < dino.x && !obstacle.passed) {
                         obstacle.passed = true;
                         gameState.obstaclesPassedCount++;
                     }
                 });
 
-                // Check for checkpoint trigger after processing all obstacles
                 if (gameState.obstaclesPassedCount >= BLOCKS_PER_CHECKPOINT) {
-                    // Reset the counter immediately before pausing
                     gameState.obstaclesPassedCount = 0;
                     pauseGameForSecurityCheck();
                 }
 
-                // Clean up obstacles that are off-screen
                 obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > 0);
             }
             
-            // 6. Loop
             gameState.animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function setGameOverScreen(isWin = false) {
+            finalScoreSpan.textContent = Math.floor(gameState.score);
+            if (isWin) {
+                gameOverScreen.querySelector('h2').textContent = 'MISSION COMPLETE!';
+                gameOverScreen.querySelector('h2').style.color = '#006400'; 
+                gameOverScreen.querySelector('p').innerHTML = `You successfully cleared all security checkpoints with a final score of <span id="finalScore">${Math.floor(gameState.score)}</span>!`;
+                restartButton.textContent = 'Start New Scan';
+                backToMenuButton.style.backgroundColor = '#007bff'; // Change color for success screen
+            } else {
+                gameOverScreen.querySelector('h2').textContent = 'GAME OVER!';
+                gameOverScreen.querySelector('h2').style.color = '#ff0000'; 
+                gameOverScreen.querySelector('p').innerHTML = `You tripped over a vulnerability at <span id="finalScore">${Math.floor(gameState.score)}</span> points.`;
+                restartButton.textContent = 'Retry Scan';
+                backToMenuButton.style.backgroundColor = '#007bff';
+            }
         }
 
         function gameOver() {
             gameState.isRunning = false;
-            setGameOverScreen(false); // Ensure loss message is set
+            setGameOverScreen(false);
             gameOverScreen.style.display = 'flex';
 
-            // Update High Score
             if (Math.floor(gameState.score) > gameState.highScore) {
                 gameState.highScore = Math.floor(gameState.score);
                 localStorage.setItem('cyberDashHighScore', gameState.highScore);
@@ -682,10 +855,9 @@
 
         function gameWin() {
             gameState.isRunning = false;
-            setGameOverScreen(true); // Set win message
+            setGameOverScreen(true); 
             gameOverScreen.style.display = 'flex';
 
-            // Update High Score
             if (Math.floor(gameState.score) > gameState.highScore) {
                 gameState.highScore = Math.floor(gameState.score);
                 localStorage.setItem('cyberDashHighScore', gameState.highScore);
@@ -695,11 +867,8 @@
             cancelAnimationFrame(gameState.animationFrameId);
         }
         
-        // --- SECURITY CHECKPOINT LOGIC ---
-
         function pauseGameForSecurityCheck() {
             
-            // Check for game end condition first
             if (gameState.checkpointsCleared >= MAX_CHECKPOINTS) {
                 gameWin();
                 return;
@@ -707,37 +876,26 @@
 
             gameState.isRunning = false;
             gameState.isPausedBySystem = true;
-            gameState.checkpointsCleared++; // Increment the cleared count for the new question
+            gameState.checkpointsCleared++; 
 
-            // Get the next topic from the pre-selected, randomized set
             currentTopic = gameState.currentQuestionSet[gameState.checkpointsCleared - 1]; 
 
-            // Update Modal Content
             modalTitle.textContent = 'SECURITY CHECKPOINT REACHED!';
-            
-            // Display the question counter
             questionCounter.textContent = `Question ${gameState.checkpointsCleared} of ${MAX_CHECKPOINTS}`;
-            
             topicText.textContent = `Topic: ${currentTopic.topic}`;
-            
-            // Display the CIS Control reference
             cisControlText.textContent = `(${currentTopic.cisControl})`;
-            
             questionText.textContent = `Q: ${currentTopic.question}`;
             
-            // Reset modal elements
             feedbackText.style.display = 'none';
             continueButton.style.display = 'none';
-            optionContainer.innerHTML = ''; // Clear previous options
+            optionContainer.innerHTML = ''; 
 
-            // 1. Create and display options
             currentTopic.options.forEach((optionText, index) => {
                 const button = document.createElement('button');
                 button.textContent = optionText;
                 button.classList.add('option-button');
                 button.dataset.index = index;
                 
-                // Add event listener for the answer check
                 button.addEventListener('click', handleAnswer);
                 optionContainer.appendChild(button);
             });
@@ -753,123 +911,134 @@
             const isCorrect = selectedIndex === currentTopic.correctIndex;
             const allButtons = optionContainer.querySelectorAll('.option-button');
 
-            // 1. Disable all buttons and remove click listeners
             allButtons.forEach(btn => {
                 btn.disabled = true;
                 btn.removeEventListener('click', handleAnswer);
             });
 
-            // 2. Provide visual feedback
             if (isCorrect) {
                 selectedButton.classList.add('correct-answer');
                 feedbackText.textContent = `CORRECT! (+15 pts)\n\nExplanation: ${currentTopic.explanation}`;
-                
-                // Bonus score for correct answer
                 gameState.score += 15;
             } else {
                 selectedButton.classList.add('incorrect-answer');
-                
-                // Highlight the correct answer
                 allButtons[currentTopic.correctIndex].classList.add('correct-answer');
-                
                 feedbackText.textContent = `INCORRECT. The correct answer is highlighted.\n\nExplanation: ${currentTopic.explanation}`;
             }
 
-            // 3. Show detailed explanation and continue button
             feedbackText.style.display = 'block';
             continueButton.style.display = 'inline-block';
             
-            // Set continue button text based on win condition
             if (gameState.checkpointsCleared >= MAX_CHECKPOINTS) {
                 continueButton.textContent = 'Mission Accomplished!';
             } else {
                  continueButton.textContent = 'Continue Run';
             }
 
-            // Re-render score display immediately to show bonus
             scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore}`;
         }
         
         function resumeGame() {
             messageBox.style.display = 'none';
             
-            // Check if the checkpoint count has been reached (win condition)
             if (gameState.checkpointsCleared >= MAX_CHECKPOINTS) {
                 gameWin();
                 return;
             }
 
-            // Reset the track: Clear all existing obstacles
             obstacles = []; 
-            gameState.timeSinceLastObstacle = 0; // Reset timer so a new obstacle doesn't spawn immediately
+            gameState.timeSinceLastObstacle = 0; 
             
             gameState.isRunning = true;
             gameState.isPausedBySystem = false;
-            lastTimestamp = performance.now(); // Resetting timestamp helps prevent a jump in updates
+            lastTimestamp = performance.now(); 
         }
 
         // --- EVENT LISTENERS ---
 
         document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' || e.code === 'ArrowUp') {
-                // Prevent scrolling when space is pressed
-                e.preventDefault(); 
-                
-                if (gameState.isRunning) {
-                    dino.jump();
-                } else if (!gameState.isRunning && !gameState.isPausedBySystem && gameOverScreen.style.display !== 'flex') {
-                    // Start the game with spacebar
-                    initGame();
+            // Check for Quiz Mode controls
+            if (gameState.mode === 'quiz') {
+                if (e.code === 'Space' || e.code === 'ArrowUp') {
+                    e.preventDefault(); 
+                    if (gameState.isRunning) {
+                        dino.jump();
+                    }
                 }
+            } 
+            
+            // Check for Study Mode controls
+            else if (gameState.mode === 'study') {
+                const totalControls = CIS_CONTROLS_STUDY.length;
+                if (e.code === 'ArrowRight') {
+                    gameState.currentCisIndex = (gameState.currentCisIndex + 1) % totalControls;
+                    displayCisControl(gameState.currentCisIndex);
+                } else if (e.code === 'ArrowLeft') {
+                    gameState.currentCisIndex = (gameState.currentCisIndex - 1 + totalControls) % totalControls;
+                    displayCisControl(gameState.currentCisIndex);
+                } else if (e.code === 'Enter' || e.code === 'Escape') {
+                    exitStudyMode();
+                }
+            }
+            
+            // Check for universal controls (Game Over / Start Menu)
+            else if (gameState.mode === 'start') {
+                 if (e.code === 'Space' || e.code === 'ArrowUp') {
+                     e.preventDefault();
+                     startQuizMode(); // Default to quiz mode from start menu on jump/space
+                 }
             }
         });
 
         canvas.addEventListener('click', (e) => {
-            if (!gameState.isRunning && !gameState.isPausedBySystem && gameOverScreen.style.display !== 'flex') {
-                // Start the game with click
-                initGame();
-            } else {
+             if (gameState.mode === 'quiz' && gameState.isRunning) {
                 dino.jump();
+            } else if (gameState.mode === 'start') {
+                startQuizMode(); // Default to quiz mode from start menu on click
             }
         });
 
+        // Button listeners
+        quizModeButton.addEventListener('click', startQuizMode);
+        studyModeButton.addEventListener('click', startStudyMode);
+        exitStudyButton.addEventListener('click', exitStudyMode);
+        
         continueButton.addEventListener('click', resumeGame);
+        restartButton.addEventListener('click', initGame); // Retry Scan button starts the game again
+        backToMenuButton.addEventListener('click', showStartMenu); // New: Back to menu button goes to start menu
 
-        restartButton.addEventListener('click', initGame);
-
-        // --- INITIAL START MESSAGE ---
+        // --- INITIAL DISPLAY ---
         
         function drawInitialMessage() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawGround();
             ctx.fillStyle = DINO_COLOR;
-            ctx.fillRect(50, GROUND_Y - DINO_HEIGHT, DINO_WIDTH, DINO_HEIGHT); // Draw static dino
+            ctx.fillRect(50, GROUND_Y - DINO_HEIGHT, DINO_WIDTH, DINO_HEIGHT); 
             
             ctx.fillStyle = GROUND_COLOR;
-            // Reverted back to the original retro font
             ctx.font = '12px "Press Start 2P"'; 
             ctx.textAlign = 'center';
-            ctx.fillText("Press SPACE/UP or Click to Start!", canvas.width / 2, canvas.height / 2);
+            ctx.fillText("CYBER DASH RUNNER", canvas.width / 2, canvas.height / 2 - 10);
+            ctx.font = '8px "Press Start 2P"';
+            ctx.fillText("Select a mode to begin", canvas.width / 2, canvas.height / 2 + 10);
         }
 
-        // Initialize display on load
         window.onload = () => {
-            // Adjust canvas size for responsiveness
             const container = document.querySelector('.game-container');
-            canvas.width = container.clientWidth - 40; // Subtract padding
+            canvas.width = container.clientWidth - 40; 
             
-            // Reload high score
             gameState.highScore = localStorage.getItem('cyberDashHighScore') || 0;
-            scoreDisplay.innerHTML = `Score: 0 | High: ${gameState.highScore}`;
-
-            drawInitialMessage();
+            
+            // Start the game loop only to draw the initial screen and handle resizes
+            gameLoop(performance.now());
+            
+            showStartMenu();
         };
 
-        // Handle resize (optional, but good practice for canvas games)
         window.addEventListener('resize', () => {
              const container = document.querySelector('.game-container');
              canvas.width = container.clientWidth - 40;
-             if (!gameState.isRunning && gameOverScreen.style.display !== 'flex' && messageBox.style.display !== 'flex') {
+             if (gameState.mode === 'start') {
                 drawInitialMessage();
              }
         });
