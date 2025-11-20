@@ -1,0 +1,879 @@
+<!DOCTYPE ahtml>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Dash: Security Runner</title>
+    <style>
+        /* FONT IMPORT */
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            /* Added vertical padding for space at the top and bottom */
+            padding: 20px 0;
+            background-color: #f7f7f7;
+            font-family: 'Press Start 2P', cursive; /* Main font applied to body and main text */
+            color: #333;
+        }
+
+        .game-container {
+            border: 4px solid #333;
+            box-shadow: 10px 10px 0px rgba(0, 0, 0, 0.2);
+            background-color: #fff;
+            width: 90%;
+            max-width: 700px;
+            position: relative;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to top, #e0e0e0 50%, #f0f0f0 50%);
+            border-bottom: 2px solid #333;
+        }
+
+        #scoreDisplay {
+            text-align: right;
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        #messageBox {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none; /* Hidden by default */
+            background: rgba(0, 0, 0, 0.7);
+            
+            /* --- MODIFICATION: Changed to 'center' for perfect vertical balance --- */
+            align-items: center; 
+            padding-top: 0; /* Removed custom offset */
+            /* ------------------------------------------------------------------ */
+
+            box-sizing: border-box;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 30px;
+            /* Increase bottom padding for extra space */
+            padding-bottom: 40px; 
+            border: 4px solid #333;
+            box-shadow: 15px 15px 0px rgba(255, 0, 0, 0.8);
+            max-width: 95%;
+            text-align: center;
+            color: #333;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            color: #ff0000;
+            margin-bottom: 15px;
+        }
+
+        .modal-text {
+            font-size: 12px;
+            margin: 10px 0;
+            line-height: 1.5;
+            color: #333;
+        }
+        
+        /* CSS to prevent words like Wi-Fi from splitting */
+        #questionText {
+            /* Inherits modal-text styles */
+            word-break: normal; /* Ensure standard breaking rules are used */
+            overflow-wrap: break-word; /* Allows long words to break if necessary, but prioritizes spaces */
+            margin-bottom: 20px;
+        }
+
+        .modal-answer {
+            /* Used for the feedback/explanation text */
+            margin-top: 20px;
+        }
+
+        /* Base style for Continue and Retry Buttons */
+        .button-style {
+            /* --- FONT CHANGE APPLIED HERE --- */
+            font-family: 'Press Start 2P', cursive;
+            /* -------------------------------- */
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            /* Increased top margin for extra space after feedback */
+            margin-top: 30px; 
+            cursor: pointer;
+            border: 3px solid #333;
+            box-shadow: 4px 4px 0px #333;
+            transition: all 0.1s;
+            /* Add margin-bottom for space below the button */
+            margin-bottom: 10px;
+        }
+
+        .button-style:hover {
+            background-color: #45a049;
+        }
+
+        .button-style:active {
+            box-shadow: 0 0 0 #333;
+            transform: translate(4px, 4px);
+        }
+        
+        /* Style for Multiple Choice Option Buttons */
+        .option-button {
+            /* This was already updated to the pixel font in the last turn */
+            font-family: 'Press Start 2P', cursive; 
+            
+            background-color: #007bff; /* Blue for options */
+            color: white;
+            padding: 8px 15px;
+            text-align: center;
+            font-size: 8px; /* Slightly smaller font to fit the pixel style */
+            cursor: pointer;
+            border: 3px solid #333;
+            box-shadow: 3px 3px 0px #333;
+            transition: all 0.1s;
+            line-height: 1.2;
+            width: 100%;
+            white-space: normal; /* Allow text to wrap */
+        }
+
+        .option-button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+
+        .option-button:active:not(:disabled) {
+            box-shadow: 0 0 0 #333;
+            transform: translate(3px, 3px);
+        }
+        
+        /* Feedback colors */
+        .correct-answer {
+            background-color: #008000 !important; /* Green for correct */
+            color: white;
+        }
+
+        .incorrect-answer {
+            background-color: #ff0000 !important; /* Red for incorrect */
+            color: white;
+        }
+
+
+        #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 101;
+            /* Add padding-bottom to the whole screen for space below button */
+            padding-bottom: 20px; 
+        }
+        
+        #gameOverScreen h2 {
+            font-size: 24px;
+            color: #ff0000;
+            margin-bottom: 15px;
+        }
+
+        #gameOverScreen p {
+            font-size: 14px;
+            margin-bottom: 25px;
+            padding-left: 20px; 
+            padding-right: 20px; 
+            text-align: center; 
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 600px) {
+            .game-container {
+                width: 95%;
+                max-width: 95%; 
+                padding: 10px;
+            }
+            .modal-content {
+                max-width: 95%; 
+                padding-bottom: 30px; 
+            }
+            .modal-title {
+                font-size: 14px;
+            }
+            .modal-text, .button-style {
+                font-size: 10px;
+            }
+            #scoreDisplay {
+                font-size: 10px;
+            }
+            .option-button {
+                font-size: 8px; 
+            }
+            #gameOverScreen p {
+                padding-left: 10px; 
+                padding-right: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1 style="font-size: 20px; margin-bottom: 20px;">Cyber Dash: Security Runner</h1>
+
+    <div class="game-container">
+        <div id="scoreDisplay">Score: 0 | High: 0</div>
+        <canvas id="gameCanvas" width="600" height="150"></canvas>
+
+        <!-- Cybersecurity Modal / Pause Screen --><div id="messageBox">
+            <div class="modal-content">
+                <h3 id="modalTitle" class="modal-title">SECURITY CHECKPOINT REACHED!</h3>
+                <!-- Question Counter Added Here -->
+                <div id="questionCounter" class="modal-text" style="font-size: 10px; margin-bottom: 5px; font-weight: bold;"></div>
+                <div id="topicText" class="modal-text"></div>
+                <!-- NEW CIS CONTROL DISPLAY -->
+                <div id="cisControlText" class="modal-text" style="font-size: 10px; margin-bottom: 10px; color: #007bff; font-weight: bold;"></div>
+                <div id="questionText" class="modal-text"></div>
+                
+                <!-- Multiple Choice Option Container --><div id="optionContainer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                    <!-- Options will be inserted here by JS --></div>
+
+                <!-- Feedback/Answer Text --><div id="feedbackText" class="modal-answer modal-text" style="display: none;"></div>
+                
+                <button id="continueButton" class="button-style" style="display: none;">Continue Run</button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen --><div id="gameOverScreen">
+            <h2>GAME OVER!</h2>
+            <p>You tripped over a vulnerability at <span id="finalScore">0</span> points.</p>
+            <button id="restartButton" class="button-style">Retry Scan</button>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME ASSET SETUP ---
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const messageBox = document.getElementById('messageBox');
+        const modalTitle = document.getElementById('modalTitle');
+        const questionCounter = document.getElementById('questionCounter');
+        const topicText = document.getElementById('topicText');
+        const cisControlText = document.getElementById('cisControlText'); // New element reference
+        const questionText = document.getElementById('questionText');
+        const optionContainer = document.getElementById('optionContainer');
+        const feedbackText = document.getElementById('feedbackText');
+        const continueButton = document.getElementById('continueButton');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const restartButton = document.getElementById('restartButton');
+        const finalScoreSpan = document.getElementById('finalScore');
+        
+        // Use a persistent object for game state
+        let gameState = {
+            score: 0,
+            highScore: localStorage.getItem('cyberDashHighScore') || 0,
+            isRunning: false,
+            animationFrameId: null,
+            timeSinceLastObstacle: 0,
+            obstacleGenerationInterval: 1200, // Initial time in ms
+            speed: 5,
+            isPausedBySystem: false,
+            // State tracking for obstacle-based checkpoint
+            obstaclesPassedCount: 0,
+            // New state tracking for question progress
+            checkpointsCleared: 0,
+            // New state for the current randomized question set
+            currentQuestionSet: [],
+        };
+
+        const GROUND_Y = canvas.height - 30;
+        const DINO_WIDTH = 20;
+        const DINO_HEIGHT = 40;
+
+        // Configuration constants for difficulty/progression
+        const BLOCKS_PER_CHECKPOINT = 5; 
+        const MAX_CHECKPOINTS = 5; // The total number of unique questions the player must answer
+        
+        // Colors
+        const DINO_COLOR = '#006400'; // Dark Green
+        const OBSTACLE_COLOR = '#8B0000'; // Dark Red
+        const GROUND_COLOR = '#333';
+        
+        // --- GAME ENTITIES ---
+
+        class Dinosaur {
+            constructor() {
+                this.x = 50;
+                this.y = GROUND_Y - DINO_HEIGHT;
+                this.width = DINO_WIDTH;
+                this.height = DINO_HEIGHT;
+                this.velocityY = 0;
+                this.isJumping = false;
+                this.gravity = 0.6;
+                this.jumpStrength = -13;
+            }
+
+            draw() {
+                ctx.fillStyle = DINO_COLOR;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                // Simple Eye/Icon for character
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(this.x + this.width / 2 - 2, this.y + 5, 4, 4);
+            }
+
+            update() {
+                if (this.isJumping) {
+                    this.y += this.velocityY;
+                    this.velocityY += this.gravity;
+
+                    // Check for ground collision
+                    if (this.y >= GROUND_Y - this.height) {
+                        this.y = GROUND_Y - this.height;
+                        this.isJumping = false;
+                        this.velocityY = 0;
+                    }
+                }
+            }
+
+            jump() {
+                if (!this.isJumping && gameState.isRunning && !gameState.isPausedBySystem) {
+                    this.isJumping = true;
+                    this.velocityY = this.jumpStrength;
+                }
+            }
+        }
+
+        class Obstacle {
+            constructor(width, height) {
+                this.x = canvas.width;
+                this.y = GROUND_Y - height;
+                this.width = width;
+                this.height = height;
+                // Add a flag to track if the obstacle has been successfully passed and counted
+                this.passed = false;
+            }
+
+            draw() {
+                ctx.fillStyle = OBSTACLE_COLOR;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+
+            update() {
+                this.x -= gameState.speed;
+            }
+        }
+
+        // --- CYBERSECURITY DATA (Expanded for more variety) ---
+
+        const CYBER_TOPICS = [
+            {
+                topic: "Phishing Awareness",
+                cisControl: "CIS Control 14: Security Awareness and Skills Training",
+                question: "What is the primary sign of a malicious email?",
+                options: [
+                    "It uses a generic greeting like 'Dear Customer.'",
+                    "It has urgent language demanding immediate action or clicking a suspicious link.",
+                    "It contains no images or logos.",
+                    "It is sent during non-business hours."
+                ],
+                correctIndex: 1,
+                explanation: "Urgent language demanding immediate action and links to unknown sites are classic red flags for phishing. Generic greetings are also common, but the threat of immediate action is key."
+            },
+            {
+                topic: "Strong Passwords & Passphrases",
+                cisControl: "CIS Control 6: Access Control Management",
+                question: "Which of the following creates the most secure login credential?",
+                options: [
+                    "P@sswOrd1!",
+                    "A 4-word phrase: CorrectHorseBatteryStaple",
+                    "Your name followed by your birth year.",
+                    "A 10-character mix of letters and numbers."
+                ],
+                correctIndex: 1,
+                explanation: "Passphrases (long, random sequences of words) are often significantly more secure and easier to remember than short, complex character strings."
+            },
+            {
+                topic: "Multi-Factor Authentication (MFA)",
+                cisControl: "CIS Control 6: Access Control Management",
+                question: "If a hacker steals your password, what stops them from logging in if MFA is enabled?",
+                options: [
+                    "The MFA system will automatically lock their IP address.",
+                    "The hacker cannot provide the second verification step (like a code from your phone or biometric scan).",
+                    "MFA only works if the password is changed every 30 days.",
+                    "MFA forces the hacker to use a different browser."
+                ],
+                correctIndex: 1,
+                explanation: "MFA requires something the hacker *has* (like your phone/token) in addition to something they *know* (your password). Without the second factor, the login fails."
+            },
+            {
+                topic: "Software Updates & Patching",
+                cisControl: "CIS Control 7: Vulnerability Management",
+                question: "What is the main reason security experts recommend immediate software updates?",
+                options: [
+                    "To introduce new graphical features.",
+                    "To fix bugs that cause applications to crash.",
+                    "To patch security vulnerabilities that attackers can exploit.",
+                    "To optimize battery life on mobile devices."
+                ],
+                correctIndex: 2,
+                explanation: "Security updates and patches often close critical vulnerabilities (holes) in the software that hackers look for. Delaying updates leaves your system exposed."
+            },
+            {
+                topic: "Public Wi-Fi Security",
+                cisControl: "CIS Control 13: Network Monitoring and Defense",
+                question: "What is the safest practice when using public Wi-Fi at a cafe or airport?",
+                options: [
+                    "Avoid using any Wi-Fi that requires a password.",
+                    "Assume all connections are secure and browse as normal.",
+                    "Use a Virtual Private Network (VPN) for all sensitive activities.",
+                    "Only visit websites that start with 'http://'."
+                ],
+                correctIndex: 2,
+                explanation: "Public Wi-Fi is often unencrypted, meaning data can be easily intercepted. A VPN encrypts your connection, protecting your data."
+            },
+            {
+                topic: "Identifying Malware",
+                cisControl: "CIS Control 10: Malware Defenses",
+                question: "What is the term for software designed to secretly monitor your actions and capture keystrokes?",
+                options: [
+                    "Adware",
+                    "Ransomware",
+                    "Spyware",
+                    "Firmware"
+                ],
+                correctIndex: 2,
+                explanation: "Spyware is malicious software designed to gather information about a person or organization without their knowledge and send it to another entity."
+            },
+             {
+                topic: "Device Encryption",
+                cisControl: "CIS Control 3: Data Protection",
+                question: "Why is full-disk encryption (FDE) important for laptops and phones?",
+                options: [
+                    "It speeds up the device's boot time.",
+                    "It prevents unauthorized access to data if the device is lost or stolen.",
+                    "It automatically deletes sensitive files after 30 days.",
+                    "It prevents phishing emails from reaching the device."
+                ]
+                ,
+                correctIndex: 1,
+                explanation: "If a device with FDE is stolen, the data on it is unreadable without the correct decryption key, protecting sensitive information."
+            },
+             {
+                topic: "Data Backup",
+                cisControl: "CIS Control 11: Data Recovery",
+                question: "What is the most critical principle of effective data backup?",
+                options: [
+                    "Storing all backups in the cloud.",
+                    "Storing backups on a separate, external hard drive.",
+                    "The 3-2-1 Rule: 3 copies, 2 media types, 1 offsite.",
+                    "Backing up data only once per year."
+                ],
+                correctIndex: 2,
+                explanation: "The 3-2-1 rule is the industry standard: keep 3 copies of your data, on 2 different storage types, with 1 copy located offsite (e.g., in the cloud or a different location)."
+            }
+        ];
+
+        let dino;
+        let obstacles = [];
+        let lastTimestamp = 0;
+        let currentTopic = null; // Stores the active question data
+
+        // --- UTILITY: SHUFFLE AND SELECT ---
+        
+        // Function to randomly select and shuffle MAX_CHECKPOINTS unique topics
+        function shuffleAndSelectTopics() {
+            // 1. Create a copy of the topics and shuffle them
+            const shuffled = [...CYBER_TOPICS]
+                .map(value => ({ value, sort: Math.random() }))
+                .sort((a, b) => a.sort - b.sort)
+                .map(({ value }) => value);
+            
+            // 2. Return only the number of questions required (MAX_CHECKPOINTS, which is 5)
+            return shuffled.slice(0, MAX_CHECKPOINTS);
+        }
+
+        // --- GAME FUNCTIONS ---
+
+        function setGameOverScreen(isWin = false) {
+            finalScoreSpan.textContent = Math.floor(gameState.score);
+            if (isWin) {
+                gameOverScreen.querySelector('h2').textContent = 'MISSION COMPLETE!';
+                gameOverScreen.querySelector('h2').style.color = '#006400'; // Green for win
+                gameOverScreen.querySelector('p').innerHTML = `You successfully cleared all security checkpoints with a final score of <span id="finalScore">${Math.floor(gameState.score)}</span>!`;
+                restartButton.textContent = 'Start New Scan';
+            } else {
+                gameOverScreen.querySelector('h2').textContent = 'GAME OVER!';
+                gameOverScreen.querySelector('h2').style.color = '#ff0000'; // Red for lose
+                gameOverScreen.querySelector('p').innerHTML = `You tripped over a vulnerability at <span id="finalScore">${Math.floor(gameState.score)}</span> points.`;
+                restartButton.textContent = 'Retry Scan';
+            }
+        }
+
+        function initGame() {
+            // Reset game state
+            gameState.score = 0;
+            gameState.isRunning = true;
+            gameState.isPausedBySystem = false;
+            gameState.speed = 5;
+            gameState.obstaclesPassedCount = 0; // Reset obstacle count
+            gameState.checkpointsCleared = 0; // Reset question count
+            obstacles = [];
+            
+            // *** NEW: Select and randomize 5 unique questions for this run ***
+            gameState.currentQuestionSet = shuffleAndSelectTopics(); 
+            
+            // Reset the Game Over screen text to default 'Game Over' state
+            setGameOverScreen(false);
+
+            // Initialize entities
+            dino = new Dinosaur();
+
+            // Hide screens
+            messageBox.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+
+            // Start the main loop
+            if (gameState.animationFrameId) {
+                cancelAnimationFrame(gameState.animationFrameId);
+            }
+            lastTimestamp = performance.now();
+            gameLoop(lastTimestamp);
+        }
+
+        function drawGround() {
+            ctx.strokeStyle = GROUND_COLOR;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, GROUND_Y);
+            ctx.lineTo(canvas.width, GROUND_Y);
+            ctx.stroke();
+        }
+
+        function generateObstacle() {
+            const minHeight = 20;
+            const maxHeight = 40;
+            const minWidth = 10;
+            const maxWidth = 30;
+
+            const height = Math.random() * (maxHeight - minHeight) + minHeight;
+            const width = Math.random() * (maxWidth - minWidth) + minWidth;
+
+            obstacles.push(new Obstacle(width, height));
+        }
+
+        function checkCollision(dino, obstacle) {
+            return (
+                dino.x < obstacle.x + obstacle.width &&
+                dino.x + dino.width > obstacle.x &&
+                dino.y < obstacle.y + obstacle.height &&
+                dino.y + dino.height > obstacle.y
+            );
+        }
+        
+        function updateSpeedAndDifficulty() {
+            // Increase speed every 100 points
+            if (gameState.score > 0 && Math.floor(gameState.score) % 100 === 0) {
+                // To prevent speed increasing every frame for a score of 100, 200, etc.
+                if (Math.floor(gameState.score) !== gameState.lastScoreBeforeSpeedIncrease) {
+                    gameState.speed = Math.min(gameState.speed + 0.5, 10); // Cap speed at 10
+                    gameState.lastScoreBeforeSpeedIncrease = Math.floor(gameState.score); // Track when speed was last increased
+                }
+            }
+        }
+
+        function gameLoop(timestamp) {
+            const deltaTime = timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+
+            // Update score display regardless of run state
+            scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore}`;
+            
+            if (gameState.isRunning && !gameState.isPausedBySystem) {
+                // 1. Clear Canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // 2. Draw Ground
+                drawGround();
+
+                // 3. Update Dino
+                dino.update();
+                dino.draw();
+
+                // 4. Update Score
+                gameState.score += 0.05; // Increment score based on time/frame
+                updateSpeedAndDifficulty();
+                
+                // 5. Obstacle Logic
+                gameState.timeSinceLastObstacle += deltaTime;
+                if (gameState.timeSinceLastObstacle > gameState.obstacleGenerationInterval) {
+                    generateObstacle();
+                    gameState.timeSinceLastObstacle = 0;
+                    // Slightly decrease the interval to increase difficulty
+                    gameState.obstacleGenerationInterval = Math.max(800, gameState.obstacleGenerationInterval * 0.98);
+                }
+
+                obstacles.forEach((obstacle) => {
+                    obstacle.update();
+                    obstacle.draw();
+
+                    // Check for collision
+                    if (checkCollision(dino, obstacle)) {
+                        gameOver();
+                        return; // Stop processing further
+                    }
+
+                    // Check if obstacle has been successfully passed
+                    // Only count if it's past the dino's x position and hasn't been counted yet
+                    if (obstacle.x + obstacle.width < dino.x && !obstacle.passed) {
+                        obstacle.passed = true;
+                        gameState.obstaclesPassedCount++;
+                    }
+                });
+
+                // Check for checkpoint trigger after processing all obstacles
+                if (gameState.obstaclesPassedCount >= BLOCKS_PER_CHECKPOINT) {
+                    // Reset the counter immediately before pausing
+                    gameState.obstaclesPassedCount = 0;
+                    pauseGameForSecurityCheck();
+                }
+
+                // Clean up obstacles that are off-screen
+                obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > 0);
+            }
+            
+            // 6. Loop
+            gameState.animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver() {
+            gameState.isRunning = false;
+            setGameOverScreen(false); // Ensure loss message is set
+            gameOverScreen.style.display = 'flex';
+
+            // Update High Score
+            if (Math.floor(gameState.score) > gameState.highScore) {
+                gameState.highScore = Math.floor(gameState.score);
+                localStorage.setItem('cyberDashHighScore', gameState.highScore);
+                scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore} (NEW!)`;
+            }
+            
+            cancelAnimationFrame(gameState.animationFrameId);
+        }
+
+        function gameWin() {
+            gameState.isRunning = false;
+            setGameOverScreen(true); // Set win message
+            gameOverScreen.style.display = 'flex';
+
+            // Update High Score
+            if (Math.floor(gameState.score) > gameState.highScore) {
+                gameState.highScore = Math.floor(gameState.score);
+                localStorage.setItem('cyberDashHighScore', gameState.highScore);
+                scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore} (NEW!)`;
+            }
+
+            cancelAnimationFrame(gameState.animationFrameId);
+        }
+        
+        // --- SECURITY CHECKPOINT LOGIC ---
+
+        function pauseGameForSecurityCheck() {
+            
+            // Check for game end condition first
+            if (gameState.checkpointsCleared >= MAX_CHECKPOINTS) {
+                gameWin();
+                return;
+            }
+
+            gameState.isRunning = false;
+            gameState.isPausedBySystem = true;
+            gameState.checkpointsCleared++; // Increment the cleared count for the new question
+
+            // Get the next topic from the pre-selected, randomized set
+            currentTopic = gameState.currentQuestionSet[gameState.checkpointsCleared - 1]; 
+
+            // Update Modal Content
+            modalTitle.textContent = 'SECURITY CHECKPOINT REACHED!';
+            
+            // Display the question counter
+            questionCounter.textContent = `Question ${gameState.checkpointsCleared} of ${MAX_CHECKPOINTS}`;
+            
+            topicText.textContent = `Topic: ${currentTopic.topic}`;
+            
+            // Display the CIS Control reference
+            cisControlText.textContent = `(${currentTopic.cisControl})`;
+            
+            questionText.textContent = `Q: ${currentTopic.question}`;
+            
+            // Reset modal elements
+            feedbackText.style.display = 'none';
+            continueButton.style.display = 'none';
+            optionContainer.innerHTML = ''; // Clear previous options
+
+            // 1. Create and display options
+            currentTopic.options.forEach((optionText, index) => {
+                const button = document.createElement('button');
+                button.textContent = optionText;
+                button.classList.add('option-button');
+                button.dataset.index = index;
+                
+                // Add event listener for the answer check
+                button.addEventListener('click', handleAnswer);
+                optionContainer.appendChild(button);
+            });
+            
+            messageBox.style.display = 'flex';
+        }
+
+        function handleAnswer(event) {
+            if (!currentTopic) return;
+
+            const selectedButton = event.currentTarget;
+            const selectedIndex = parseInt(selectedButton.dataset.index);
+            const isCorrect = selectedIndex === currentTopic.correctIndex;
+            const allButtons = optionContainer.querySelectorAll('.option-button');
+
+            // 1. Disable all buttons and remove click listeners
+            allButtons.forEach(btn => {
+                btn.disabled = true;
+                btn.removeEventListener('click', handleAnswer);
+            });
+
+            // 2. Provide visual feedback
+            if (isCorrect) {
+                selectedButton.classList.add('correct-answer');
+                feedbackText.textContent = `CORRECT! (+15 pts)\n\nExplanation: ${currentTopic.explanation}`;
+                
+                // Bonus score for correct answer
+                gameState.score += 15;
+            } else {
+                selectedButton.classList.add('incorrect-answer');
+                
+                // Highlight the correct answer
+                allButtons[currentTopic.correctIndex].classList.add('correct-answer');
+                
+                feedbackText.textContent = `INCORRECT. The correct answer is highlighted.\n\nExplanation: ${currentTopic.explanation}`;
+            }
+
+            // 3. Show detailed explanation and continue button
+            feedbackText.style.display = 'block';
+            continueButton.style.display = 'inline-block';
+            
+            // Set continue button text based on win condition
+            if (gameState.checkpointsCleared >= MAX_CHECKPOINTS) {
+                continueButton.textContent = 'Mission Accomplished!';
+            } else {
+                 continueButton.textContent = 'Continue Run';
+            }
+
+            // Re-render score display immediately to show bonus
+            scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore}`;
+        }
+        
+        function resumeGame() {
+            messageBox.style.display = 'none';
+            
+            // Check if the checkpoint count has been reached (win condition)
+            if (gameState.checkpointsCleared >= MAX_CHECKPOINTS) {
+                gameWin();
+                return;
+            }
+
+            // Reset the track: Clear all existing obstacles
+            obstacles = []; 
+            gameState.timeSinceLastObstacle = 0; // Reset timer so a new obstacle doesn't spawn immediately
+            
+            gameState.isRunning = true;
+            gameState.isPausedBySystem = false;
+            lastTimestamp = performance.now(); // Resetting timestamp helps prevent a jump in updates
+        }
+
+        // --- EVENT LISTENERS ---
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                // Prevent scrolling when space is pressed
+                e.preventDefault(); 
+                
+                if (gameState.isRunning) {
+                    dino.jump();
+                } else if (!gameState.isRunning && !gameState.isPausedBySystem && gameOverScreen.style.display !== 'flex') {
+                    // Start the game with spacebar
+                    initGame();
+                }
+            }
+        });
+
+        canvas.addEventListener('click', (e) => {
+            if (!gameState.isRunning && !gameState.isPausedBySystem && gameOverScreen.style.display !== 'flex') {
+                // Start the game with click
+                initGame();
+            } else {
+                dino.jump();
+            }
+        });
+
+        continueButton.addEventListener('click', resumeGame);
+
+        restartButton.addEventListener('click', initGame);
+
+        // --- INITIAL START MESSAGE ---
+        
+        function drawInitialMessage() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGround();
+            ctx.fillStyle = DINO_COLOR;
+            ctx.fillRect(50, GROUND_Y - DINO_HEIGHT, DINO_WIDTH, DINO_HEIGHT); // Draw static dino
+            
+            ctx.fillStyle = GROUND_COLOR;
+            // Reverted back to the original retro font
+            ctx.font = '12px "Press Start 2P"'; 
+            ctx.textAlign = 'center';
+            ctx.fillText("Press SPACE/UP or Click to Start!", canvas.width / 2, canvas.height / 2);
+        }
+
+        // Initialize display on load
+        window.onload = () => {
+            // Adjust canvas size for responsiveness
+            const container = document.querySelector('.game-container');
+            canvas.width = container.clientWidth - 40; // Subtract padding
+            
+            // Reload high score
+            gameState.highScore = localStorage.getItem('cyberDashHighScore') || 0;
+            scoreDisplay.innerHTML = `Score: 0 | High: ${gameState.highScore}`;
+
+            drawInitialMessage();
+        };
+
+        // Handle resize (optional, but good practice for canvas games)
+        window.addEventListener('resize', () => {
+             const container = document.querySelector('.game-container');
+             canvas.width = container.clientWidth - 40;
+             if (!gameState.isRunning && gameOverScreen.style.display !== 'flex' && messageBox.style.display !== 'flex') {
+                drawInitialMessage();
+             }
+        });
+
+    </script>
+</body>
+</html>
