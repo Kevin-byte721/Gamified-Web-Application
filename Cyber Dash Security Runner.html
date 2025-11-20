@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE ahtml>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -46,7 +46,7 @@
             color: #555;
         }
 
-        /* --- MODAL STYLES (Applies to #messageBox, #startMenu, #studyMode) --- */
+        /* --- MODAL STYLES (Applies to #messageBox, #startMenu, #studyMode, #moduleMode) --- */
         .full-overlay-modal {
             position: absolute;
             top: 0;
@@ -123,10 +123,16 @@
         /* Specific button colors for modes */
         #quizModeButton { background-color: #007bff; }
         #studyModeButton { background-color: #ff9800; }
+        #moduleModeButton { background-color: #f39c12; } /* New: Amber/Orange for Scenario Mode */
+        
         #quizModeButton:hover { background-color: #0056b3; }
         #studyModeButton:hover { background-color: #e68900; }
+        #moduleModeButton:hover { background-color: #e08e0b; }
+        
         #exitStudyButton { background-color: #777; }
         #exitStudyButton:hover { background-color: #555; }
+        #exitModuleButton { background-color: #999; } /* Darker gray for module exit */
+        #exitModuleButton:hover { background-color: #666; }
         
         /* Game Over Buttons */
         /* Margin-top removed to rely on flex gap below */
@@ -200,7 +206,7 @@
         #gameOverScreen h2 {
             font-size: 24px;
             color: #ff0000;
-            /* Added top margin for space above the text */
+            /* Adjusted for more space on top */
             margin: 30px 0 15px 0; 
         }
 
@@ -213,30 +219,30 @@
         }
         
         /* Study Mode Specific Styles */
-        #studyContent {
+        #studyContent, #scenarioContent {
             background-color: #f0f8ff; /* Light blue background */
             padding: 20px;
             border: 3px dashed #007bff;
             margin-top: 15px;
             min-height: 150px;
         }
-        #cisIndex {
+        #cisIndex, #scenarioIndex {
             font-size: 10px;
             margin-bottom: 5px;
             color: #007bff;
         }
-        #cisTitle {
+        #cisTitle, #scenarioTitle {
             font-size: 14px;
             color: #000080; /* Dark blue */
             margin-bottom: 10px;
             text-transform: uppercase;
         }
-        #cisDescription {
+        #cisDescription, #scenarioText {
             font-size: 10px;
             line-height: 1.6;
             text-align: left;
         }
-        #studyInstructions {
+        #studyInstructions, #moduleInstructions {
              font-size: 8px;
              margin-top: 20px;
              color: #666;
@@ -277,10 +283,10 @@
                 padding-left: 10px; 
                 padding-right: 10px;
             }
-            #cisTitle {
+            #cisTitle, #scenarioTitle {
                 font-size: 12px;
             }
-            #cisDescription {
+            #cisDescription, #scenarioText {
                 font-size: 8px;
             }
         }
@@ -294,7 +300,7 @@
         <div id="scoreDisplay">Score: 0 | High: 0</div>
         <canvas id="gameCanvas" width="600" height="150"></canvas>
         
-        <!-- START MENU SCREEN (New) -->
+        <!-- START MENU SCREEN -->
         <div id="startMenu" class="full-overlay-modal" style="display: flex;">
             <div class="modal-content">
                 <h3 class="modal-title">SELECT MODE</h3>
@@ -306,14 +312,18 @@
                     <button id="studyModeButton" class="button-style" style="margin-top: 0;">
                         Study Mode (CIS Controls)
                     </button>
+                    <!-- NEW BUTTON FOR MODULE MODE -->
+                    <button id="moduleModeButton" class="button-style" style="margin-top: 0;">
+                        Module Mode (Scenario)
+                    </button>
                 </div>
                 <p id="startInstructions" class="modal-text" style="font-size: 10px; margin-top: 30px; color: #666;">
-                    Quiz Mode: Jump to avoid vulnerabilities and answer questions at checkpoints.
+                    <!-- Instructions updated via JS on load -->
                 </p>
             </div>
         </div>
 
-        <!-- STUDY MODE SCREEN (New) -->
+        <!-- STUDY MODE SCREEN -->
         <div id="studyMode" class="full-overlay-modal">
             <div class="modal-content">
                 <h3 class="modal-title" style="color: #007bff;">CIS CONTROL STUDY MODULE</h3>
@@ -329,6 +339,28 @@
                 </p>
                 
                 <button id="exitStudyButton" class="button-style">Exit Study Mode</button>
+            </div>
+        </div>
+        
+        <!-- MODULE MODE SCREEN (NEW) -->
+        <div id="moduleMode" class="full-overlay-modal">
+            <div class="modal-content">
+                <h3 class="modal-title" style="color: #f39c12;">CYBER SCENARIO MODULE</h3>
+                
+                <div id="scenarioContent">
+                    <div id="scenarioIndex">SCENARIO X OF Y</div>
+                    <div id="scenarioTitle" style="font-size: 14px; color: #333; margin: 10px 0;"></div>
+                    <div id="scenarioText" style="font-size: 10px; line-height: 1.6; text-align: left;"></div>
+                    <div id="scenarioQuestion" style="font-size: 10px; line-height: 1.6; text-align: left; font-weight: bold; margin-top: 15px; color: #ff0000;"></div>
+                </div>
+
+                <p id="moduleInstructions" style="font-size: 8px; margin-top: 20px; color: #666;">
+                    Use &larr; and &rarr; arrow keys to navigate scenarios. Press the button to reveal the solution.
+                </p>
+                
+                <!-- Reveal Button will be injected here by JS -->
+                
+                <button id="exitModuleButton" class="button-style" style="background-color: #999;">Exit Module Mode</button>
             </div>
         </div>
 
@@ -358,9 +390,7 @@
             <p>You tripped over a vulnerability at <span id="finalScore">0</span> points.</p>
             
             <div class="game-over-buttons">
-                <!-- Keep the Retry button for quick restarts -->
                 <button id="restartButton" class="button-style">Retry Scan</button>
-                <!-- New button to go back to the Start Menu -->
                 <button id="backToMenuButton" class="button-style">Back to Main Menu</button>
             </div>
         </div>
@@ -377,12 +407,21 @@
         const startMenu = document.getElementById('startMenu');
         const quizModeButton = document.getElementById('quizModeButton');
         const studyModeButton = document.getElementById('studyModeButton');
+        const moduleModeButton = document.getElementById('moduleModeButton'); // New reference
         
         const studyMode = document.getElementById('studyMode');
         const cisIndex = document.getElementById('cisIndex');
         const cisTitle = document.getElementById('cisTitle');
         const cisDescription = document.getElementById('cisDescription');
         const exitStudyButton = document.getElementById('exitStudyButton');
+        
+        const moduleMode = document.getElementById('moduleMode'); // New modal reference
+        const scenarioContent = document.getElementById('scenarioContent');
+        const scenarioIndex = document.getElementById('scenarioIndex');
+        const scenarioTitle = document.getElementById('scenarioTitle');
+        const scenarioText = document.getElementById('scenarioText');
+        const scenarioQuestion = document.getElementById('scenarioQuestion');
+        const exitModuleButton = document.getElementById('exitModuleButton');
         
         const messageBox = document.getElementById('messageBox');
         const modalTitle = document.getElementById('modalTitle');
@@ -395,13 +434,12 @@
         const continueButton = document.getElementById('continueButton');
         const gameOverScreen = document.getElementById('gameOverScreen');
         const restartButton = document.getElementById('restartButton');
-        // New button reference
         const backToMenuButton = document.getElementById('backToMenuButton');
         const finalScoreSpan = document.getElementById('finalScore');
         
         // Use a persistent object for game state
         let gameState = {
-            mode: 'start', // 'start', 'quiz', or 'study'
+            mode: 'start', // 'start', 'quiz', 'study', or 'module'
             score: 0,
             highScore: localStorage.getItem('cyberDashHighScore') || 0,
             isRunning: false,
@@ -415,6 +453,8 @@
             currentQuestionSet: [],
             // Study Mode State
             currentCisIndex: 0,
+            // Module Mode State
+            currentModuleIndex: 0,
         };
 
         const GROUND_Y = canvas.height - 30;
@@ -626,6 +666,34 @@
                 description: "Develop and maintain security awareness training for all personnel to minimize human error. Train employees to recognize social engineering tactics like phishing and baiting, as well as proper handling of sensitive data."
             }
         ];
+        
+        // --- MODULE SCENARIOS DATA (Module Mode) ---
+        const MODULE_SCENARIOS = [
+            {
+                number: 1,
+                title: "The Urgent IT Ticket Scam",
+                description: "You receive an email claiming to be from IT Support. It says your account is locked due to 'suspicious activity' and you must click a link immediately to verify your password and unlock it. The email address looks slightly off: 'it-support@companyname.co' instead of 'it-support@companyname.com'.",
+                question: "What is the safest immediate action?",
+                answer: "Do not click the link. Report the email as phishing immediately, then call the official IT support desk using a verified number (not the one in the email) to confirm if your account is truly locked.",
+                control: "CIS Control 14: Security Awareness and Skills Training"
+            },
+            {
+                number: 2,
+                title: "The USB Drive in the Parking Lot",
+                description: "On your way into the office, you find a brand new, unlabeled USB drive lying next to your car in the parking lot. You are curious to know what files might be on it.",
+                question: "What should you do with the USB drive?",
+                answer: "Never plug unknown USB drives into your work or personal computer. These drives are often 'bait' loaded with malware. Turn it over to your security team or discard it according to company policy.",
+                control: "CIS Control 10: Malware Defenses"
+            },
+            {
+                number: 3,
+                title: "The Public Wi-Fi Password Leak",
+                description: "You're traveling and decide to work from an airport lounge. You successfully connect to the lounge's free Wi-Fi and open your banking website to check a balance. You notice the website address starts with 'http://' instead of 'https://'.",
+                question: "What is the security risk, and how should you stop?",
+                answer: "The risk is that 'http://' means your data is unencrypted, making it vulnerable to interception (sniffing) on the public network. Stop immediately and only proceed with sensitive activities (like banking) after connecting via a Virtual Private Network (VPN).",
+                control: "CIS Control 13: Network Monitoring and Defense"
+            }
+        ];
 
 
         let dino;
@@ -654,6 +722,7 @@
             messageBox.style.display = 'none';
             gameOverScreen.style.display = 'none';
             studyMode.style.display = 'none';
+            moduleMode.style.display = 'none'; // New: Hide module mode
 
             // Show start menu
             startMenu.style.display = 'flex';
@@ -666,6 +735,15 @@
             // Update the static score display
             gameState.highScore = localStorage.getItem('cyberDashHighScore') || 0;
             scoreDisplay.innerHTML = `Score: 0 | High: ${gameState.highScore}`;
+            
+            // Update instructions for the new mode
+            document.getElementById('startInstructions').innerHTML = `
+                Quiz Mode: Jump to avoid vulnerabilities and answer questions at checkpoints.
+                <br><br>
+                Study Mode: Review foundational CIS Controls.
+                <br><br>
+                Module Mode: Explore real-world cyber security scenarios and best practices.
+            `;
         }
         
         function startQuizMode() {
@@ -682,6 +760,24 @@
             displayCisControl(gameState.currentCisIndex);
         }
         
+        function exitStudyMode() {
+            studyMode.style.display = 'none';
+            showStartMenu();
+        }
+        
+        function startModuleMode() {
+            gameState.mode = 'module';
+            gameState.currentModuleIndex = 0;
+            startMenu.style.display = 'none';
+            moduleMode.style.display = 'flex'; // Show the new modal
+            displayScenario(gameState.currentModuleIndex);
+        }
+        
+        function exitModuleMode() {
+            moduleMode.style.display = 'none';
+            showStartMenu();
+        }
+        
         function displayCisControl(index) {
             const control = CIS_CONTROLS_STUDY[index];
             if (!control) {
@@ -693,11 +789,58 @@
             cisTitle.textContent = control.title;
             cisDescription.textContent = control.description;
         }
+        
+        function displayScenario(index) {
+            const scenario = MODULE_SCENARIOS[index];
+            if (!scenario) {
+                exitModuleMode();
+                return;
+            }
+            
+            // Update Text Content
+            scenarioIndex.textContent = `SCENARIO ${index + 1} OF ${MODULE_SCENARIOS.length}`;
+            scenarioTitle.textContent = scenario.title;
+            scenarioText.innerHTML = `<strong>Situation:</strong> ${scenario.description} <br><br> <strong>Control Focus:</strong> ${scenario.control}`;
+            scenarioQuestion.textContent = `Question: ${scenario.question}`;
+            
+            // Answer Reveal Logic
+            let answerReveal = document.getElementById('answerReveal');
+            let revealButton = document.getElementById('revealButton');
 
-        function exitStudyMode() {
-            studyMode.style.display = 'none';
-            showStartMenu();
+            if (!answerReveal) {
+                answerReveal = document.createElement('div');
+                answerReveal.id = 'answerReveal';
+                answerReveal.style.marginTop = '20px';
+                answerReveal.style.borderTop = '2px dashed #ccc';
+                answerReveal.style.paddingTop = '10px';
+                answerReveal.style.textAlign = 'left';
+                answerReveal.style.fontSize = '10px';
+                answerReveal.style.color = '#006400';
+                scenarioContent.appendChild(answerReveal);
+            }
+            
+            if (!revealButton) {
+                revealButton = document.createElement('button');
+                revealButton.id = 'revealButton';
+                revealButton.classList.add('button-style');
+                revealButton.style.backgroundColor = '#2c3e50'; // Dark color
+                revealButton.style.marginTop = '20px';
+                revealButton.style.fontSize = '10px';
+                revealButton.style.marginBottom = '10px';
+                revealButton.onclick = () => {
+                    const isHidden = answerReveal.style.display === 'none';
+                    answerReveal.style.display = isHidden ? 'block' : 'none';
+                    revealButton.textContent = isHidden ? 'Hide Solution' : 'Reveal Solution';
+                };
+                moduleMode.querySelector('.modal-content').insertBefore(revealButton, exitModuleButton);
+            }
+
+            // Reset state and content for the current scenario
+            revealButton.textContent = 'Reveal Solution';
+            answerReveal.style.display = 'none'; 
+            answerReveal.innerHTML = `<strong>Solution:</strong> ${scenario.answer}`;
         }
+
 
         // --- QUIZ GAME LOGIC ---
 
@@ -981,6 +1124,20 @@
                 }
             }
             
+            // Check for Module Mode controls (NEW)
+            else if (gameState.mode === 'module') {
+                const totalModules = MODULE_SCENARIOS.length;
+                if (e.code === 'ArrowRight') {
+                    gameState.currentModuleIndex = (gameState.currentModuleIndex + 1) % totalModules;
+                    displayScenario(gameState.currentModuleIndex);
+                } else if (e.code === 'ArrowLeft') {
+                    gameState.currentModuleIndex = (gameState.currentModuleIndex - 1 + totalModules) % totalModules;
+                    displayScenario(gameState.currentModuleIndex);
+                } else if (e.code === 'Enter' || e.code === 'Escape') {
+                    exitModuleMode();
+                }
+            }
+            
             // Check for universal controls (Game Over / Start Menu)
             else if (gameState.mode === 'start') {
                  if (e.code === 'Space' || e.code === 'ArrowUp') {
@@ -1001,7 +1158,10 @@
         // Button listeners
         quizModeButton.addEventListener('click', startQuizMode);
         studyModeButton.addEventListener('click', startStudyMode);
+        moduleModeButton.addEventListener('click', startModuleMode); // New Listener
+        
         exitStudyButton.addEventListener('click', exitStudyMode);
+        exitModuleButton.addEventListener('click', exitModuleMode); // New Listener
         
         continueButton.addEventListener('click', resumeGame);
         restartButton.addEventListener('click', initGame); // Retry Scan button starts the game again
