@@ -262,6 +262,24 @@
             gap: 8px; 
             align-items: center;
         }
+        #pauseMenu {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: none;
+        background: rgba(0, 0, 0, 0.85); /* Darker overlay for full block */
+        align-items: center;
+        justify-content: center;
+        z-index: 999; /* Ensure it's above canvas and other modals */
+        }
+
+        .wide-modal {
+        width: 95%;
+        max-width: 600px;
+        height: 250px;
+        }
 
         /* Mobile adjustments */
         @media (max-width: 600px) {
@@ -297,16 +315,73 @@
                 font-size: 8px;
             }
         }
+        #sideNav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 140px;
+  background-color: #222;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 60px;
+  z-index: 1000;
+  box-shadow: 4px 0 8px rgba(0,0,0,0.3);
+}
+
+.side-button {
+  width: 120px;
+  margin: 10px 0;
+  padding: 10px;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 10px;
+  background-color: #444;
+  color: #fff;
+  border: 2px solid #fff;
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 0.2s;
+}
+
+.side-button:hover {
+  background-color: #666;
+}
+
+.side-button:focus {
+  background-color: #000;
+  color: #fff;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px #000;
+}
+
     </style>
 </head>
 <body>
+<!-- SIDE NAVIGATION -->
+<div id="sideNav">
+  <button class="side-button" id="navStart">🏁 Start</button>
+  <button class="side-button" id="navHelp">❓ Help</button>
+</div>
 
     <h1 style="font-size: 20px; margin-bottom: 20px;">Cyber Dash: Security Runner</h1>
 
     <div class="game-container">
         <div id="scoreDisplay">Score: 0 | High: 0</div>
         <canvas id="gameCanvas" width="600" height="150"></canvas>
-        
+<!-- PAUSE MENU -->
+<!-- PAUSE MENU -->
+  <div id="pauseMenu" class="full-overlay-modal">
+  <div class="modal-content wide-modal">
+      <h3 class="modal-title">GAME PAUSED</h3>
+      <p class="modal-text">Press P or ESC to resume your run.</p>
+      <div id="pauseMenuButtons" style="display:flex; flex-direction:column; gap:15px; align-items:center;">
+        <button id="resumeButton" class="button-style" tabindex="0">Resume</button>
+        <button id="backToMenuFromPause" class="button-style" tabindex="0">Back to Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+    
         <!-- START MENU SCREEN -->
         <div id="startMenu" class="full-overlay-modal" style="display: flex;">
             <div class="modal-content">
@@ -400,6 +475,29 @@
         const cisDescription = document.getElementById('cisDescription');
         const exitStudyButton = document.getElementById('exitStudyButton');
         
+        const pauseMenu = document.getElementById('pauseMenu');
+const resumeButton = document.getElementById('resumeButton');
+const backToMenuFromPause = document.getElementById('backToMenuFromPause');
+
+const pauseMenuButtons = document.getElementById('pauseMenuButtons');
+
+function handleMenuNavigation(key, container) {
+  const focusable = container.querySelectorAll('button:not([disabled])');
+  const currentFocus = document.activeElement;
+  let currentIndex = Array.from(focusable).indexOf(currentFocus);
+
+  if (key === 'ArrowUp') {
+    currentIndex = (currentIndex > 0) ? currentIndex - 1 : focusable.length - 1;
+    focusable[currentIndex].focus();
+  } else if (key === 'ArrowDown') {
+    currentIndex = (currentIndex < focusable.length - 1) ? currentIndex + 1 : 0;
+    focusable[currentIndex].focus();
+  } else if (key === 'Enter' && currentFocus.tagName === 'BUTTON') {
+    currentFocus.click();
+  }
+}
+
+
         const messageBox = document.getElementById('messageBox');
         const modalTitle = document.getElementById('modalTitle');
         const questionCounter = document.getElementById('questionCounter');
@@ -417,21 +515,22 @@
         
         // Use a persistent object for game state
         let gameState = {
-            mode: 'start', // 'start', 'quiz', or 'study'
-            score: 0,
-            highScore: localStorage.getItem('cyberDashHighScore') || 0,
-            isRunning: false,
-            animationFrameId: null,
-            timeSinceLastObstacle: 0,
-            obstacleGenerationInterval: 1200, 
-            speed: 5,
-            isPausedBySystem: false,
-            obstaclesPassedCount: 0,
-            checkpointsCleared: 0,
-            currentQuestionSet: [],
-            // Study Mode State
-            currentCisIndex: 0
-        };
+  mode: 'start', // 'start', 'quiz', or 'study'
+  score: 0,
+  highScore: localStorage.getItem('cyberDashHighScore') || 0,
+  isRunning: false, // true when game loop is active
+  isPaused: false,  // true when user triggers pause with P or ESC
+  isPausedBySystem: false, // true during quiz checkpoint questions
+  animationFrameId: null,
+  timeSinceLastObstacle: 0,
+  obstacleGenerationInterval: 1200, 
+  speed: 5,
+  obstaclesPassedCount: 0,
+  checkpointsCleared: 0,
+  currentQuestionSet: [],
+  currentCisIndex: 0 // Study Mode navigation index
+};
+
 
         const GROUND_Y = canvas.height - 30;
         const DINO_WIDTH = 20;
@@ -753,43 +852,56 @@
         }
 
         // --- GAME FLOW FUNCTIONS ---
+        function togglePause() {
+        if (gameState.mode === 'quiz' && gameState.isRunning && !gameState.isPaused) {
+            gameState.isPaused = true;
+            pauseMenu.style.display = 'flex';
+            setFocus(resumeButton);
+        } else if (pauseMenu.style.display === 'flex') {
+            resumeGameFromPause();
+        }
+        }
+
+        function resumeGameFromPause() {
+        pauseMenu.style.display = 'none';
+        gameState.isPaused = false;
+        lastTimestamp = performance.now(); // keep timing consistent
+        }
+
 
         function showStartMenu() {
-             // Reset canvas message
-            drawInitialMessage(); 
-            
-            // Hide all overlays
-            messageBox.style.display = 'none';
-            gameOverScreen.style.display = 'none';
-            studyMode.style.display = 'none';
+  // Hide all overlays
+  pauseMenu.style.display = 'none';
+  gameOverScreen.style.display = 'none';
+  studyMode.style.display = 'none';
+  messageBox.style.display = 'none';
 
-            // Show start menu
-            startMenu.style.display = 'flex';
-            
-            // Set initial focus for keyboard navigation
-            const startButtons = getFocusableElements(startMenuButtons);
-            if (startButtons.length > 0) {
-                setFocus(startButtons[0]);
-            }
+  // Reset game state
+  gameState.isRunning = false;
+  gameState.isPaused = false;
+  gameState.isPausedBySystem = false;
+  gameState.mode = 'start';
+  gameState.score = 0;
+  gameState.obstaclesPassedCount = 0;
+  gameState.checkpointsCleared = 0;
 
-            // Reset game state for a clean start
-            gameState.isRunning = false;
-            gameState.isPausedBySystem = false;
-            gameState.mode = 'start';
-            
-            // Update the static score display
-            gameState.highScore = localStorage.getItem('cyberDashHighScore') || 0;
-            scoreDisplay.innerHTML = `Score: 0 | High: ${gameState.highScore}`;
-            
-            // Update instructions for the available modes
-            document.getElementById('startInstructions').innerHTML = `
-                Quiz Mode: Jump to avoid vulnerabilities and answer questions at checkpoints.
-                <br><br>
-                Study Mode: Review foundational CIS Controls.
-                <br><br>
-                Use &uarr; / &darr; to navigate menus and ENTER to select.
-            `;
-        }
+  // Update score display
+  gameState.highScore = localStorage.getItem('cyberDashHighScore') || 0;
+  scoreDisplay.innerHTML = `Score: 0 | High: ${gameState.highScore}`;
+
+  // Show start menu
+  startMenu.style.display = 'flex';
+
+  // Focus first button
+  const startButtons = startMenu.querySelectorAll('button');
+  if (startButtons.length > 0) {
+    startButtons[0].focus();
+  }
+
+  // Redraw canvas message
+  drawInitialMessage();
+}
+
         
         function startQuizMode() {
             gameState.mode = 'quiz';
@@ -913,59 +1025,62 @@
         }
 
         function gameLoop(timestamp) {
-            const deltaTime = timestamp - lastTimestamp;
-            lastTimestamp = timestamp;
+  const deltaTime = timestamp - lastTimestamp;
+  lastTimestamp = timestamp;
 
-            scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore}`;
-            
-            if (gameState.isRunning && !gameState.isPausedBySystem) {
-                // 1. Clear Canvas
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+  scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore}`;
 
-                // 2. Draw Ground
-                drawGround();
+  // Skip updates if paused by user or system
+  if (gameState.isRunning && !gameState.isPaused && !gameState.isPausedBySystem) {
+    // 1. Clear Canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // 3. Update Dino
-                dino.update();
-                dino.draw();
+    // 2. Draw Ground
+    drawGround();
 
-                // 4. Update Score
-                gameState.score += 0.05; 
-                updateSpeedAndDifficulty();
-                
-                // 5. Obstacle Logic
-                gameState.timeSinceLastObstacle += deltaTime;
-                if (gameState.timeSinceLastObstacle > gameState.obstacleGenerationInterval) {
-                    generateObstacle();
-                    gameState.timeSinceLastObstacle = 0;
-                    gameState.obstacleGenerationInterval = Math.max(800, gameState.obstacleGenerationInterval * 0.98);
-                }
+    // 3. Update Dino
+    dino.update();
+    dino.draw();
 
-                obstacles.forEach((obstacle) => {
-                    obstacle.update();
-                    obstacle.draw();
+    // 4. Update Score
+    gameState.score += 0.05;
+    updateSpeedAndDifficulty();
 
-                    if (checkCollision(dino, obstacle)) {
-                        gameOver();
-                        return; 
-                    }
+    // 5. Obstacle Logic
+    gameState.timeSinceLastObstacle += deltaTime;
+    if (gameState.timeSinceLastObstacle > gameState.obstacleGenerationInterval) {
+      generateObstacle();
+      gameState.timeSinceLastObstacle = 0;
+      gameState.obstacleGenerationInterval = Math.max(800, gameState.obstacleGenerationInterval * 0.98);
+    }
 
-                    if (obstacle.x + obstacle.width < dino.x && !obstacle.passed) {
-                        obstacle.passed = true;
-                        gameState.obstaclesPassedCount++;
-                    }
-                });
+    obstacles.forEach((obstacle) => {
+      obstacle.update();
+      obstacle.draw();
 
-                if (gameState.obstaclesPassedCount >= BLOCKS_PER_CHECKPOINT) {
-                    gameState.obstaclesPassedCount = 0;
-                    pauseGameForSecurityCheck();
-                }
+      if (checkCollision(dino, obstacle)) {
+        gameOver();
+        return;
+      }
 
-                obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > 0);
-            }
-            
-            gameState.animationFrameId = requestAnimationFrame(gameLoop);
-        }
+      if (obstacle.x + obstacle.width < dino.x && !obstacle.passed) {
+        obstacle.passed = true;
+        gameState.obstaclesPassedCount++;
+      }
+    });
+
+    if (gameState.obstaclesPassedCount >= BLOCKS_PER_CHECKPOINT) {
+      gameState.obstaclesPassedCount = 0;
+      pauseGameForSecurityCheck();
+    }
+
+    obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > 0);
+  }
+
+  // Continue loop regardless of pause state
+  gameState.animationFrameId = requestAnimationFrame(gameLoop);
+}
+
 
         function setGameOverScreen(isWin = false) {
             finalScoreSpan.textContent = Math.floor(gameState.score);
@@ -1122,6 +1237,10 @@
         }
 
         // --- EVENT LISTENERS ---
+        document.getElementById('navStart').onclick = () => showStartMenu();
+document.getElementById('navHelp').onclick = () => {
+  alert("Use ↑ / ↓ to navigate menus. Press ENTER to select. Jump with arrow keys.");
+};
 
         document.addEventListener('keydown', (e) => {
             const key = e.code;
@@ -1189,6 +1308,28 @@
                 startQuizMode(); 
             }
         });
+        resumeButton.addEventListener('click', resumeGameFromPause);
+backToMenuFromPause.addEventListener('click', () => {
+  pauseMenu.style.display = 'none';
+  showStartMenu();
+});
+document.addEventListener('keydown', (e) => {
+  const key = e.code;
+
+  // Pause toggle
+  if (key === 'KeyP' || key === 'Escape') {
+    togglePause();
+    return; // stop further handling
+  }
+  if (pauseMenu.style.display === 'flex') {
+  if (['ArrowUp', 'ArrowDown', 'Enter'].includes(key)) {
+    e.preventDefault();
+    handleMenuNavigation(key, pauseMenuButtons);
+  }
+}
+  // ... keep your other controls (jump, menu navigation, study mode) below
+});
+
 
         // Button listeners (kept for mouse/touch functionality)
         quizModeButton.addEventListener('click', startQuizMode);
@@ -1203,18 +1344,19 @@
         // --- INITIAL DISPLAY ---
         
         function drawInitialMessage() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawGround();
-            ctx.fillStyle = DINO_COLOR;
-            ctx.fillRect(50, GROUND_Y - DINO_HEIGHT, DINO_WIDTH, DINO_HEIGHT); 
-            
-            ctx.fillStyle = GROUND_COLOR;
-            ctx.font = '12px "Press Start 2P"'; 
-            ctx.textAlign = 'center';
-            ctx.fillText("CYBER DASH RUNNER", canvas.width / 2, canvas.height / 2 - 10);
-            ctx.font = '8px "Press Start 2P"';
-            ctx.fillText("Select a mode to begin", canvas.width / 2, canvas.height / 2 + 10);
-        }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGround();
+  ctx.fillStyle = '#006400'; // Dino color
+  ctx.fillRect(50, GROUND_Y - DINO_HEIGHT, DINO_WIDTH, DINO_HEIGHT); 
+
+  ctx.fillStyle = '#333';
+  ctx.font = '12px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText("CYBER DASH RUNNER", canvas.width / 2, canvas.height / 2 - 10);
+  ctx.font = '8px "Press Start 2P"';
+  ctx.fillText("Select a mode to begin", canvas.width / 2, canvas.height / 2 + 10);
+}
+
 
         window.onload = () => {
             const container = document.querySelector('.game-container');
