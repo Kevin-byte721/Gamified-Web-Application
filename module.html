@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISO 27001 Security Controls</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #222;
+            --accent-green: #4CAF50;
+            --text-color: #eee;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            height: 100%;
+        }
+
+        .container { padding: 40px; max-width: 1200px; margin: 0 auto; }
+        
+        .header-title {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--accent-green);
+            font-size: 18px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .module-card {
+            background: var(--card-bg);
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .module-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-green);
+        }
+
+        .card-body { padding: 20px; }
+        .module-name { font-weight: 700; font-size: 16px; margin-bottom: 8px; color: var(--accent-green); }
+        .module-desc { font-size: 13px; color: #aaa; line-height: 1.4; }
+
+        /* CONTENT VIEWER */
+        #moduleViewer {
+            display: none;
+            padding: 40px;
+            background: #fff;
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .back-btn {
+            font-family: 'Press Start 2P', cursive;
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            font-size: 10px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        #contentBody h2 { color: #2e7d32; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        #contentBody ul { line-height: 1.8; }
+    </style>
+</head>
+<body>
+
+    <div id="gridView" class="container">
+        <h1 class="header-title">ISO 27001 CONTROL DOMAINS</h1>
+        <div class="modules-grid" id="cardContainer"></div>
+    </div>
+
+    <div id="moduleViewer">
+        <button class="back-btn" onclick="closeModule()">⬅ BACK</button>
+        <h1 id="contentTitle"></h1>
+        <div id="contentBody"></div>
+    </div>
+
+<script>
+    // Configuration: added 'progress' and 'requiredTime' (in seconds)
+    const isoModules = [
+        {
+            id: 1,
+            title: "Module 1: Keeping Secrets Safe",
+            desc: "Learning how to protect important information so only the right people can see it.",
+            image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=500&auto=format",
+            progress: 0,
+            requiredTime: 2, // 3 minutes
+            content: `
+            <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
+                    <b>Course Description:</b> Learning how to protect important information so only the right people can see it.
+                </p>
+                <p><i>(ISO 27001 for Elementary Students)</i></p>
+                <h3>Introduction</h3>
+                <p>Every day, we use information. Information can be something simple, like the lunch menu, or something private, like your diary or your grades. Just like we lock our doors to keep our belongings safe, we also need to protect information. This is called <b>Information Security</b>.</p>
+                <h3>The Three Pillars of Security</h3>
+                <ul>
+                    <li><b>Confidentiality:</b> Keep it secret.</li>
+                    <li><b>Integrity:</b> Keep it correct.</li>
+                    <li><b>Availability:</b> Keep it ready.</li>
+                </ul>
+                <h3>1. Confidentiality: Keep It Secret</h3>
+                <p>Some information should only be seen by the right people. Your diary is for you. Your test scores are for you and your teacher. Your password is for you alone.</p>
+                <h3>2. Integrity: Keep It Correct</h3>
+                <p>Information must stay true and accurate. Your grades should not be changed by anyone except your teacher.</p>
+                <h3>3. Availability: Keep It Ready</h3>
+                <p>Information should be there when you need it. The lunch menu should be ready so everyone knows what to eat.</p>
+                <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border-left: 5px solid #4CAF50; margin-top: 20px;">
+                    <h3>Everyday Example: The Treasure Box</h3>
+                    <p>Imagine you have a treasure box:</p>
+                    <ul>
+                        <li>You lock it so only you can open it <b>(Confidentiality)</b>.</li>
+                        <li>You keep the items inside safe and unchanged <b>(Integrity)</b>.</li>
+                        <li>You place it where you can reach it when needed <b>(Availability)</b>.</li>
+                    </ul>
+                </div>
+                <h3>Reflection</h3>
+                <p>Think about one piece of information you want to keep safe. Is it secret? Should it stay correct? Do you need it ready when you ask for it?</p>
+                <p><b>Key Takeaway:</b> Information security is about keeping secrets safe, keeping things correct, and keeping them ready when needed.</p>
+            `
+        },
+        {
+            id: 2,
+            title: "Module 2: Who Needs to Know?",
+            desc: "Understanding roles and deciding who should have access to certain information.",
+            image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=500&auto=format",
+            progress: 0,
+            requiredTime: 120, // 2 minutes
+            content: `
+                <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
+                    <b>Course Description:</b> Understanding roles and deciding who should have access to certain information.
+                </p>
+                <h3>Introduction</h3>
+                <p>Not everyone needs to know everything. In school, teachers know your grades, but classmates don’t. This is called <b>Access Control</b> — deciding who should see or use certain information.</p>
+                <h3>Why Access Matters</h3>
+                <p>Information is like a key. If too many people have the key, things can go wrong.</p>
+                <h3>Roles in Information Security</h3>
+                <ul>
+                    <li><b>Students:</b> Protect their own passwords and belongings.</li>
+                    <li><b>Teachers:</b> Keep grades and records safe.</li>
+                    <li><b>School Staff:</b> Share only what is needed, like the lunch menu.</li>
+                </ul>
+                <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; border-left: 5px solid #2e7d32; margin: 20px 0;">
+                    <h3>Everyday Examples</h3>
+                    <ul>
+                        <li><b>Lunch Menu:</b> Everyone should know.</li>
+                        <li><b>Report Card:</b> Only you, your teacher, and your parents should know.</li>
+                        <li><b>Computer Password:</b> Only you should know.</li>
+                    </ul>
+                </div>
+                <h3>Reflection Questions</h3>
+                <ol>
+                    <li>Who should know your diary secrets?</li>
+                    <li>Who should know your grades?</li>
+                    <li>Who should know the fire drill plan?</li>
+                </ol>
+                <div style="background: #333; color: #fff; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                    <b>Key Takeaway:</b> Information should only be shared with the right people. Knowing who needs to know keeps secrets safe.
+                </div>
+            `
+        },
+        {
+            id: 3,
+            title: "Module 3: Spotting Risks",
+            desc: "Finding possible problems that could harm information and learning simple ways to prevent them.",
+            image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=500&auto=format",
+            progress: 0,
+            requiredTime: 150, // 2.5 minutes
+            content: `
+                <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
+                    <b>Course Description:</b> Finding possible problems that could harm information and learning simple ways to prevent them.
+                </p>
+                <h3>Introduction</h3>
+                <p>A <b>risk</b> is something that might go wrong. Just like leaving your backpack open could mean losing a pencil, leaving your computer unlocked could mean someone changes your work.</p>
+                <h3>What Is a Risk?</h3>
+                <ul>
+                    <li>If you share your <b>password</b>, someone might use it.</li>
+                    <li>If you forget to <b>save your file</b>, you might lose it.</li>
+                </ul>
+                <div style="background: #fffde7; padding: 20px; border-radius: 8px; border-left: 5px solid #fbc02d; margin: 20px 0;">
+                    <h3>How Do We Handle Risks?</h3>
+                    <ul>
+                        <li><b>Avoid it:</b> Don’t let it happen (lock your locker).</li>
+                        <li><b>Fix it:</b> Add protection (use a password).</li>
+                        <li><b>Accept it:</b> Sometimes small risks are okay.</li>
+                    </ul>
+                </div>
+                <h3>Reflection</h3>
+                <p>Think of one risk in your school life. How would you avoid, fix, or accept it?</p>
+                <div style="background: #333; color: #fff; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                    <b>Key Takeaway:</b> Spotting risks helps us protect information before problems happen.
+                </div>
+            `
+        },
+        {
+            id: 4,
+            title: "Module 4: Rules to Stay Safe",
+            desc: "Creating easy-to-follow rules that help keep information and belongings secure.",
+            image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=500&auto=format",
+            progress: 0,
+            requiredTime: 120,
+            content: `
+                <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
+                    <b>Course Description:</b> Creating easy-to-follow rules that help keep information and belongings secure.
+                </p>
+                <h3>Introduction</h3>
+                <p>Rules help everyone stay safe. In school, we follow rules like “walk in the hallway.” Information also needs rules to stay safe.</p>
+                <h3>Examples of Safety Rules</h3>
+                <ul>
+                    <li>Use strong passwords.</li>
+                    <li>Log out of computers when finished.</li>
+                    <li>Ask permission before sharing information.</li>
+                </ul>
+                <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 5px solid #1976d2; margin: 20px 0;">
+                    <h3>Why Rules Matter</h3>
+                    <p>Rules are like <b>shields</b>. They stop problems before they happen.</p>
+                </div>
+                <h3>Reflection</h3>
+                <p>Write one rule you follow at school and one rule you follow online.</p>
+                <div style="background: #333; color: #fff; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                    <b>Key Takeaway:</b> Rules make safety simple. Following them protects both people and information.
+                </div>
+            `
+        },
+        {
+            id: 5,
+            title: "Module 5: Practice Makes Perfect",
+            desc: "Building good daily habits, like logging out of computers and locking doors, to stay safe.",
+            image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=500&auto=format",
+            progress: 0,
+            requiredTime: 120,
+            content: `
+                <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
+                    <b>Course Description:</b> Building good daily habits, like logging out of computers and locking doors, to stay safe.
+                </p>
+                <h3>Introduction</h3>
+                <p>Safety is not just about rules. It is about <b>habits</b> we practice every day. Habits are small actions that keep us safe without thinking too much.</p>
+                <h3>Good Safety Habits</h3>
+                <ul>
+                    <li>Locking your locker every day.</li>
+                    <li>Logging out of the computer after class.</li>
+                    <li>Checking your homework file before turning it in.</li>
+                </ul>
+                <div style="background: #f3e5f5; padding: 20px; border-radius: 8px; border-left: 5px solid #7b1fa2; margin: 20px 0;">
+                    <h3>Why Habits Work</h3>
+                    <p>Habits make safety <b>automatic</b>. When we repeat good actions, they become part of our routine.</p>
+                </div>
+                <h3>Reflection</h3>
+                <p>What is one safety habit you already do? What is one new habit you want to start?</p>
+                <div style="background: #333; color: #fff; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                    <b>Key Takeaway:</b> Practicing safety habits every day makes protection easy and natural.
+                </div>
+            `
+        },
+        {
+            id: 6,
+            title: "Module 6: Checking and Improving",
+            desc: "Reviewing safety rules to see if they work well and finding ways to make them better.",
+            image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=500&auto=format",
+            progress: 0,
+            requiredTime: 180,
+            content: `
+                <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
+                    <b>Course Description:</b> Reviewing safety rules to see if they work well and finding ways to make them better.
+                </p>
+                <h3>Introduction</h3>
+                <p>Even good rules and habits need checking. Sometimes things change, and we need to improve. Schools check fire drills, and we can check our safety rules too.</p>
+                <div style="text-align: center; margin: 20px 0;">
+                    <img src="https://images.squarespace-cdn.com/content/v1/6348398d9d21fd6277c64f96/adecc7f8-baa6-4c6d-9fbf-b5bc9fdf73d9/Plan+Do+Check+Act+PDCA+cycle+diagram.png" alt="PDCA Cycle" style="max-width: 50%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                    <p style="font-size: 12px; color: #666;"><i>The PDCA Cycle: Plan, Do, Check, and Act!</i></p>
+                </div>
+                <h3>How to Check</h3>
+                <ul>
+                    <li><b>Look:</b> Are people following the rules?</li>
+                    <li><b>Ask:</b> Do the rules still make sense?</li>
+                    <li><b>Improve:</b> Can we make the rules better?</li>
+                </ul>
+                <div style="background: #eceff1; padding: 20px; border-radius: 8px; border-left: 5px solid #455a64; margin: 20px 0;">
+                    <h3>Everyday Example</h3>
+                    <p>If students forget to log out of computers, maybe the rule needs a reminder sign.</p>
+                </div>
+                <h3>Reflection</h3>
+                <p>Think of one safety rule in your class. How could it be improved?</p>
+                <div style="background: #333; color: #fff; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                    <b>Key Takeaway:</b> Checking and improving keeps safety strong. Rules and habits must grow with us.
+                </div>
+            `
+        }
+    ];
+
+    // Global variables for time tracking
+    let startTime;
+    let currentModuleId = null;
+
+    function renderCards() {
+        const container = document.getElementById('cardContainer');
+        container.innerHTML = isoModules.map(m => `
+            <div class="module-card" onclick="openModule(${m.id})">
+                <img src="${m.image}" alt="${m.title}" style="width: 100%; height: 150px; object-fit: cover; border-bottom: 2px solid #333;">
+                <div class="card-body">
+                    <div class="module-name">${m.title}</div>
+                    <div class="module-desc">${m.desc}</div>
+                    
+                    <div style="background: #333; height: 8px; border-radius: 4px; margin-top: 15px; overflow: hidden;">
+                        <div style="background: #4CAF50; height: 100%; width: ${m.progress}%; transition: width 0.3s;"></div>
+                    </div>
+                    <div style="font-size: 11px; color: #888; margin-top: 5px; text-align: right;">${m.progress}% Read</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function openModule(id) {
+        currentModuleId = id;
+        startTime = Date.now(); // Mark the start time
+
+        const module = isoModules.find(m => m.id === id);
+        document.getElementById('gridView').style.display = 'none';
+        document.getElementById('moduleViewer').style.display = 'block';
+        document.getElementById('contentTitle').innerText = module.title;
+        document.getElementById('contentBody').innerHTML = module.content;
+        window.scrollTo(0, 0);
+    }
+
+    function closeModule() {
+        if (currentModuleId !== null) {
+            const endTime = Date.now();
+            const timeSpentSeconds = Math.floor((endTime - startTime) / 1000);
+            
+            updateProgress(currentModuleId, timeSpentSeconds);
+        }
+
+        document.getElementById('moduleViewer').style.display = 'none';
+        document.getElementById('gridView').style.display = 'block';
+        
+        // Re-render cards to update the progress bars
+        renderCards();
+    }
+
+    function updateProgress(id, timeSpent) {
+    const module = isoModules.find(m => m.id === id);
+    
+    // Calculate percentage
+    let newProgress = Math.floor((timeSpent / module.requiredTime) * 100);
+    
+    if (newProgress > 100) newProgress = 100;
+    
+    if (newProgress > module.progress) {
+        module.progress = newProgress;
+    }
+}
+
+    renderCards();
+</script>
+</body>
+</html>

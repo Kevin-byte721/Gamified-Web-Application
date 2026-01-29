@@ -315,20 +315,7 @@
                 font-size: 8px;
             }
         }
-        #sideNav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh;
-  width: 140px;
-  background-color: #222;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 60px;
-  z-index: 1000;
-  box-shadow: 4px 0 8px rgba(0,0,0,0.3);
-}
+        
 
 .side-button {
   width: 120px;
@@ -357,20 +344,13 @@
     </style>
 </head>
 <body>
-<!-- SIDE NAVIGATION -->
-<div id="sideNav">
-  <button class="side-button" id="navStart">🏁 Start</button>
-  <button class="side-button" id="navHelp">❓ Help</button>
-</div>
 
     <h1 style="font-size: 20px; margin-bottom: 20px;">Cyber Dash: Security Runner</h1>
 
     <div class="game-container">
         <div id="scoreDisplay">Score: 0 | High: 0</div>
         <canvas id="gameCanvas" width="600" height="150"></canvas>
-<!-- PAUSE MENU -->
-<!-- PAUSE MENU -->
-  <div id="pauseMenu" class="full-overlay-modal">
+<div id="pauseMenu" class="full-overlay-modal">
   <div class="modal-content wide-modal">
       <h3 class="modal-title">GAME PAUSED</h3>
       <p class="modal-text">Press P or ESC to resume your run.</p>
@@ -382,18 +362,16 @@
   </div>
 
     
-        <!-- START MENU SCREEN -->
         <div id="startMenu" class="full-overlay-modal" style="display: flex;">
             <div class="modal-content">
                 <h3 class="modal-title">SELECT MODE</h3>
                 <p class="modal-text" style="margin-bottom: 25px;">Choose your operation type.</p>
                 <div id="startMenuButtons" style="display: flex; flex-direction: column; gap: 15px;">
-                    <!-- Added tabindex="0" to all interactive buttons for keyboard focus -->
                     <button id="quizModeButton" class="button-style" style="margin-top: 0;" tabindex="0">
                         Quiz Mode (Start)
                     </button>
                     <button id="studyModeButton" class="button-style" style="margin-top: 0;" tabindex="0">
-                        Study Mode (CIS Controls)
+                        Study Mode (ISO Controls)
                     </button>
                 </div>
                 <p id="startInstructions" class="modal-text" style="font-size: 10px; margin-top: 30px; color: #666;">
@@ -406,26 +384,22 @@
             </div>
         </div>
 
-        <!-- STUDY MODE SCREEN -->
-        <div id="studyMode" class="full-overlay-modal">
-            <div class="modal-content">
-                <h3 class="modal-title" style="color: #007bff;">CIS CONTROL STUDY MODULE</h3>
-                
-                <div id="studyContent">
-                    <div id="cisIndex">CIS CONTROL X OF Y</div>
-                    <div id="cisTitle"></div>
-                    <div id="cisDescription"></div>
-                </div>
+        <div id="studyMode" class="full-overlay-modal" style="display: none;">
+  <div class="modal-content" style="max-width: 700px; padding: 40px 50px;">
+    <h3 class="modal-title" style="margin-bottom: 25px;">ISO CONTROLS STUDY MODULE</h3>
+    <p class="modal-text" style="margin-bottom: 15px;">
+      <span id="isoControlLabel">ISO CONTROL 1 OF 3</span>
+    </p>
 
-                <p id="studyInstructions">
-                    Use &larr; and &rarr; arrow keys to navigate. Press ENTER or the button below to exit.
-                </p>
-                
-                <button id="exitStudyButton" class="button-style" tabindex="0">Exit Study Mode</button>
-            </div>
-        </div>
+    <div id="isoControlContent" class="modal-text" style="text-align: left; max-height: 300px; overflow-y: auto; padding: 10px 10px 60px 10px; margin-bottom: 30px;">
+      </div>
 
-        <!-- Cybersecurity Modal / Pause Screen -->
+    <p class="modal-text">Use ← and → arrow keys to navigate. Press ENTER or the button below to exit.</p>
+    <button id="exitStudyButton" class="button-style">Exit Study Mode</button>
+  </div>
+</div>
+
+
         <div id="messageBox" class="full-overlay-modal">
             <div class="modal-content">
                 <h3 id="modalTitle" class="modal-title">SECURITY CHECKPOINT REACHED!</h3>
@@ -435,8 +409,7 @@
                 <div id="questionText" class="modal-text"></div>
                 
                 <div id="optionContainer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
-                    <!-- Options will be inserted here by JS -->
-                </div>
+                    </div>
 
                 <div id="feedbackText" class="modal-answer modal-text" style="display: none;"></div>
                 
@@ -444,7 +417,6 @@
             </div>
         </div>
 
-        <!-- Game Over Screen -->
         <div id="gameOverScreen">
             <h2>GAME OVER!</h2>
             <p>You tripped over a vulnerability at <span id="finalScore">0</span> points.</p>
@@ -712,99 +684,50 @@ function handleMenuNavigation(key, container) {
             }
         ];
         
-        // --- CIS CONTROL DATA (Study Mode) ---
-        const CIS_CONTROLS_STUDY = [
-        {
-            number: 1,
-            title: "CIS Control 1: Inventory and Control of Enterprise Assets",
-            description: "Identify, track, and manage all hardware assets connected to the network. Unmanaged devices pose security risks and may be exploited by attackers. Maintain an accurate inventory to ensure only authorized systems are granted access to enterprise resources."
-        },
-        {
-            number: 2,
-            title: "CIS Control 2: Inventory and Control of Software Assets",
-            description: "Maintain a complete inventory of authorized software. Prevent installation or execution of unauthorized applications. Regularly audit software usage and licensing to reduce vulnerabilities and ensure compliance with organizational policies and security standards across all systems."
-        },
-        {
-            number: 3,
-            title: "CIS Control 3: Data Protection",
-            description: "Protect sensitive data through classification, encryption, and access controls. Ensure secure handling, storage, and disposal of information. Implement safeguards for data in transit and at rest to prevent unauthorized access, leaks, or breaches across enterprise systems."
-        },
-        {
-            number: 4,
-            title: "CIS Control 4: Secure Configuration of Enterprise Assets and Software",
-            description: "Establish and maintain secure configurations for hardware and software. Disable unnecessary services, ports, and default accounts. Regularly review and update configurations to reduce attack surfaces and ensure systems operate within defined security baselines."
-        },
-        {
-            number: 5,
-            title: "CIS Control 5: Account Management",
-            description: "Manage user accounts with centralized tools. Create, monitor, and remove accounts based on role and need. Enforce least privilege principles and regularly audit account activity to prevent unauthorized access or privilege escalation within enterprise environments."
-        },
-        {
-            number: 6,
-            title: "CIS Control 6: Access Control Management",
-            description: "Control access to systems and data using strong authentication. Implement Multi-Factor Authentication (MFA), enforce unique credentials, and restrict access based on roles. Monitor access logs to detect anomalies and prevent unauthorized entry into critical systems."
-        },
-        {
-            number: 7,
-            title: "CIS Control 7: Continuous Vulnerability Management",
-            description: "Regularly scan systems for known vulnerabilities. Prioritize and remediate issues based on risk. Apply patches promptly and maintain awareness of emerging threats to reduce exposure and strengthen the organization’s overall security posture."
-        },
-        {
-            number: 8,
-            title: "CIS Control 8: Audit Log Management",
-            description: "Collect, manage, and analyze audit logs from systems and applications. Ensure logs are protected from tampering and retained for investigations. Use centralized logging to detect suspicious activity and support incident response and forensic analysis."
-        },
-        {
-            number: 9,
-            title: "CIS Control 9: Email and Web Browser Protections",
-            description: "Secure email clients and web browsers against threats. Disable unnecessary features, apply filters, and enforce safe browsing practices. Prevent access to malicious content and reduce exposure to phishing, malware, and drive-by downloads through configuration controls."
-        },
-        {
-            number: 10,
-            title: "CIS Control 10: Malware Defenses",
-            description: "Deploy anti-malware solutions across all systems. Scan incoming files, emails, and downloads. Prevent execution of unauthorized software and monitor for signs of infection. Keep malware definitions updated to defend against evolving threats and attack vectors."
-        },
-        {
-            number: 11,
-            title: "CIS Control 11: Data Recovery",
-            description: "Implement reliable backup solutions for critical data. Follow the 3-2-1 rule: three copies, two media types, one offsite. Test recovery procedures regularly to ensure business continuity and minimize data loss during incidents or disasters."
-        },
-        {
-            number: 12,
-            title: "CIS Control 12: Network Infrastructure Management",
-            description: "Secure network devices and configurations. Limit administrative access, disable unused ports, and enforce strong credentials. Monitor changes and maintain documentation to ensure network integrity and reduce risks from misconfigurations or unauthorized modifications."
-        },
-        {
-            number: 13,
-            title: "CIS Control 13: Network Monitoring and Defense",
-            description: "Monitor network traffic for anomalies and threats. Use firewalls, intrusion detection systems, and segmentation to isolate sensitive assets. Analyze logs and alerts to detect attacks early and respond effectively to potential breaches or disruptions."
-        },
-        {
-            number: 14,
-            title: "CIS Control 14: Security Awareness and Skills Training",
-            description: "Educate personnel on cybersecurity risks and best practices. Conduct regular training on phishing, social engineering, and data handling. Reinforce a security-first culture to reduce human error and improve organizational resilience against evolving threats."
-        },
-        {
-            number: 15,
-            title: "CIS Control 15: Service Provider Management",
-            description: "Assess and monitor third-party service providers. Ensure contracts include security requirements and data protection clauses. Review vendor practices regularly to confirm compliance and reduce risks from external dependencies or supply chain vulnerabilities."
-        },
-        {
-            number: 16,
-            title: "CIS Control 16: Application Software Security",
-            description: "Secure applications throughout their lifecycle. Apply secure coding practices, conduct code reviews, and test for vulnerabilities. Ensure updates are applied promptly and that software behaves as intended without exposing sensitive data or system functions."
-        },
-        {
-            number: 17,
-            title: "CIS Control 17: Incident Response Management",
-            description: "Develop and maintain an incident response plan. Define roles, communication protocols, and escalation procedures. Conduct tabletop exercises and post-incident reviews to improve readiness and minimize impact from security breaches or operational disruptions."
-        },
-        {
-            number: 18,
-            title: "CIS Control 18: Penetration Testing",
-            description: "Conduct regular penetration tests to identify weaknesses. Simulate real-world attacks to evaluate defenses. Use findings to improve security controls, validate remediation efforts, and ensure systems can withstand targeted exploitation attempts."
-        }
-        ];
+        const isoControls = [
+  {
+    title: "ISO Control 5.1: Leadership and Commitment",
+    body: `Top management shall demonstrate leadership and commitment with respect to the information security management system by ensuring integration with business processes, providing resources, and promoting continual improvement.`
+  },
+  {
+    title: "ISO Control 6.1.2: Information Security Risk Assessment",
+    body: `The organization shall establish and maintain a process for information security risk assessment that identifies risks, evaluates their impact, and determines appropriate controls.`
+  },
+  {
+    title: "ISO Control 8.1: Operational Planning and Control",
+    body: `The organization shall plan, implement, and control processes needed to meet information security requirements and to implement actions determined in risk treatment.`
+  }
+];
+
+let currentISOIndex = 0;
+
+function renderISOControl(index) {
+  const control = isoControls[index];
+  document.getElementById('isoControlContent').innerHTML = `<strong>${control.title}</strong><br><br>${control.body}`;
+  document.getElementById('isoControlLabel').textContent = `ISO CONTROL ${index + 1} OF ${isoControls.length}`;
+}
+
+// **FIXED/CONSOLIDATED STUDY MODE START FUNCTION**
+function startStudyMode() {
+  gameState.mode = 'study';
+  currentISOIndex = 0;
+  renderISOControl(currentISOIndex);
+  startMenu.style.display = 'none';
+  document.getElementById('studyMode').style.display = 'flex';
+  
+  // Set initial focus on the exit button
+  setFocus(document.querySelector('#studyMode .button-style'));
+}
+
+function exitStudyMode() {
+  document.getElementById('studyMode').style.display = 'none';
+  showStartMenu();
+}
+
+// REMOVED: The previous inline document.addEventListener('keydown', ...) for ISO controls navigation was removed.
+// The logic is now integrated into the main keydown listener below.
+
+// REMOVED: The displayCisControl function and its references were removed as it relied on missing CIS_CONTROLS_STUDY data.
 
 
         let dino;
@@ -909,51 +832,10 @@ function handleMenuNavigation(key, container) {
             initGame();
         }
 
-        function startStudyMode() {
-            gameState.mode = 'study';
-            gameState.currentCisIndex = 0; // Start at the first control
-            startMenu.style.display = 'none';
-            studyMode.style.display = 'flex';
-            displayCisControl(gameState.currentCisIndex);
-            
-            // Set initial focus on the exit button
-            setFocus(exitStudyButton);
-        }
+        // REMOVED: The previous startStudyMode definition was deleted.
+        // It is now defined above as the consolidated startStudyMode function.
         
-        function exitStudyMode() {
-            studyMode.style.display = 'none';
-            showStartMenu();
-        }
-        
-        function displayCisControl(index) {
-    const control = CIS_CONTROLS_STUDY[index];
-    if (!control) {
-        exitStudyMode();
-        return;
-    }
-
-    cisIndex.textContent = `CIS CONTROL ${index + 1} OF ${CIS_CONTROLS_STUDY.length}`;
-    cisTitle.textContent = control.title;
-    cisDescription.textContent = control.description;
-
-    // Remove any previously added image
-    const existingImage = document.getElementById('cisImage');
-    if (existingImage) {
-        existingImage.remove();
-    }
-
-    // Conditionally add image for CIS Control 1
-    /*if (control.number === 1) {
-        const img = document.createElement('img');
-        img.src = "https://media.wired.com/photos/5ceeed5b0bdd96c34c6174a3/master/w_1600%2Cc_limit/01_Ferrari_SF90_03.jpg";
-        img.alt = "Illustration for CIS Control 1";
-        img.id = "cisImage";
-        img.style.maxWidth = "150px";
-        img.style.marginTop = "10px";
-        img.style.border = "2px solid #333";
-        cisDescription.parentNode.appendChild(img);
-    } */
-}
+        // REMOVED: The displayCisControl function was removed.
 
 
         // --- QUIZ GAME LOGIC ---
@@ -1237,10 +1119,7 @@ function handleMenuNavigation(key, container) {
         }
 
         // --- EVENT LISTENERS ---
-        document.getElementById('navStart').onclick = () => showStartMenu();
-document.getElementById('navHelp').onclick = () => {
-  alert("Use ↑ / ↓ to navigate menus. Press ENTER to select. Jump with arrow keys.");
-};
+        
 
         document.addEventListener('keydown', (e) => {
             const key = e.code;
@@ -1284,17 +1163,21 @@ document.getElementById('navHelp').onclick = () => {
                     }
                 }
             } 
-            // --- STUDY CONTENT NAVIGATION (ArrowLeft/ArrowRight) ---
+            // **FIXED: STUDY CONTENT NAVIGATION (ArrowLeft/ArrowRight) - Uses correct isoControls logic**
             else if (['ArrowLeft', 'ArrowRight'].includes(key)) {
                 if (gameState.mode === 'study' && studyMode.style.display === 'flex') {
-                    const totalControls = CIS_CONTROLS_STUDY.length;
+                    e.preventDefault();
+                    const totalControls = isoControls.length;
+                    let newIndex = currentISOIndex;
                     if (key === 'ArrowRight') {
-                        gameState.currentCisIndex = (gameState.currentCisIndex + 1) % totalControls;
+                        newIndex = (currentISOIndex + 1) % totalControls;
                     } else if (key === 'ArrowLeft') {
-                        gameState.currentCisIndex = (gameState.currentCisIndex - 1 + totalControls) % totalControls;
+                        // Modulo arithmetic for negative indices
+                        newIndex = (currentISOIndex - 1 + totalControls) % totalControls;
                     }
-                    displayCisControl(gameState.currentCisIndex);
-                    setFocus(exitStudyButton); // Keep focus on exit button after content change
+                    currentISOIndex = newIndex; // Update the global index
+                    renderISOControl(currentISOIndex); // Use the correct ISO render function
+                    setFocus(document.querySelector('#studyMode .button-style')); // Keep focus on exit button after content change
                 }
             }
         });
