@@ -25,9 +25,46 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 40px 10px;
+            padding: 20px 10px; 
             box-sizing: border-box;
             z-index: 10;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        /* Collapsible State */
+        #mainNav.collapsed {
+            width: 80px;
+            padding: 20px 5px;
+        }
+
+        #mainNav.collapsed .nav-header,
+        #mainNav.collapsed .nav-button span,
+        #mainNav.collapsed .version-tag {
+            display: none;
+        }
+
+        /* --- TOGGLE BUTTON INSIDE NAV --- */
+        #toggleBtn {
+            align-self: flex-end; 
+            background: #4CAF50;
+            border: 2px solid #fff;
+            color: #000;
+            cursor: pointer;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            padding: 5px 8px;
+            margin-bottom: 20px;
+            transition: all 0.2s;
+        }
+
+        #toggleBtn:hover {
+            background-color: #45a049;
+            transform: scale(1.1);
+        }
+
+        #mainNav.collapsed #toggleBtn {
+            align-self: center; 
         }
 
         .nav-header {
@@ -64,11 +101,12 @@
         #gameWrapper {
             flex-grow: 1;
             position: relative;
-            background-color: #111; /* Darker background while empty */
+            background-color: #111;
             display: flex;
             justify-content: center;
             align-items: center;
             color: #333;
+            transition: flex-grow 0.3s ease;
         }
 
         #gameWrapper::after {
@@ -77,7 +115,7 @@
         }
 
         #gameWrapper.active::after {
-            display: none; /* Hide text when game is active */
+            display: none;
         }
 
         iframe {
@@ -91,51 +129,68 @@
 <body>
 
     <nav id="mainNav">
-    <div class="nav-header">SYSTEM<br>DASHBOARD</div>
-    
-    <button class="nav-button" onclick="window.location.reload()">🏠 Home</button>
-    <button class="nav-button" onclick="loadContent('Cyber Dash Security Runner.html')">🎮 Play Game</button>
-    <button class="nav-button" onclick="loadContent('module.html')">📦 Module</button>
-    
-    <button class="nav-button" onclick="reloadGame()">🔄 Reset Content</button>
-    <button class="nav-button" onclick="alert('Controls: Arrows to Jump')">⌨️ Controls</button>
-    
-    <div style="margin-top: auto; color: #666; font-size: 8px;">v1.0.1-SEC</div>
-</nav>
+        <button id="toggleBtn" onclick="toggleNav()" title="Toggle Sidebar">X</button>
 
-    <div id="gameWrapper">
-        </div>
+        <div class="nav-header">SYSTEM<br>DASHBOARD</div>
+        
+        <button class="nav-button" onclick="window.location.reload()" title="Home">
+            🏠 <span>Home</span>
+        </button>
+        
+        <button class="nav-button" onclick="loadContent('Cyber Dash Security Runner.html')" title="Play Game">
+            🎮 <span>Play Game</span>
+        </button>
+        
+        <button class="nav-button" onclick="loadContent('module.html')" title="Training Modules">
+            📦 <span>Module</span>
+        </button>
+        
+        <button class="nav-button" onclick="reloadGame()" title="Reset Content">
+            🔄 <span>Reset</span>
+        </button>
+        
+        <button class="nav-button" onclick="alert('Controls: Arrows to Jump')" title="View Controls">
+            ⌨️ <span>Controls</span>
+        </button>
+        
+        <div class="version-tag" style="margin-top: auto; color: #666; font-size: 8px;">v1.0.8-SEC</div>
+    </nav>
+
+    <div id="gameWrapper"></div>
 
     <script>
         const wrapper = document.getElementById('gameWrapper');
 
-function loadContent(page) {
-    let iframe = document.getElementById('gameFrame');
-    
-    if (!iframe) {
-        // Create iframe if it doesn't exist
-        iframe = document.createElement('iframe');
-        iframe.id = 'gameFrame';
-        wrapper.innerHTML = ''; 
-        wrapper.classList.add('active');
-        wrapper.appendChild(iframe);
-    }
-    
-    // Set the source to whichever page was clicked (game or module)
-    iframe.src = page;
-}
+        function toggleNav() {
+            const nav = document.getElementById('mainNav');
+            const toggleBtn = document.getElementById('toggleBtn');
+            nav.classList.toggle('collapsed');
+            
+            toggleBtn.innerText = nav.classList.contains('collapsed') ? ">" : "X";
+        }
 
-// Update reload function to work with any content currently in the frame
-function reloadGame() {
-    const frame = document.getElementById('gameFrame');
-    if (frame) {
-        frame.src = frame.src;
-    } else {
-        alert("No content loaded! Select a system from the menu.");
-    }
-}
+        function loadContent(page) {
+            let iframe = document.getElementById('gameFrame');
+            
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.id = 'gameFrame';
+                wrapper.innerHTML = ''; 
+                wrapper.classList.add('active');
+                wrapper.appendChild(iframe);
+            }
+            
+            iframe.src = page;
+        }
+
+        function reloadGame() {
+            const frame = document.getElementById('gameFrame');
+            if (frame) {
+                frame.src = frame.src;
+            } else {
+                alert("No content loaded! Select a system from the menu.");
+            }
+        }
     </script>
-
-
 </body>
 </html>
