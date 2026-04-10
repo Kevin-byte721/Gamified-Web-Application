@@ -365,7 +365,7 @@
         <div id="startMenu" class="full-overlay-modal" style="display: flex;">
             <div class="modal-content">
                 <h3 class="modal-title"></h3>
-                <p class="modal-text" style="margin-bottom: 50px;"></p>
+                <p class="modal-text" style="margin-bottom: 70px;"></p>
                 <div id="startMenuButtons" style="display: flex; flex-direction: column; gap: 15px;">
                     <button id="quizModeButton" class="button-style" style="margin-top: 0;" tabindex="0">
                         Quiz Mode (Start)
@@ -380,7 +380,7 @@
                     Quiz Mode: Jump to avoid vulnerabilities and answer questions at checkpoints.
                     <br><br>
                     <br><br>
-                    Use &uarr; / &darr; to navigate menus and ENTER to select.
+                <!-- Use &uarr; / &darr; to navigate menus and ENTER to select. -->
                 </p>
             </div>
         </div>
@@ -1026,7 +1026,7 @@ function exitStudyMode() {
     dino.draw();
 
     // 4. Update Score
-    gameState.score += 0.05;
+    // gameState.score += 0.05;
     updateSpeedAndDifficulty();
 
     // 5. Obstacle Logic
@@ -1166,47 +1166,51 @@ function exitStudyMode() {
         }
 
         function handleAnswer(event) {
-            if (!currentTopic) return;
+    if (!currentTopic) return;
 
-            const selectedButton = event.currentTarget;
-            const selectedIndex = parseInt(selectedButton.dataset.index);
-            const isCorrect = selectedIndex === currentTopic.correctIndex;
-            const allButtons = optionContainer.querySelectorAll('.option-button');
+    const selectedButton = event.currentTarget;
+    const selectedIndex = parseInt(selectedButton.dataset.index);
+    const isCorrect = selectedIndex === currentTopic.correctIndex;
+    const allButtons = optionContainer.querySelectorAll('.option-button');
 
-            allButtons.forEach(btn => {
-                btn.disabled = true;
-                btn.removeEventListener('click', handleAnswer);
-            });
+    // Disable all buttons to prevent double-clicking
+    allButtons.forEach(btn => {
+        btn.disabled = true;
+        btn.removeEventListener('click', handleAnswer);
+    });
 
-            if (isCorrect) {
-                selectedButton.classList.add('correct-answer');
-                feedbackText.textContent = `CORRECT! (+15 pts)\n\nExplanation: ${currentTopic.explanation}`;
-                gameState.score += 15;
-            } else {
-                selectedButton.classList.add('incorrect-answer');
-                allButtons[currentTopic.correctIndex].classList.add('correct-answer');
-                feedbackText.textContent = `INCORRECT. The correct answer is highlighted.\n\nExplanation: ${currentTopic.explanation}`;
-            }
+    if (isCorrect) {
+        selectedButton.classList.add('correct-answer');
+        // Point value for correct answers
+        const pointsAwarded = 20; 
+        gameState.score += pointsAwarded;
+        feedbackText.textContent = `CORRECT! (+${pointsAwarded} pts)\n\nExplanation: ${currentTopic.explanation}`;
+    } else {
+        selectedButton.classList.add('incorrect-answer');
+        allButtons[currentTopic.correctIndex].classList.add('correct-answer');
+        feedbackText.textContent = `INCORRECT. The correct answer is highlighted.\n\nExplanation: ${currentTopic.explanation}`;
+    }
 
-            feedbackText.style.display = 'block';
-            continueButton.style.display = 'inline-block';
-            
-            if (gameState.checkpointsCleared >= MAX_CHECKPOINTS) {
-                continueButton.textContent = 'Mission Accomplished!';
-            } else {
-                 continueButton.textContent = 'Continue Run';
-            }
+    feedbackText.style.display = 'block';
+    continueButton.style.display = 'inline-block';
+    
+    // Change button text based on mission progress
+    if (gameState.checkpointsCleared >= MAX_CHECKPOINTS) {
+        continueButton.textContent = 'FINISH MISSION';
+    } else {
+        continueButton.textContent = 'CONTINUE RUN';
+    }
 
-            scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore}`;
-            
-            // Shift focus to the continue button
-            setFocus(continueButton);
-            // Ensure this event listener is at the bottom of your script
-continueButton.addEventListener('click', () => {
-    console.log("Continue clicked"); // Debugging line
-    resumeGame();
-});
-        }
+    // Update the HUD display immediately
+    scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore}`;
+    
+    // Shift focus for keyboard navigation
+    if (typeof setFocus === "function") {
+        setFocus(continueButton);
+    } else {
+        continueButton.focus();
+    }
+}
         
         // --- UPDATE THIS FUNCTION IN Cyber Dash Security Runner.html ---
 function resumeGame() {
