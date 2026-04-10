@@ -1201,23 +1201,35 @@ function exitStudyMode() {
             
             // Shift focus to the continue button
             setFocus(continueButton);
+            // Ensure this event listener is at the bottom of your script
+continueButton.addEventListener('click', () => {
+    console.log("Continue clicked"); // Debugging line
+    resumeGame();
+});
         }
         
-        function resumeGame() {
-            messageBox.style.display = 'none';
-            
-            if (gameState.checkpointsCleared >= MAX_CHECKPOINTS) {
-                gameWin();
-                return;
-            }
+        // --- UPDATE THIS FUNCTION IN Cyber Dash Security Runner.html ---
+function resumeGame() {
+    messageBox.style.display = 'none';
+    
+    // Check if mission is complete
+    if (gameState.checkpointsCleared >= MAX_CHECKPOINTS) {
+        gameWin();
+        return;
+    }
 
-            obstacles = []; 
-            gameState.timeSinceLastObstacle = 0; 
-            
-            gameState.isRunning = true;
-            gameState.isPausedBySystem = false;
-            lastTimestamp = performance.now(); 
-        }
+    // Reset obstacle tracking for the new stretch
+    obstacles = []; 
+    gameState.timeSinceLastObstacle = 0; 
+    
+    // Resume states
+    gameState.isRunning = true;
+    gameState.isPausedBySystem = false;
+    
+    // CRITICAL: Reset the timestamp to the current time
+    // This prevents the game from "teleporting" the dino or obstacles
+    lastTimestamp = performance.now(); 
+}
 
         // --- EVENT LISTENERS ---
         
@@ -1317,7 +1329,7 @@ document.addEventListener('keydown', (e) => {
 
         // Button listeners (kept for mouse/touch functionality)
         quizModeButton.addEventListener('click', startQuizMode);
-        studyModeButton.addEventListener('click', startStudyMode);
+        //studyModeButton.addEventListener('click', startStudyMode);
         
         exitStudyButton.addEventListener('click', exitStudyMode);
         
@@ -1327,37 +1339,91 @@ document.addEventListener('keydown', (e) => {
 
         // --- INITIAL DISPLAY ---
         
+// --- UPDATED EVENT LISTENERS ---
+
+        // Retry Scan button: Restarts the game immediately
+        restartButton.addEventListener('click', () => {
+            gameOverScreen.style.display = 'none'; // Hide game over overlay
+            initGame(); // Re-initialize and start loop
+        });
+
+        // Back to Menu button: Resets state and shows start screen
+        backToMenuButton.addEventListener('click', () => {
+            gameOverScreen.style.display = 'none'; // Hide game over overlay
+            showStartMenu(); // Return to initial state
+        });
+
+        function handleRestart() {
+            // 1. Hide the game over/victory screen
+            gameOverScreen.style.display = 'none';
+            
+            // 2. Stop any existing animation frames to prevent double-speed issues
+            if (gameState.animationFrameId) {
+                cancelAnimationFrame(gameState.animationFrameId);
+            }
+            
+            // 3. Re-initialize all variables and restart the loop
+            initGame();
+        }
+        function handleBackToMenu() {
+            // 1. Clear any active loops
+            if (gameState.animationFrameId) {
+                cancelAnimationFrame(gameState.animationFrameId);
+            }
+            
+            // 2. Ensure all potential overlays are hidden
+            gameOverScreen.style.display = 'none';
+            messageBox.style.display = 'none';
+            pauseMenu.style.display = 'none';
+            studyMode.style.display = 'none';
+            
+            // 3. Reset state and show start menu
+            showStartMenu();
+        }
+        restartButton.addEventListener('click', handleRestart);
+        backToMenuButton.addEventListener('click', handleBackToMenu);
+
         function drawInitialMessage() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawGround();
-  ctx.fillStyle = '#006400'; // Dino color
-  ctx.fillRect(50, GROUND_Y - DINO_HEIGHT, DINO_WIDTH, DINO_HEIGHT); 
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Ground line
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, GROUND_Y, canvas.width, 2);
 
-  ctx.fillStyle = '#333';
-  ctx.font = '12px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillText("CYBER DASH RUNNER", canvas.width / 2, canvas.height / 2 - 10);
-  ctx.font = '8px "Press Start 2P"';
-  ctx.fillText("Select a mode to begin", canvas.width / 2, canvas.height / 2 + 10);
-}
+            // Draw Dino (Solid Green)
+            ctx.fillStyle = '#006400'; 
+            ctx.fillRect(50, GROUND_Y - DINO_HEIGHT, DINO_WIDTH, DINO_HEIGHT); 
 
+            // Menu Text
+            ctx.fillStyle = '#333';
+            ctx.font = '12px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            ctx.fillText("CYBER DASH RUNNER", canvas.width / 2, canvas.height / 2 - 10);
+            ctx.font = '8px "Press Start 2P"';
+            ctx.fillText("Select a mode to begin", canvas.width / 2, canvas.height / 2 + 10);
+        }
 
         window.onload = () => {
             const container = document.querySelector('.game-container');
-            canvas.width = container.clientWidth - 40; 
+            if (container) {
+                canvas.width = container.clientWidth - 40; 
+            }
             
             gameState.highScore = localStorage.getItem('cyberDashHighScore') || 0;
             
-            // Start the game loop only to draw the initial screen and handle resizes
+            // Start the game by showing the initial menu and drawing the idle state
             showStartMenu();
         };
 
         window.addEventListener('resize', () => {
-             const container = document.querySelector('.game-container');
-             canvas.width = container.clientWidth - 40;
-             if (gameState.mode === 'start') {
-                drawInitialMessage();
-             }
+            const container = document.querySelector('.game-container');
+            if (container) {
+                canvas.width = container.clientWidth - 40;
+                // Redraw if the user is still on the start screen
+                if (!gameState.isRunning && gameState.mode === 'start') {
+                    drawInitialMessage();
+                }
+            }
         });
 
     </script>
