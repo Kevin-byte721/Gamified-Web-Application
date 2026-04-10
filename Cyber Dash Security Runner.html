@@ -364,20 +364,21 @@
     
         <div id="startMenu" class="full-overlay-modal" style="display: flex;">
             <div class="modal-content">
-                <h3 class="modal-title">SELECT MODE</h3>
-                <p class="modal-text" style="margin-bottom: 25px;">Choose your operation type.</p>
+                <h3 class="modal-title"></h3>
+                <p class="modal-text" style="margin-bottom: 50px;"></p>
                 <div id="startMenuButtons" style="display: flex; flex-direction: column; gap: 15px;">
                     <button id="quizModeButton" class="button-style" style="margin-top: 0;" tabindex="0">
                         Quiz Mode (Start)
                     </button>
-                    <button id="studyModeButton" class="button-style" style="margin-top: 0;" tabindex="0">
-                        Study Mode (ISO Controls)
-                    </button>
+                    <!--
+                        <button id="studyModeButton" class="button-style" style="margin-top: 0;" tabindex="0">
+                        Study Mode (CIS Controls)
+                        </button> 
+                    -->
                 </div>
                 <p id="startInstructions" class="modal-text" style="font-size: 10px; margin-top: 30px; color: #666;">
                     Quiz Mode: Jump to avoid vulnerabilities and answer questions at checkpoints.
                     <br><br>
-                    Study Mode: Review foundational CIS Controls.
                     <br><br>
                     Use &uarr; / &darr; to navigate menus and ENTER to select.
                 </p>
@@ -532,8 +533,6 @@ function handleMenuNavigation(key, container) {
             draw() {
                 ctx.fillStyle = DINO_COLOR;
                 ctx.fillRect(this.x, this.y, this.width, this.height);
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(this.x + this.width / 2 - 2, this.y + 5, 4, 4);
             }
 
             update() {
@@ -576,6 +575,108 @@ function handleMenuNavigation(key, container) {
         }
 
         // --- CYBERSECURITY DATA (Quiz Mode) ---
+        const CYBER_TOPICS = [
+            {
+                topic: "Phishing Awareness",
+                
+                question: "What is the primary sign of a malicious email?",
+                options: [
+                    "It uses a generic greeting like 'Dear Customer.'",
+                    "It has urgent language demanding immediate action or clicking a suspicious link.",
+                    "It contains no images or logos.",
+                    "It is sent during non-business hours."
+                ],
+                correctIndex: 1,
+                explanation: "Urgent language demanding immediate action and links to unknown sites are classic red flags for phishing. Generic greetings are also common, but the threat of immediate action is key."
+            },
+            {
+                topic: "Strong Passwords & Passphrases",
+                question: "Which of the following creates the most secure login credential?",
+                options: [
+                    "P@sswOrd1!",
+                    "A 4-word phrase: CorrectHorseBatteryStaple",
+                    "Your name followed by your birth year.",
+                    "A 10-character mix of letters and numbers."
+                ],
+                correctIndex: 1,
+                explanation: "Passphrases (long, random sequences of words) are often significantly more secure and easier to remember than short, complex character strings."
+            },
+            {
+                topic: "Multi-Factor Authentication (MFA)",
+                
+                question: "If a hacker steals your password, what stops them from logging in if MFA is enabled?",
+                options: [
+                    "The MFA system will automatically lock their IP address.",
+                    "The hacker cannot provide the second verification step (like a code from your phone or biometric scan).",
+                    "MFA only works if the password is changed every 30 days.",
+                    "MFA forces the hacker to use a different browser."
+                ],
+                correctIndex: 1,
+                explanation: "MFA requires something the hacker *has* (like your phone/token) in addition to something they *know* (your password). Without the second factor, the login fails."
+            },
+            {
+                topic: "Software Updates & Patching",
+                question: "What is the main reason security experts recommend immediate software updates?",
+                options: [
+                    "To introduce new graphical features.",
+                    "To fix bugs that cause applications to crash.",
+                    "To patch security vulnerabilities that attackers can exploit.",
+                    "To optimize battery life on mobile devices."
+                ],
+                correctIndex: 2,
+                explanation: "Security updates and patches often close critical vulnerabilities (holes) in the software that hackers look for. Delaying updates leaves your system exposed."
+            },
+            {
+                topic: "Public Wi-Fi Security",
+                question: "What is the safest practice when using public Wi-Fi at a cafe or airport?",
+                options: [
+                    "Avoid using any Wi-Fi that requires a password.",
+                    "Assume all connections are secure and browse as normal.",
+                    "Use a Virtual Private Network (VPN) for all sensitive activities.",
+                    "Only visit websites that start with 'http://'."
+                ],
+                correctIndex: 2,
+                explanation: "Public Wi-Fi is often unencrypted, meaning data can be easily intercepted. A VPN encrypts your connection, protecting your data."
+            },
+            {
+                topic: "Identifying Malware",
+                question: "What is the term for software designed to secretly monitor your actions and capture keystrokes?",
+                options: [
+                    "Adware",
+                    "Ransomware",
+                    "Spyware",
+                    "Firmware"
+                ],
+                correctIndex: 2,
+                explanation: "Spyware is malicious software designed to gather information about a person or organization without their knowledge and send it to another entity."
+            },
+             {
+                topic: "Device Encryption",
+                question: "Why is full-disk encryption (FDE) important for laptops and phones?",
+                options: [
+                    "It speeds up the device's boot time.",
+                    "It prevents unauthorized access to data if the device is lost or stolen.",
+                    "It automatically deletes sensitive files after 30 days.",
+                    "It prevents phishing emails from reaching the device."
+                ]
+                ,
+                correctIndex: 1,
+                explanation: "If a device with FDE is stolen, the data on it is unreadable without the correct decryption key, protecting sensitive information."
+            },
+             {
+                topic: "Data Backup",
+                question: "What is the most critical principle of effective data backup?",
+                options: [
+                    "Storing all backups in the cloud.",
+                    "Storing backups on a separate, external hard drive.",
+                    "The 3-2-1 Rule: 3 copies, 2 media types, 1 offsite.",
+                    "Backing up data only once per year."
+                ],
+                correctIndex: 2,
+                explanation: "The 3-2-1 rule is the industry standard: keep 3 copies of your data, on 2 different storage types, with 1 copy located offsite (e.g., in the cloud or a different location)."
+            }
+        ];
+        /*
         const CYBER_TOPICS = [
             {
                 topic: "Phishing Awareness",
@@ -682,7 +783,7 @@ function handleMenuNavigation(key, container) {
                 correctIndex: 2,
                 explanation: "The 3-2-1 rule is the industry standard: keep 3 copies of your data, on 2 different storage types, with 1 copy located offsite (e.g., in the cloud or a different location)."
             }
-        ];
+        ]; */
         
         const isoControls = [
   {
@@ -1037,7 +1138,7 @@ function exitStudyMode() {
             modalTitle.textContent = 'SECURITY CHECKPOINT REACHED!';
             questionCounter.textContent = `Question ${gameState.checkpointsCleared} of ${MAX_CHECKPOINTS}`;
             topicText.textContent = `Topic: ${currentTopic.topic}`;
-            cisControlText.textContent = `(${currentTopic.cisControl})`;
+            // cisControlText.textContent = `(${currentTopic.cisControl})`;
             questionText.textContent = `Q: ${currentTopic.question}`;
             
             feedbackText.style.display = 'none';
