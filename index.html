@@ -32,7 +32,6 @@
             position: relative;
         }
 
-        /* Collapsible State */
         #mainNav.collapsed {
             width: 80px;
             padding: 20px 5px;
@@ -44,7 +43,6 @@
             display: none;
         }
 
-        /* --- TOGGLE BUTTON INSIDE NAV --- */
         #toggleBtn {
             align-self: flex-end; 
             background: #4CAF50;
@@ -97,7 +95,7 @@
             box-shadow: -4px 0 0 #4CAF50;
         }
 
-        /* --- GAME CONTAINER --- */
+        /* --- CONTENT WRAPPER --- */
         #gameWrapper {
             flex-grow: 1;
             position: relative;
@@ -105,23 +103,56 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            color: #333;
             transition: flex-grow 0.3s ease;
         }
 
-        #gameWrapper::after {
-            content: "SYSTEM IDLE";
-            font-size: 14px;
+        /* --- CUSTOM HOME PAGE CONTENT --- */
+        #homeContent {
+            color: #4CAF50;
+            text-align: center;
+            padding: 40px;
+            max-width: 700px;
         }
 
-        #gameWrapper.active::after {
-            display: none;
+        #homeContent h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px #000;
+        }
+
+        #homeContent p {
+            font-size: 24px;
+            line-height: 1.8;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+
+        .instruction-box {
+            border: 2px dashed #4CAF50;
+            padding: 20px;
+            margin: 20px 0;
+            background: rgba(76, 175, 80, 0.05);
+            color: #fff;
+            font-size: 10px;
+            line-height: 1.6;
+        }
+
+        .status-box {
+            border: 2px solid #4CAF50;
+            padding: 15px;
+            margin-top: 30px;
+            background: rgba(76, 175, 80, 0.1);
+            font-size: 10px;
         }
 
         iframe {
             width: 100%;
             height: 100%;
             border: none;
+            display: none; 
+        }
+
+        iframe.active {
             display: block;
         }
     </style>
@@ -133,7 +164,7 @@
 
         <div class="nav-header">SYSTEM<br>DASHBOARD</div>
         
-        <button class="nav-button" onclick="window.location.reload()" title="Home">
+        <button class="nav-button" onclick="showHome()" title="Home">
             🏠 <span>Home</span>
         </button>
         
@@ -153,42 +184,54 @@
             ⌨️ <span>Controls</span>
         </button>
         
-        <div class="version-tag" style="margin-top: auto; color: #666; font-size: 8px;">v1.0.8-SEC</div>
+        <div class="version-tag" style="margin-top: auto; color: #666; font-size: 8px;">v1.1.0-SEC</div>
     </nav>
 
-    <div id="gameWrapper"></div>
+    <div id="gameWrapper">
+        <div id="homeContent">
+            <h1>WELCOME, AGENT</h1>
+            
+            <div class="instruction-box">
+                [ INITIALIZING MISSION BRIEF ]<br><br>
+                To ensure maximum field efficiency, you are required to 
+                <strong>complete the Module training</strong> before 
+                engaging in the Cyber Dash Security Runner simulation.
+            </div>
+
+            
+        </div>
+        <iframe id="gameFrame"></iframe>
+    </div>
 
     <script>
         const wrapper = document.getElementById('gameWrapper');
+        const homeView = document.getElementById('homeContent');
+        const iframe = document.getElementById('gameFrame');
 
         function toggleNav() {
             const nav = document.getElementById('mainNav');
             const toggleBtn = document.getElementById('toggleBtn');
             nav.classList.toggle('collapsed');
-            
             toggleBtn.innerText = nav.classList.contains('collapsed') ? ">" : "X";
         }
 
+        function showHome() {
+            iframe.classList.remove('active');
+            iframe.src = "";
+            homeView.style.display = 'block';
+        }
+
         function loadContent(page) {
-            let iframe = document.getElementById('gameFrame');
-            
-            if (!iframe) {
-                iframe = document.createElement('iframe');
-                iframe.id = 'gameFrame';
-                wrapper.innerHTML = ''; 
-                wrapper.classList.add('active');
-                wrapper.appendChild(iframe);
-            }
-            
+            homeView.style.display = 'none';
+            iframe.classList.add('active');
             iframe.src = page;
         }
 
         function reloadGame() {
-            const frame = document.getElementById('gameFrame');
-            if (frame) {
-                frame.src = frame.src;
+            if (iframe.classList.contains('active')) {
+                iframe.src = iframe.src;
             } else {
-                alert("No content loaded! Select a system from the menu.");
+                alert("No active system to reset!");
             }
         }
     </script>
