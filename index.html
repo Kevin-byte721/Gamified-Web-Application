@@ -149,28 +149,35 @@
 <body>
 
     <div id="loginOverlay">
-    <div class="login-box" style="max-width: 900px; width: 95%;">
+    <div class="login-box" style="max-width: 1000px; width: 95%;">
         <h2>[ SELECT AGENT IDENTITY ]</h2>
         
-        <div id="gridContainer">
-            <div id="userGrid">
-                </div>
+        <div id="gridContainer" style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <button onclick="scrollGrid(-1)" class="nav-btn" style="background: none; border: 2px solid #4CAF50; color: #4CAF50; cursor: pointer; padding: 10px; font-family: 'Press Start 2P'; font-size: 16px; border-radius: 5px;">&lt;</button>
+
+            <div id="userGrid" onscroll="updateActiveDot()" style="display: flex; overflow-x: auto; scroll-behavior: smooth; gap: 20px; padding: 20px 0; flex: 1; scroll-snap-type: x mandatory; -ms-overflow-style: none; scrollbar-width: none;">
+            </div>
+
+            <button onclick="scrollGrid(1)" class="nav-btn" style="background: none; border: 2px solid #4CAF50; color: #4CAF50; cursor: pointer; padding: 10px; font-family: 'Press Start 2P'; font-size: 16px; border-radius: 5px;">&gt;</button>
         </div>
+
+        <div id="carouselDots" style="display: flex; justify-content: center; gap: 10px; margin: 10px 0 20px 0;">
+            </div>
 
         <div id="passwordSection" style="display: none; margin-top: 20px; text-align: center;">
-    <div id="activeAgentDisplay" style="margin-bottom: 20px;">
-        <div id="activeAgentAvatar" style="width: 80px; height: 80px; background: #333; border-radius: 50%; margin: 0 auto 10px; border: 3px solid #4CAF50; overflow: hidden;">
-            <img src="" id="activeImg" style="width:100%; height:100%; object-fit:cover;">
-        </div>
-        <div id="activeAgentName" style="font-size: 10px; color: #4CAF50; text-shadow: 2px 2px #000;"></div>
-    </div>
+            <div id="activeAgentDisplay" style="margin-bottom: 20px;">
+                <div id="activeAgentAvatar" style="width: 80px; height: 80px; background: #333; border-radius: 50%; margin: 0 auto 10px; border: 3px solid #4CAF50; overflow: hidden;">
+                    <img src="" id="activeImg" style="width:100%; height:100%; object-fit:cover;">
+                </div>
+                <div id="activeAgentName" style="font-size: 10px; color: #4CAF50; text-shadow: 2px 2px #000;"></div>
+            </div>
 
-    <input type="password" id="passwordInput" placeholder="ENTER PASSWORD">
-    <div style="margin-top: 15px;">
-        <button class="login-btn" onclick="attemptLogin()">INITIALIZE</button>
-        <button class="login-btn" onclick="cancelSelection()" style="background:#444; border-color:#666;">BACK</button>
-    </div>
-</div>
+            <input type="password" id="passwordInput" placeholder="ENTER PASSWORD">
+            <div style="margin-top: 15px;">
+                <button class="login-btn" onclick="attemptLogin()">INITIALIZE</button>
+                <button class="login-btn" onclick="cancelSelection()" style="background:#444; border-color:#666;">BACK</button>
+            </div>
+        </div>
 
         <p id="loginError" style="color: #ff4444; font-size: 8px; margin-top: 15px; display: none;">UNAUTHORIZED ACCESS DENIED</p>
     </div>
@@ -186,7 +193,11 @@
             🏠 <span>Home</span>
         </button>
         
-        <button class="nav-button" onclick="loadContent('Cyber Dash Security Runner.html')">
+        <button class="nav-button" onclick="loadContent('module.html')">
+            📦 <span>Module</span>
+        </button>
+
+        <button class="nav-button" onclick="loadContent('Cyber_Dash_Security_Runner.html')">
             🎮 <span>Play Game</span>
         </button>
 
@@ -194,9 +205,6 @@
     🏆 <span>Scores</span>
 </button>
         
-        <button class="nav-button" onclick="loadContent('module.html')">
-            📦 <span>Module</span>
-        </button>
         
         <button class="nav-button" onclick="location.reload()" style="margin-top: auto; border-color: #ff4444;">
             🚫 <span>Logout</span>
@@ -236,7 +244,10 @@ const USERS = Array.from({ length: 20 }, (_, i) => ({
     const homeView = document.getElementById('homeContent');
     const iframe = document.getElementById('gameFrame');
 
-    function initUserGrid() {
+// 1. Update the constant to 3
+const CARDS_PER_PAGE = 3;
+
+function initUserGrid() {
     const grid = document.getElementById('userGrid');
     if (!grid) return;
     grid.innerHTML = ''; 
@@ -244,19 +255,92 @@ const USERS = Array.from({ length: 20 }, (_, i) => ({
     USERS.forEach(user => {
         const card = document.createElement('div');
         card.className = 'agent-card';
-        card.style.cssText = `cursor: pointer; padding: 15px; text-align: center; width: 140px; flex: 0 0 calc(20% - 20px); scroll-snap-align: start;`;
+        
+        // 2. Adjust width to roughly 33% (calc(33.33% - 14px))
+        // This ensures exactly 3 cards fit in the visible area
+        card.style.cssText = `
+            cursor: pointer; 
+            padding: 10px; 
+            text-align: center; 
+            width: calc(33.33% - 14px); 
+            flex: 0 0 auto; 
+            scroll-snap-align: center; 
+            transition: transform 0.2s;
+        `;
         
         card.innerHTML = `
-            <div class="avatar-circle" style="width: 100px; height: 100px; background: #222; border-radius: 50%; margin: 0 auto 10px; border: 3px solid #4CAF50; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;">
+            <div class="avatar-circle" style="width: 80px; height: 80px; background: #222; border-radius: 50%; margin: 0 auto 10px; border: 3px solid #4CAF50; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;">
                 <img src="${user.avatar}" 
                      style="width:100%; height:100%; object-fit:cover;" 
                      onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                <span style="display:none; color:#4CAF50; font-size:10px; font-family:sans-serif;">[ AGENT ]</span>
+                <span style="display:none; color:#4CAF50; font-size:8px; font-family:sans-serif;">[ AGENT ]</span>
             </div>
-            <div style="font-size: 8px; color: #fff;">${user.displayName}</div>
+            <div style="font-size: 7px; color: #fff; font-family: 'Press Start 2P'; text-transform: uppercase;">${user.displayName}</div>
         `;
+        
+        card.onmouseover = () => card.style.transform = 'scale(1.05)';
+        card.onmouseout = () => card.style.transform = 'scale(1.0)';
+        
         card.onclick = () => selectUser(user);
         grid.appendChild(card);
+    });
+
+    createDots(); 
+}
+
+// 3. Ensure scrolling slides 3 users at a time
+function scrollGrid(direction) {
+    const grid = document.getElementById('userGrid');
+    // OffsetWidth now represents the width of exactly 3 users
+    const scrollAmount = grid.offsetWidth; 
+    grid.scrollBy({
+        left: direction * scrollAmount,
+        behavior: 'smooth'
+    });
+}
+
+/**
+ * Generates navigation dots based on the total number of agent pages.
+ */
+function createDots() {
+    const dotsContainer = document.getElementById('carouselDots');
+    const totalPages = Math.ceil(USERS.length / CARDS_PER_PAGE);
+    dotsContainer.innerHTML = '';
+
+    for (let i = 0; i < totalPages; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot';
+        dot.style.cssText = `width: 10px; height: 10px; border-radius: 50%; border: 1px solid #4CAF50; background: transparent; cursor: pointer; transition: 0.3s;`;
+        dot.onclick = () => {
+            const grid = document.getElementById('userGrid');
+            grid.scrollTo({ left: i * grid.offsetWidth, behavior: 'smooth' });
+        };
+        dotsContainer.appendChild(dot);
+    }
+    updateActiveDot();
+}
+
+/**
+ * Updates the visual state of the circle indicators 
+ * during scroll events.
+ */
+function updateActiveDot() {
+    const grid = document.getElementById('userGrid');
+    const dots = document.querySelectorAll('.dot');
+    const scrollPosition = grid.scrollLeft;
+    const pageWidth = grid.offsetWidth;
+    
+    // Calculate the active page index
+    const activeIndex = Math.round(scrollPosition / pageWidth);
+
+    dots.forEach((dot, index) => {
+        if (index === activeIndex) {
+            dot.style.background = '#4CAF50';
+            dot.style.boxShadow = '0 0 8px #4CAF50';
+        } else {
+            dot.style.background = 'transparent';
+            dot.style.boxShadow = 'none';
+        }
     });
 }
    function selectUser(user) {

@@ -83,7 +83,7 @@
 <body>
 
     <div id="gridView" class="container">
-        <h1 class="header-title">ISO 27001 CONTROL DOMAINS</h1>
+<h1 class="header-title">THE S3 FRAMEWORK: CYBER-READY SHS</h1>
         <div class="modules-grid" id="cardContainer"></div>
     </div>
 
@@ -96,214 +96,132 @@
 <script>
     // Configuration: added 'progress' and 'requiredTime' (in seconds)
     const isoModules = [
-        {
-            id: 1,
-            title: "Module 1: Keeping Secrets Safe",
-            desc: "Learning how to protect important information so only the right people can see it.",
-            image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=500&auto=format",
-            progress: 0,
-            requiredTime: 180, // 3 minutes
-            content: `
+    {
+        id: 1,
+        title: "Module 1: SAFE (Technical Defense)",
+        desc: "Mastering Defense-in-Depth, Zero Trust architectures, and advanced encryption for the modern professional.",
+        image: "photo-1550751827-4bd374c3f58b.jpg",
+        progress: 0,
+        requiredTime: 180, // 3 Minutes
+        content: `
             <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
-                    <b>Course Description:</b> Learning how to protect important information so only the right people can see it.
-                </p>
-                <p><i>(ISO 27001 for Elementary Students)</i></p>
-                <h3>Introduction</h3>
-                <p>Every day, we use information. Information can be something simple, like the lunch menu, or something private, like your diary or your grades. Just like we lock our doors to keep our belongings safe, we also need to protect information. This is called <b>Information Security</b>.</p>
-                <h3>The Three Pillars of Security</h3>
+                <b>Course Description:</b> Establishing a multi-layered defense strategy to protect personal and organizational data from technical exploitation.
+            </p>
+            <p><i>(S3 Framework: Senior High School Edition)</i></p>
+            
+            <h3>Introduction</h3>
+            <p>For Grade 11 and 12 students, cybersecurity is no longer just about avoiding "bad links." As you prepare for higher education or the global workforce, you must transition from basic habits to a professional security mindset known as <b>Defense-in-Depth</b>.</p>
+
+            <h3>The Zero Trust Architecture</h3>
+            <p>The traditional security model was "trust but verify." In today's threat landscape, we use <b>Zero Trust</b>: "Never trust, always verify." This means even if you are logged into a trusted network, every access request to sensitive data must be authenticated and encrypted.</p>
+
+            <h3>1. Hardening Your Digital Identity</h3>
+            <p>Your password is the first line of defense, but it is never enough on its own. Professionals use <b>Multi-Factor Authentication (MFA)</b>. 
+            <ul>
+                <li><b>MFA Fatigue:</b> Be wary of "push bombing," where attackers spam your phone with login approvals hoping you will click 'Yes' just to stop the notifications.</li>
+                <li><b>Hardware Keys:</b> Consider using physical security keys (like YubiKeys) for your most sensitive professional accounts.</li>
+            </ul></p>
+
+            <h3>2. Data at Rest: Disk Encryption</h3>
+            <p>If your laptop or mobile device is physically stolen, a login password will not stop a sophisticated thief from pulling out the hard drive to read your files. Ensure <b>Full Disk Encryption</b> (BitLocker for Windows or FileVault for macOS) is active to scramble your data into unreadable ciphertext.</p>
+
+            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border-left: 5px solid #4CAF50; margin-top: 20px;">
+                <h3>Professional Concept: The Layered Onion</h3>
+                <p>Imagine your digital life as an onion:</p>
                 <ul>
-                    <li><b>Confidentiality:</b> Keep it secret.</li>
-                    <li><b>Integrity:</b> Keep it correct.</li>
-                    <li><b>Availability:</b> Keep it ready.</li>
+                    <li><b>Outer Layer:</b> Secure Network (VPN/Firewall).</li>
+                    <li><b>Middle Layer:</b> Strong Identity (MFA/Password Manager).</li>
+                    <li><b>Inner Core:</b> Encrypted Data (Disk Encryption).</li>
                 </ul>
-                <h3>1. Confidentiality: Keep It Secret</h3>
-                <p>Some information should only be seen by the right people. Your diary is for you. Your test scores are for you and your teacher. Your password is for you alone.</p>
-                <h3>2. Integrity: Keep It Correct</h3>
-                <p>Information must stay true and accurate. Your grades should not be changed by anyone except your teacher.</p>
-                <h3>3. Availability: Keep It Ready</h3>
-                <p>Information should be there when you need it. The lunch menu should be ready so everyone knows what to eat.</p>
-                <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border-left: 5px solid #4CAF50; margin-top: 20px;">
-                    <h3>Everyday Example: The Treasure Box</h3>
-                    <p>Imagine you have a treasure box:</p>
-                    <ul>
-                        <li>You lock it so only you can open it <b>(Confidentiality)</b>.</li>
-                        <li>You keep the items inside safe and unchanged <b>(Integrity)</b>.</li>
-                        <li>You place it where you can reach it when needed <b>(Availability)</b>.</li>
-                    </ul>
-                </div>
-                <h3>Reflection</h3>
-                <p>Think about one piece of information you want to keep safe. Is it secret? Should it stay correct? Do you need it ready when you ask for it?</p>
-                <p><b>Key Takeaway:</b> Information security is about keeping secrets safe, keeping things correct, and keeping them ready when needed.</p>
-            `
-        },
-        {
-            id: 2,
-            title: "Module 2: Who Needs to Know?",
-            desc: "Understanding roles and deciding who should have access to certain information.",
-            image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=500&auto=format",
-            progress: 0,
-            requiredTime: 120, // 2 minutes
-            content: `
-                <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
-                    <b>Course Description:</b> Understanding roles and deciding who should have access to certain information.
-                </p>
-                <h3>Introduction</h3>
-                <p>Not everyone needs to know everything. In school, teachers know your grades, but classmates don’t. This is called <b>Access Control</b> — deciding who should see or use certain information.</p>
-                <h3>Why Access Matters</h3>
-                <p>Information is like a key. If too many people have the key, things can go wrong.</p>
-                <h3>Roles in Information Security</h3>
+                <p>An attacker must peel back every single layer to reach your information.</p>
+            </div>
+
+            <h3>Reflection</h3>
+            <p>If you lost your laptop today at school or a café, is your data encrypted? Or is a simple login password the only thing standing between a stranger and your entire digital life?</p>
+            <p><b>Key Takeaway:</b> Being "Safe" means building multiple technical barriers so that the failure of one layer does not lead to a total compromise.</p>
+        `
+    },
+    {
+        id: 2,
+        title: "Module 2: SAVVY (Information Intelligence)",
+        desc: "Navigating deepfakes, sophisticated social engineering, and the legalities of the Data Privacy Act.",
+        image: "photo-1563986768609-322da13575f3.jpg",
+        progress: 0,
+        requiredTime: 180, // 3 Minutes
+        content: `
+            <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
+                <b>Course Description:</b> Developing the analytical skills to identify sophisticated psychological manipulation and understanding digital legal rights.
+            </p>
+            <p><i>(S3 Framework: Senior High School Edition)</i></p>
+
+            <h3>The Human Firewall</h3>
+            <p>Most cyberattacks do not start with a "hack"—they start with a conversation. Being "Savvy" means recognizing that psychology is often used as a weapon through <b>Social Engineering</b>.</p>
+
+            <h3>1. Spear Phishing and OSINT</h3>
+            <p>Generic phishing emails are easy to spot. However, <b>Spear Phishing</b> uses Open Source Intelligence (OSINT) to target you specifically. Attackers might research your school (De La Salle Lipa), your current projects, or your friends to create a fake email that looks 100% authentic.</p>
+
+            <h3>2. The Era of Synthetic Media (Deepfakes)</h3>
+            <p>As AI improves, we can no longer trust our eyes or ears. Deepfake technology can mimic a parent's voice or a teacher's face in a video call. Always verify urgent requests for money or sensitive data by calling the person back on a known, trusted number.</p>
+
+            <h3>3. Compliance: Data Privacy Act of 2012</h3>
+            <p>In the Philippines, the <b>Data Privacy Act (RA 10173)</b> protects your rights. You have the right to be informed, the right to object to processing, and the right to access your data. Being Savvy means reading a "Privacy Policy" to ensure a company isn't selling your habits to third-party brokers.</p>
+
+            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border-left: 5px solid #4CAF50; margin-top: 20px;">
+                <h3>Savvy Strategy: The "S.T.O.P." Method</h3>
                 <ul>
-                    <li><b>Students:</b> Protect their own passwords and belongings.</li>
-                    <li><b>Teachers:</b> Keep grades and records safe.</li>
-                    <li><b>School Staff:</b> Share only what is needed, like the lunch menu.</li>
+                    <li><b>S</b>crutinize the sender's actual email address.</li>
+                    <li><b>T</b>ake a breath; attackers use artificial urgency to make you panic.</li>
+                    <li><b>O</b>bserve the links without clicking (hover to see the real URL).</li>
+                    <li><b>P</b>hone a friend or the official institution to verify the request.</li>
                 </ul>
-                <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; border-left: 5px solid #2e7d32; margin: 20px 0;">
-                    <h3>Everyday Examples</h3>
-                    <ul>
-                        <li><b>Lunch Menu:</b> Everyone should know.</li>
-                        <li><b>Report Card:</b> Only you, your teacher, and your parents should know.</li>
-                        <li><b>Computer Password:</b> Only you should know.</li>
-                    </ul>
-                </div>
-                <h3>Reflection Questions</h3>
-                <ol>
-                    <li>Who should know your diary secrets?</li>
-                    <li>Who should know your grades?</li>
-                    <li>Who should know the fire drill plan?</li>
-                </ol>
-                <div style="background: #333; color: #fff; padding: 15px; border-radius: 5px; margin-top: 20px;">
-                    <b>Key Takeaway:</b> Information should only be shared with the right people. Knowing who needs to know keeps secrets safe.
-                </div>
-            `
-        },
-        {
-            id: 3,
-            title: "Module 3: Spotting Risks",
-            desc: "Finding possible problems that could harm information and learning simple ways to prevent them.",
-            image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=500&auto=format",
-            progress: 0,
-            requiredTime: 150, // 2.5 minutes
-            content: `
-                <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
-                    <b>Course Description:</b> Finding possible problems that could harm information and learning simple ways to prevent them.
-                </p>
-                <h3>Introduction</h3>
-                <p>A <b>risk</b> is something that might go wrong. Just like leaving your backpack open could mean losing a pencil, leaving your computer unlocked could mean someone changes your work.</p>
-                <h3>What Is a Risk?</h3>
+            </div>
+
+            <h3>Reflection</h3>
+            <p>Have you ever clicked 'Accept' on a Terms of Service without reading it? What data did you just legally give away about your location, your contacts, or your private messages?</p>
+            <p><b>Key Takeaway:</b> Intelligence is your best defense. If a digital interaction feels urgent, strange, or too good to be true, it likely is.</p>
+        `
+    },
+    {
+        id: 3,
+        title: "Module 3: SOCIAL (Digital Citizenship)",
+        desc: "Protecting your professional digital footprint and the ethics of social responsibility in cybersecurity.",
+        image: "photo-1522202176988-66273c2fd55f.jpg",
+        progress: 0,
+        requiredTime: 180, // 3 Minutes
+        content: `
+            <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
+                <b>Course Description:</b> Understanding the long-term impact of a digital footprint and the ethical responsibilities of a connected citizen.
+            </p>
+            <p><i>(S3 Framework: Senior High School Edition)</i></p>
+
+            <h3>The Permanent Shadow</h3>
+            <p>Everything you do online—every post, comment, and "private" message—is a permanent part of your <b>Digital Footprint</b>. For SHS students, this footprint is often the first thing university admissions or future employers will investigate.</p>
+
+            <h3>1. The Risk of Oversharing</h3>
+            <p>Posting photos of your school ID, your home, or even a view from your window provides "metadata" to attackers. This information can lead to <b>Doxing</b> (publishing your private info) or physical security risks. Practice "Digital Minimalism" by only sharing what is absolutely necessary.</p>
+
+            <h3>2. Collective Security and Reporting</h3>
+            <p>Cybersecurity is a team effort. If you notice a classmate’s social media account is compromised or posting spam, don't just ignore it. Being "Socially" responsible means alerting them through a different channel and reporting the compromised account to protect your entire network.</p>
+
+            <h3>3. Ethical Boundaries: The Law</h3>
+            <p>With the technical skills you learn in Information Technology, you have the power to help or harm. The <b>Cybercrime Prevention Act of 2012 (RA 10175)</b> makes unauthorized access and data interference a criminal offense. Aim to be a "White Hat"—using your knowledge to build a safer community for everyone.</p>
+
+            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border-left: 5px solid #4CAF50; margin-top: 20px;">
+                <h3>The Social Integrity Test</h3>
+                <p>Before you post or share, ask yourself:</p>
                 <ul>
-                    <li>If you share your <b>password</b>, someone might use it.</li>
-                    <li>If you forget to <b>save your file</b>, you might lose it.</li>
+                    <li><b>Is it secure?</b> (Does this reveal my location or private data?)</li>
+                    <li><b>Is it kind?</b> (Does this maintain my professional reputation?)</li>
+                    <li><b>Is it true?</b> (Am I spreading misinformation or a verified fact?)</li>
                 </ul>
-                <div style="background: #fffde7; padding: 20px; border-radius: 8px; border-left: 5px solid #fbc02d; margin: 20px 0;">
-                    <h3>How Do We Handle Risks?</h3>
-                    <ul>
-                        <li><b>Avoid it:</b> Don’t let it happen (lock your locker).</li>
-                        <li><b>Fix it:</b> Add protection (use a password).</li>
-                        <li><b>Accept it:</b> Sometimes small risks are okay.</li>
-                    </ul>
-                </div>
-                <h3>Reflection</h3>
-                <p>Think of one risk in your school life. How would you avoid, fix, or accept it?</p>
-                <div style="background: #333; color: #fff; padding: 15px; border-radius: 5px; margin-top: 20px;">
-                    <b>Key Takeaway:</b> Spotting risks helps us protect information before problems happen.
-                </div>
-            `
-        },
-        {
-            id: 4,
-            title: "Module 4: Rules to Stay Safe",
-            desc: "Creating easy-to-follow rules that help keep information and belongings secure.",
-            image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=500&auto=format",
-            progress: 0,
-            requiredTime: 120,
-            content: `
-                <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
-                    <b>Course Description:</b> Creating easy-to-follow rules that help keep information and belongings secure.
-                </p>
-                <h3>Introduction</h3>
-                <p>Rules help everyone stay safe. In school, we follow rules like “walk in the hallway.” Information also needs rules to stay safe.</p>
-                <h3>Examples of Safety Rules</h3>
-                <ul>
-                    <li>Use strong passwords.</li>
-                    <li>Log out of computers when finished.</li>
-                    <li>Ask permission before sharing information.</li>
-                </ul>
-                <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 5px solid #1976d2; margin: 20px 0;">
-                    <h3>Why Rules Matter</h3>
-                    <p>Rules are like <b>shields</b>. They stop problems before they happen.</p>
-                </div>
-                <h3>Reflection</h3>
-                <p>Write one rule you follow at school and one rule you follow online.</p>
-                <div style="background: #333; color: #fff; padding: 15px; border-radius: 5px; margin-top: 20px;">
-                    <b>Key Takeaway:</b> Rules make safety simple. Following them protects both people and information.
-                </div>
-            `
-        },
-        {
-            id: 5,
-            title: "Module 5: Practice Makes Perfect",
-            desc: "Building good daily habits, like logging out of computers and locking doors, to stay safe.",
-            image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=500&auto=format",
-            progress: 0,
-            requiredTime: 120,
-            content: `
-                <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
-                    <b>Course Description:</b> Building good daily habits, like logging out of computers and locking doors, to stay safe.
-                </p>
-                <h3>Introduction</h3>
-                <p>Safety is not just about rules. It is about <b>habits</b> we practice every day. Habits are small actions that keep us safe without thinking too much.</p>
-                <h3>Good Safety Habits</h3>
-                <ul>
-                    <li>Locking your locker every day.</li>
-                    <li>Logging out of the computer after class.</li>
-                    <li>Checking your homework file before turning it in.</li>
-                </ul>
-                <div style="background: #f3e5f5; padding: 20px; border-radius: 8px; border-left: 5px solid #7b1fa2; margin: 20px 0;">
-                    <h3>Why Habits Work</h3>
-                    <p>Habits make safety <b>automatic</b>. When we repeat good actions, they become part of our routine.</p>
-                </div>
-                <h3>Reflection</h3>
-                <p>What is one safety habit you already do? What is one new habit you want to start?</p>
-                <div style="background: #333; color: #fff; padding: 15px; border-radius: 5px; margin-top: 20px;">
-                    <b>Key Takeaway:</b> Practicing safety habits every day makes protection easy and natural.
-                </div>
-            `
-        },
-        {
-            id: 6,
-            title: "Module 6: Checking and Improving",
-            desc: "Reviewing safety rules to see if they work well and finding ways to make them better.",
-            image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=500&auto=format",
-            progress: 0,
-            requiredTime: 180,
-            content: `
-                <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
-                    <b>Course Description:</b> Reviewing safety rules to see if they work well and finding ways to make them better.
-                </p>
-                <h3>Introduction</h3>
-                <p>Even good rules and habits need checking. Sometimes things change, and we need to improve. Schools check fire drills, and we can check our safety rules too.</p>
-                <div style="text-align: center; margin: 20px 0;">
-                    <img src="https://images.squarespace-cdn.com/content/v1/6348398d9d21fd6277c64f96/adecc7f8-baa6-4c6d-9fbf-b5bc9fdf73d9/Plan+Do+Check+Act+PDCA+cycle+diagram.png" alt="PDCA Cycle" style="max-width: 50%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                    <p style="font-size: 12px; color: #666;"><i>The PDCA Cycle: Plan, Do, Check, and Act!</i></p>
-                </div>
-                <h3>How to Check</h3>
-                <ul>
-                    <li><b>Look:</b> Are people following the rules?</li>
-                    <li><b>Ask:</b> Do the rules still make sense?</li>
-                    <li><b>Improve:</b> Can we make the rules better?</li>
-                </ul>
-                <div style="background: #eceff1; padding: 20px; border-radius: 8px; border-left: 5px solid #455a64; margin: 20px 0;">
-                    <h3>Everyday Example</h3>
-                    <p>If students forget to log out of computers, maybe the rule needs a reminder sign.</p>
-                </div>
-                <h3>Reflection</h3>
-                <p>Think of one safety rule in your class. How could it be improved?</p>
-                <div style="background: #333; color: #fff; padding: 15px; border-radius: 5px; margin-top: 20px;">
-                    <b>Key Takeaway:</b> Checking and improving keeps safety strong. Rules and habits must grow with us.
-                </div>
-            `
-        }
-    ];
+            </div>
+
+            <h3>Reflection</h3>
+            <p>If a recruiter for your dream job looked at your social media history from three years ago, would they still want to hire you? How can you start curating a more professional "Social" presence today?</p>
+            <p><b>Key Takeaway:</b> Your digital footprint is your legacy. Use your social platform to protect your community and build your professional future.</p>
+        `
+    }
+];
 
     // Global variables for time tracking
     let startTime;
