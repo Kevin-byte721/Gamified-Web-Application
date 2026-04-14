@@ -17,9 +17,21 @@
             overflow: hidden;
         }
 
+        /* --- LOGIN OVERLAY --- */
+        #loginOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #111; z-index: 1000; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; color: #4CAF50;
+        }
+        .login-box { border: 4px solid #4CAF50; padding: 40px; text-align: center; background: #222; box-shadow: 10px 10px 0px #000; }
+        .login-box h2 { font-size: 14px; margin-bottom: 20px; }
+        .login-box input { display: block; margin: 15px auto; padding: 10px; font-family: 'Press Start 2P'; font-size: 10px; border: 2px solid #4CAF50; background: #000; color: #fff; width: 250px; }
+        .login-btn { background: #4CAF50; color: #000; border: none; padding: 10px 20px; font-family: 'Press Start 2P'; cursor: pointer; border: 2px solid #fff; }
+        .login-btn:hover { background: #45a049; }
+
         /* --- SIDE NAVIGATION BAR --- */
         #mainNav {
-            width: 200px;
+            width: 220px;
             background-color: #222;
             border-right: 4px solid #333;
             display: flex;
@@ -32,16 +44,12 @@
             position: relative;
         }
 
-        #mainNav.collapsed {
-            width: 80px;
-            padding: 20px 5px;
-        }
+        #mainNav.collapsed { width: 80px; padding: 20px 5px; }
 
         #mainNav.collapsed .nav-header,
         #mainNav.collapsed .nav-button span,
-        #mainNav.collapsed .version-tag {
-            display: none;
-        }
+        #mainNav.collapsed .version-tag,
+        #mainNav.collapsed .user-info { display: none; }
 
         #toggleBtn {
             align-self: flex-end; 
@@ -53,47 +61,32 @@
             font-size: 12px;
             padding: 5px 8px;
             margin-bottom: 20px;
-            transition: all 0.2s;
         }
 
-        #toggleBtn:hover {
-            background-color: #45a049;
-            transform: scale(1.1);
-        }
+        #mainNav.collapsed #toggleBtn { align-self: center; }
 
-        #mainNav.collapsed #toggleBtn {
-            align-self: center; 
-        }
-
-        .nav-header {
-            color: #4CAF50;
-            font-size: 12px;
-            margin-bottom: 40px;
-            text-align: center;
-            line-height: 1.4;
-        }
+        .nav-header { color: #4CAF50; font-size: 12px; margin-bottom: 40px; text-align: center; line-height: 1.4; }
+        .user-info { color: #4CAF50; font-size: 8px; margin-bottom: 20px; text-align: center; width: 100%; border-bottom: 1px solid #333; padding-bottom: 10px; }
 
         .nav-button {
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             padding: 12px 5px;
             font-family: 'Press Start 2P', cursive;
-            font-size: 10px;
+            font-size: 8px;
             background-color: #333;
             color: #fff;
             border: 2px solid #fff;
             cursor: pointer;
             transition: all 0.2s;
             text-align: center;
-            box-sizing: border-box;
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
-        .nav-button:hover {
-            background-color: #444;
-            transform: translateX(5px);
-            box-shadow: -4px 0 0 #4CAF50;
-        }
+        .nav-button:hover { background-color: #444; transform: translateX(5px); box-shadow: -4px 0 0 #4CAF50; }
 
         /* --- CONTENT WRAPPER --- */
         #gameWrapper {
@@ -103,133 +96,310 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: flex-grow 0.3s ease;
         }
 
-        /* --- CUSTOM HOME PAGE CONTENT --- */
-        #homeContent {
-            color: #4CAF50;
-            text-align: center;
-            padding: 40px;
-            max-width: 700px;
-        }
+        #homeContent { color: #4CAF50; text-align: center; padding: 40px; max-width: 700px; }
+        .instruction-box { border: 2px dashed #4CAF50; padding: 20px; margin: 20px 0; background: rgba(76, 175, 80, 0.05); color: #fff; font-size: 10px; line-height: 1.6; }
 
-        #homeContent h1 {
-            font-size: 24px;
-            margin-bottom: 20px;
-            text-shadow: 3px 3px #000;
-        }
+        iframe { width: 100%; height: 100%; border: none; display: none; }
+        iframe.active { display: block; }
 
-        #homeContent p {
-            font-size: 24px;
-            line-height: 1.8;
-            color: #ccc;
-            margin-bottom: 20px;
-        }
+        /* Container to hold the grid and limit width */
+#gridContainer {
+    width: 850px; /* Adjust based on your card width to fit 5 cards */
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+    animation: fadeIn 0.3s;
+}
 
-        .instruction-box {
-            border: 2px dashed #4CAF50;
-            padding: 20px;
-            margin: 20px 0;
-            background: rgba(76, 175, 80, 0.05);
-            color: #fff;
-            font-size: 10px;
-            line-height: 1.6;
-        }
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+#userGrid {
+    display: flex;
+    gap: 20px;
+    padding: 20px 10px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    /* This makes it snap so you always land on a card */
+    scroll-snap-type: x mandatory; 
+}
 
-        .status-box {
-            border: 2px solid #4CAF50;
-            padding: 15px;
-            margin-top: 30px;
-            background: rgba(76, 175, 80, 0.1);
-            font-size: 10px;
-        }
+/* Custom Scrollbar for a retro look */
+#userGrid::-webkit-scrollbar {
+    height: 8px;
+}
+#userGrid::-webkit-scrollbar-track {
+    background: #222;
+}
+#userGrid::-webkit-scrollbar-thumb {
+    background: #4CAF50;
+    border-radius: 4px;
+}
 
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            display: none; 
-        }
-
-        iframe.active {
-            display: block;
-        }
+/* Apply snapping to the cards */
+.agent-card {
+    flex: 0 0 calc(20% - 20px); /* Exactly 5 cards per view minus gap */
+    scroll-snap-align: start;
+}
     </style>
 </head>
 <body>
+
+    <div id="loginOverlay">
+    <div class="login-box" style="max-width: 900px; width: 95%;">
+        <h2>[ SELECT AGENT IDENTITY ]</h2>
+        
+        <div id="gridContainer">
+            <div id="userGrid">
+                </div>
+        </div>
+
+        <div id="passwordSection" style="display: none; margin-top: 20px; text-align: center;">
+    <div id="activeAgentDisplay" style="margin-bottom: 20px;">
+        <div id="activeAgentAvatar" style="width: 80px; height: 80px; background: #333; border-radius: 50%; margin: 0 auto 10px; border: 3px solid #4CAF50; overflow: hidden;">
+            <img src="" id="activeImg" style="width:100%; height:100%; object-fit:cover;">
+        </div>
+        <div id="activeAgentName" style="font-size: 10px; color: #4CAF50; text-shadow: 2px 2px #000;"></div>
+    </div>
+
+    <input type="password" id="passwordInput" placeholder="ENTER PASSWORD">
+    <div style="margin-top: 15px;">
+        <button class="login-btn" onclick="attemptLogin()">INITIALIZE</button>
+        <button class="login-btn" onclick="cancelSelection()" style="background:#444; border-color:#666;">BACK</button>
+    </div>
+</div>
+
+        <p id="loginError" style="color: #ff4444; font-size: 8px; margin-top: 15px; display: none;">UNAUTHORIZED ACCESS DENIED</p>
+    </div>
+</div>
 
     <nav id="mainNav">
         <button id="toggleBtn" onclick="toggleNav()" title="Toggle Sidebar">X</button>
 
         <div class="nav-header">SYSTEM<br>DASHBOARD</div>
+        <div class="user-info">AGENT: <span id="agentName">---</span></div>
         
-        <button class="nav-button" onclick="showHome()" title="Home">
+        <button class="nav-button" onclick="showHome()">
             🏠 <span>Home</span>
         </button>
         
-        <button class="nav-button" onclick="loadContent('Cyber Dash Security Runner.html')" title="Play Game">
+        <button class="nav-button" onclick="loadContent('Cyber Dash Security Runner.html')">
             🎮 <span>Play Game</span>
         </button>
+
+        <button class="nav-button" onclick="loadContent('leaderboards.html')">
+    🏆 <span>Scores</span>
+</button>
         
-        <button class="nav-button" onclick="loadContent('module.html')" title="Training Modules">
+        <button class="nav-button" onclick="loadContent('module.html')">
             📦 <span>Module</span>
         </button>
         
-        <button class="nav-button" onclick="alert('Controls: Arrows to Jump')" title="View Controls">
-            ⌨️ <span>Controls</span>
+        <button class="nav-button" onclick="location.reload()" style="margin-top: auto; border-color: #ff4444;">
+            🚫 <span>Logout</span>
         </button>
         
-        <div class="version-tag" style="margin-top: auto; color: #666; font-size: 8px;">v1.1.0-SEC</div>
+        <div class="version-tag" style="color: #666; font-size: 8px; margin-top: 10px;">v1.1.0-SEC</div>
     </nav>
 
     <div id="gameWrapper">
         <div id="homeContent">
             <h1>WELCOME, AGENT</h1>
-            
             <div class="instruction-box">
                 [ INITIALIZING MISSION BRIEF ]<br><br>
                 To ensure maximum field efficiency, you are required to 
                 <strong>complete the Module training</strong> before 
                 engaging in the Cyber Dash Security Runner simulation.
             </div>
-
-            
         </div>
         <iframe id="gameFrame"></iframe>
     </div>
 
     <script>
-        const wrapper = document.getElementById('gameWrapper');
-        const homeView = document.getElementById('homeContent');
-        const iframe = document.getElementById('gameFrame');
+    // 1. GLOBAL DATA & STATE
+    // Customize the displayNames to match your team/agents
+    // Generates 50 students: Student 1 to Student 50
+const USERS = Array.from({ length: 20 }, (_, i) => ({
+    username: `user${i + 1}`,
+    password: `password${i + 1}`,
+    displayName: `STUDENT ${i + 1}`,
+    avatar: `profile-icon.jpg` // Set this as the global icon
+}));
 
-        function toggleNav() {
-            const nav = document.getElementById('mainNav');
-            const toggleBtn = document.getElementById('toggleBtn');
+    let selectedUser = null;
+    let currentUser = null;
+
+    // DOM Elements
+    const homeView = document.getElementById('homeContent');
+    const iframe = document.getElementById('gameFrame');
+
+    function initUserGrid() {
+    const grid = document.getElementById('userGrid');
+    if (!grid) return;
+    grid.innerHTML = ''; 
+
+    USERS.forEach(user => {
+        const card = document.createElement('div');
+        card.className = 'agent-card';
+        card.style.cssText = `cursor: pointer; padding: 15px; text-align: center; width: 140px; flex: 0 0 calc(20% - 20px); scroll-snap-align: start;`;
+        
+        card.innerHTML = `
+            <div class="avatar-circle" style="width: 100px; height: 100px; background: #222; border-radius: 50%; margin: 0 auto 10px; border: 3px solid #4CAF50; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;">
+                <img src="${user.avatar}" 
+                     style="width:100%; height:100%; object-fit:cover;" 
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <span style="display:none; color:#4CAF50; font-size:10px; font-family:sans-serif;">[ AGENT ]</span>
+            </div>
+            <div style="font-size: 8px; color: #fff;">${user.displayName}</div>
+        `;
+        card.onclick = () => selectUser(user);
+        grid.appendChild(card);
+    });
+}
+   function selectUser(user) {
+    selectedUser = user;
+    
+    const activeName = document.getElementById('activeAgentName');
+    const activeImg = document.getElementById('activeImg');
+    const passwordField = document.getElementById('passwordInput');
+    
+    if (activeName) activeName.innerText = `AGENT: ${user.displayName}`;
+    
+    if (activeImg) {
+        activeImg.style.display = 'block';
+        activeImg.src = user.avatar; // Uses profile-icon.jpg
+        activeImg.onerror = function() { this.style.display = 'none'; };
+    }
+
+    // --- AUTOFILL LOGIC ---
+    if (passwordField) {
+        // Automatically fills the field with the user's specific password
+        passwordField.value = user.password; 
+    } 
+
+    // Switch views to show the password entry box
+    document.getElementById('gridContainer').style.display = 'none';
+    document.getElementById('passwordSection').style.display = 'block';
+    
+    // Focus the button so the user can just press Enter to "Initialize"
+    const loginBtn = document.querySelector('.login-btn');
+    if (loginBtn) loginBtn.focus();
+}
+    function cancelSelection() {
+    // 1. Hide the password entry area
+    document.getElementById('passwordSection').style.display = 'none';
+    
+    // 2. Show the student grid container again
+    // Use 'block' or 'flex' depending on your CSS layout
+    const gridContainer = document.getElementById('gridContainer');
+    gridContainer.style.display = 'block'; 
+    
+    // 3. Clear the password input for security
+    document.getElementById('passwordInput').value = '';
+    // Clear the password field when going back to the grid
+    const passwordField = document.getElementById('passwordInput');
+    if (passwordField) {
+        passwordField.value = '';
+    }
+    // 4. Hide any existing error messages
+    const errorMsg = document.getElementById('loginError');
+    if (errorMsg) errorMsg.style.display = 'none';
+}
+
+    function attemptLogin() {
+        const pInput = document.getElementById('passwordInput');
+        const p = pInput.value.trim();
+        
+        // No need to check username; we check the password of the selectedUser
+        if (selectedUser && p === selectedUser.password) {
+            currentUser = selectedUser.username;
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('agentName').innerText = selectedUser.displayName;
+        } else {
+            const err = document.getElementById('loginError');
+            if (err) {
+                err.style.display = 'block';
+                setTimeout(() => { err.style.display = 'none'; }, 2000);
+            }
+        }
+    }
+
+    window.addEventListener('message', function(event) {
+    if (event.data.type === 'SAVE_SCORE') {
+        const newScore = event.data.score;
+        const userObj = USERS.find(u => u.username === currentUser);
+        const displayName = userObj ? userObj.displayName : "STUDENT";
+
+        // 1. Get existing leaderboard data
+        let leaderboard = JSON.parse(localStorage.getItem('cyberDashLeaderboard') || "[]");
+
+        // 2. Check if this specific student already has a recorded score
+        const existingEntryIndex = leaderboard.findIndex(entry => entry.username === displayName);
+
+        if (existingEntryIndex !== -1) {
+            // Student exists: Only update if the new score is a High Score
+            if (newScore > leaderboard[existingEntryIndex].score) {
+                leaderboard[existingEntryIndex].score = newScore;
+                leaderboard[existingEntryIndex].date = new Date().toISOString();
+                console.log(`High score updated for ${displayName}: ${newScore}`);
+            } else {
+                console.log(`Score of ${newScore} did not beat existing record for ${displayName}`);
+                return; // Exit without saving if it's not a personal best
+            }
+        } else {
+            // Student does not exist: Add their first record
+            leaderboard.push({
+                username: displayName,
+                score: newScore,
+                date: new Date().toISOString()
+            });
+            console.log(`First record saved for ${displayName}: ${newScore}`);
+        }
+
+        // 3. Sort (Highest first) and keep top 10 overall
+        leaderboard.sort((a, b) => b.score - a.score);
+        leaderboard = leaderboard.slice(0, 10);
+
+        // 4. Save back to localStorage
+        localStorage.setItem('cyberDashLeaderboard', JSON.stringify(leaderboard));
+    }
+});
+
+    // 4. NAVIGATION FUNCTIONS
+    function toggleNav() {
+        const nav = document.getElementById('mainNav');
+        const toggleBtn = document.getElementById('toggleBtn');
+        if (nav && toggleBtn) {
             nav.classList.toggle('collapsed');
             toggleBtn.innerText = nav.classList.contains('collapsed') ? ">" : "X";
         }
+    }
 
-        function showHome() {
+    function showHome() {
+        if (iframe) {
             iframe.classList.remove('active');
             iframe.src = "";
-            homeView.style.display = 'block';
         }
+        if (homeView) homeView.style.display = 'block';
+    }
 
-        function loadContent(page) {
-            homeView.style.display = 'none';
+    function loadContent(page) {
+        if (homeView) homeView.style.display = 'none';
+        if (iframe) {
             iframe.classList.add('active');
             iframe.src = page;
         }
+    }
 
-        function reloadGame() {
-            if (iframe.classList.contains('active')) {
-                iframe.src = iframe.src;
-            } else {
-                alert("No active system to reset!");
-            }
-        }
-    </script>
+    function showLeaderboard() {
+        loadContent('leaderboards.html');
+    }
+
+    // Initialize the grid on start
+    window.onload = initUserGrid;
+</script>
 </body>
 </html>

@@ -1098,29 +1098,79 @@ function exitStudyMode() {
                 localStorage.setItem('cyberDashHighScore', gameState.highScore);
                 scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore} (NEW!)`;
             }
-            
-            cancelAnimationFrame(gameState.animationFrameId);
+    
+    // SEND SCORE TO DASHBOARD
+    const finalScore = Math.floor(gameState.score);
+    window.parent.postMessage({ 
+        type: 'SAVE_SCORE', 
+        score: finalScore 
+    }, "*");
+    window.parent.postMessage({ type: 'SAVE_SCORE', score: Math.floor(gameState.score) }, '*');
+
+    cancelAnimationFrame(gameState.animationFrameId);
         }
 
-        function gameWin() {
-            gameState.isRunning = false;
-            setGameOverScreen(true); 
-            gameOverScreen.style.display = 'flex';
-            
-            // Set initial focus on restart button
-            const focusable = getFocusableElements(gameOverButtons);
-            if (focusable.length > 0) {
-                setFocus(focusable[0]);
-            }
+       function gameWin() {
+    gameState.isRunning = false;
+    
+    // Stop the game loop
+    if (gameState.animationFrameId) {
+        cancelAnimationFrame(gameState.animationFrameId);
+    }
 
-            if (Math.floor(gameState.score) > gameState.highScore) {
-                gameState.highScore = Math.floor(gameState.score);
-                localStorage.setItem('cyberDashHighScore', gameState.highScore);
-                scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore} (NEW!)`;
-            }
+    // Update UI elements
+    setGameOverScreen(true); 
+    gameOverScreen.style.display = 'flex';
+    finalScoreSpan.innerText = Math.floor(gameState.score);
 
-            cancelAnimationFrame(gameState.animationFrameId);
+    // --- COMBINED LEADERBOARD LOGIC ---
+    const finalScore = Math.floor(gameState.score);
+    const currentUser = (window.parent && window.parent.currentUser) ? window.parent.currentUser : "Guest";
+
+    // 1. Retrieve the existing leaderboard or start fresh
+    let scores = JSON.parse(localStorage.getItem('cyberDashLeaderboard')) || [];
+    
+    // 2. Update the user's score if it's their new personal best
+    const userIdx = scores.findIndex(s => s.username === currentUser);
+    if (userIdx !== -1) {
+        if (finalScore > scores[userIdx].score) {
+            scores[userIdx].score = finalScore;
         }
+    } else {
+        // Add new user entry
+        scores.push({ username: currentUser, score: finalScore });
+    }
+
+    // 3. Sort by highest score and keep the top 10
+    scores.sort((a, b) => b.score - a.score);
+    scores = scores.slice(0, 10);
+    
+    // 4. Save the updated list back to localStorage
+    localStorage.setItem('cyberDashLeaderboard', JSON.stringify(scores));
+
+    // --- HUD HIGH SCORE LOGIC ---
+    if (finalScore > gameState.highScore) {
+        gameState.highScore = finalScore;
+        localStorage.setItem('cyberDashHighScore', gameState.highScore);
+        scoreDisplay.innerHTML = `Score: ${finalScore} | High: ${gameState.highScore} (NEW!)`;
+    } else {
+        scoreDisplay.innerHTML = `Score: ${finalScore} | High: ${gameState.highScore}`;
+    }
+
+    // Handle button focus for keyboard navigation
+    const focusable = getFocusableElements(gameOverButtons);
+    if (focusable.length > 0) {
+        setFocus(focusable[0]);
+    }
+    // --- ADD THIS BLOCK ---
+    window.parent.postMessage({ 
+        type: 'SAVE_SCORE', 
+        score: Math.floor(gameState.score) 
+    }, '*');
+    // -----------------------
+    // ADD THIS LINE:
+    window.parent.postMessage({ type: 'SAVE_SCORE', score: Math.floor(gameState.score) }, '*');
+}
         
         function pauseGameForSecurityCheck() {
             
