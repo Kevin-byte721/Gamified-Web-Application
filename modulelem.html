@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberTeach: S3 Framework Mission Guide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --accent-green: #4CAF50;
+            --text-color: #eee;
+            --panel-bg: #222;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .container { 
+            padding: 40px; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            text-align: center;
+        }
+        
+        .header-title {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--accent-green);
+            font-size: 18px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        .mission-display {
+            background: var(--panel-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #333;
+            margin-bottom: 30px;
+        }
+
+        .mission-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            border: 3px solid var(--accent-green);
+        }
+
+        .mission-content {
+            background: #fff;
+            color: #333;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: left;
+            margin-top: 20px;
+            min-height: 200px;
+        }
+
+        .mission-content h2 { 
+            color: #2e7d32; 
+            border-bottom: 2px solid #eee; 
+            padding-bottom: 10px;
+            font-size: 22px;
+            margin-top: 0;
+        }
+
+        .mission-nav {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .nav-btn {
+            font-family: 'Press Start 2P', cursive;
+            background: #333;
+            color: #fff;
+            border: 2px solid #444;
+            padding: 10px 15px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: var(--accent-green);
+            border-color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 class="header-title">THE S3 MISSION GUIDE</h1>
+
+        <div class="mission-display">
+            <img src="photo-1550751827-4bd374c3f583.png" alt="S3 Framework Infographic" class="mission-image">
+        </div>
+
+        <div class="mission-nav">
+            <button class="nav-btn active" onclick="loadMission(0)">SAFE</button>
+            <button class="nav-btn" onclick="loadMission(1)">SAVVY</button>
+            <button class="nav-btn" onclick="loadMission(2)">SOCIAL</button>
+        </div>
+
+        <div id="missionText" class="mission-content">
+            </div>
+    </div>
+
+<script>
+    const missions = [
+        {
+            title: "Mission SAFE (The Shield)",
+            content: "<h2>Objective: Information Protection</h2><p>Your first mission as a Cyber-Agent is to protect your <b>Digital Identity</b>. Use the 'Secret Code' rule to keep your passwords strong!</p><ul><li>Use Upper Case and Lower Case letters.</li><li>Add Magic Marks like @ or #.</li></ul>"
+        },
+        {
+            title: "Mission SAVVY (The Magnifying Glass)",
+            content: "<h2>Objective: Critical Thinking</h2><p>Become a <b>Digital Detective</b>! If something looks too good to be true—like 1,000 free gems—it is a trick. Always check the sender before you click!</p>"
+        },
+        {
+            title: "Mission SOCIAL (The Bridge)",
+            content: "<h2>Objective: Online Kindness</h2><p>Your online actions leave a <b>Permanent Ink</b> trail. Use the <b>T.H.I.N.K.</b> rule (True, Helpful, Inspiring, Necessary, Kind) before posting.</p>"
+        }
+    ];
+
+    function loadMission(index) {
+        const btns = document.querySelectorAll('.nav-btn');
+        btns.forEach((btn, i) => {
+            btn.classList.toggle('active', i === index);
+        });
+
+        const mission = missions[index];
+        document.getElementById('missionText').innerHTML = mission.content;
+    }
+
+    // Load the first mission by default
+    loadMission(0);
+</script>
+</body>
+</html>

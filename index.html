@@ -343,54 +343,71 @@ function updateActiveDot() {
         }
     });
 }
-   function selectUser(user) {
+   /**
+ * Handles agent selection: hides carousel, indicators, and autofills password.
+ */
+function selectUser(user) {
     selectedUser = user;
     
     const activeName = document.getElementById('activeAgentName');
     const activeImg = document.getElementById('activeImg');
     const passwordField = document.getElementById('passwordInput');
+    const gridContainer = document.getElementById('gridContainer');
+    const dotsContainer = document.getElementById('carouselDots');
+    const passwordSection = document.getElementById('passwordSection');
     
+    // Set identity details
     if (activeName) activeName.innerText = `AGENT: ${user.displayName}`;
     
     if (activeImg) {
         activeImg.style.display = 'block';
-        activeImg.src = user.avatar; // Uses profile-icon.jpg
+        activeImg.src = user.avatar; 
         activeImg.onerror = function() { this.style.display = 'none'; };
     }
 
     // --- AUTOFILL LOGIC ---
     if (passwordField) {
-        // Automatically fills the field with the user's specific password
         passwordField.value = user.password; 
     } 
 
-    // Switch views to show the password entry box
-    document.getElementById('gridContainer').style.display = 'none';
-    document.getElementById('passwordSection').style.display = 'block';
+    // Hide selection carousel and indicators (dots) as per requested view
+    if (gridContainer) gridContainer.style.display = 'none';
+    if (dotsContainer) dotsContainer.style.display = 'none'; // Removes indicator
     
-    // Focus the button so the user can just press Enter to "Initialize"
+    // Show the focused password entry box
+    if (passwordSection) passwordSection.style.display = 'block';
+    
+    // Focus the button for quick "Initialize"
     const loginBtn = document.querySelector('.login-btn');
     if (loginBtn) loginBtn.focus();
 }
-    function cancelSelection() {
-    // 1. Hide the password entry area
-    document.getElementById('passwordSection').style.display = 'none';
-    
-    // 2. Show the student grid container again
-    // Use 'block' or 'flex' depending on your CSS layout
+
+/**
+ * Restoration logic: brings back the full carousel and navigation dots.
+ */
+function cancelSelection() {
+    const passwordSection = document.getElementById('passwordSection');
     const gridContainer = document.getElementById('gridContainer');
-    gridContainer.style.display = 'block'; 
+    const dotsContainer = document.getElementById('carouselDots');
+    const passwordField = document.getElementById('passwordInput');
+    const errorMsg = document.getElementById('loginError');
+
+    // 1. Hide the password entry area
+    if (passwordSection) passwordSection.style.display = 'none';
+    
+    // 2. Restore the selection grid and indicators
+    // Use 'flex' to ensure the arrows and cards align horizontally
+    if (gridContainer) gridContainer.style.display = 'flex'; 
+    if (dotsContainer) dotsContainer.style.display = 'flex'; // Restores indicator
     
     // 3. Clear the password input for security
-    document.getElementById('passwordInput').value = '';
-    // Clear the password field when going back to the grid
-    const passwordField = document.getElementById('passwordInput');
-    if (passwordField) {
-        passwordField.value = '';
-    }
+    if (passwordField) passwordField.value = '';
+    
     // 4. Hide any existing error messages
-    const errorMsg = document.getElementById('loginError');
     if (errorMsg) errorMsg.style.display = 'none';
+    
+    // 5. Ensure dots are updated based on current scroll position
+    updateActiveDot();
 }
 
     function attemptLogin() {

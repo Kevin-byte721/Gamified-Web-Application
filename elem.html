@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Dash Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: 'Press Start 2P', cursive;
+            display: flex;
+            background-color: #1a1a1a;
+            overflow: hidden;
+        }
+
+        /* --- SIDE NAVIGATION BAR --- */
+        #mainNav {
+            width: 220px;
+            background-color: #222;
+            border-right: 4px solid #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 10px; 
+            box-sizing: border-box;
+            z-index: 10;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        #mainNav.collapsed { width: 80px; padding: 20px 5px; }
+
+        #mainNav.collapsed .nav-header,
+        #mainNav.collapsed .nav-button span,
+        #mainNav.collapsed .version-tag,
+        #mainNav.collapsed .user-info { display: none; }
+
+        #toggleBtn {
+            align-self: flex-end; 
+            background: #4CAF50;
+            border: 2px solid #fff;
+            color: #000;
+            cursor: pointer;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            padding: 5px 8px;
+            margin-bottom: 20px;
+        }
+
+        #mainNav.collapsed #toggleBtn { align-self: center; }
+
+        .nav-header { color: #4CAF50; font-size: 12px; margin-bottom: 40px; text-align: center; line-height: 1.4; }
+        .user-info { color: #4CAF50; font-size: 8px; margin-bottom: 20px; text-align: center; width: 100%; border-bottom: 1px solid #333; padding-bottom: 10px; }
+
+        .nav-button {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 12px 5px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 8px;
+            background-color: #333;
+            color: #fff;
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .nav-button:hover { background-color: #444; transform: translateX(5px); box-shadow: -4px 0 0 #4CAF50; }
+
+        /* --- CONTENT WRAPPER --- */
+        #gameWrapper {
+            flex-grow: 1;
+            position: relative;
+            background-color: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #homeContent { color: #4CAF50; text-align: center; padding: 40px; max-width: 700px; }
+        .instruction-box { border: 2px dashed #4CAF50; padding: 20px; margin: 20px 0; background: rgba(76, 175, 80, 0.05); color: #fff; font-size: 10px; line-height: 1.6; }
+
+        iframe { width: 100%; height: 100%; border: none; display: none; }
+        iframe.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav id="mainNav">
+        <button id="toggleBtn" onclick="toggleNav()" title="Toggle Sidebar">X</button>
+
+        <div class="nav-header">SYSTEM<br>DASHBOARD</div>
+        <div class="user-info">AGENT: <span id="agentName">GUEST AGENT</span></div>
+        
+        <button class="nav-button" onclick="showHome()">
+            🏠 <span>Home</span>
+        </button>
+        
+        <button class="nav-button" onclick="loadContent('modulelem.html')">
+            📦 <span>Module</span>
+        </button>
+
+        <button class="nav-button" onclick="loadContent('Cyber_Dash_Security_Runner.html')">
+            🎮 <span>Play Game</span>
+        </button>
+
+        <button class="nav-button" onclick="loadContent('leaderboardselem.html')">
+            🏆 <span>Scores</span>
+        </button>
+        
+        <button class="nav-button" onclick="location.reload()" style="margin-top: auto; border-color: #ff4444;">
+            🚫 <span>Reset</span>
+        </button>
+        
+        <div class="version-tag" style="color: #666; font-size: 8px; margin-top: 10px;">v1.1.0-SEC</div>
+    </nav>
+
+    <div id="gameWrapper">
+        <div id="homeContent">
+            <h1>WELCOME, AGENT</h1>
+            <div class="instruction-box">
+                [ INITIALIZING MISSION BRIEF ]<br><br>
+                To ensure maximum field efficiency, you are required to 
+                <strong>complete the S3 Framework modules</strong> before 
+                engaging in the Cyber Dash simulation.
+            </div>
+        </div>
+        <iframe id="gameFrame"></iframe>
+    </div>
+
+<script>
+    // 1. GLOBAL STATE
+    // We set a default currentUser so scores can still be saved
+    let currentUser = "Guest_Agent";
+
+    const homeView = document.getElementById('homeContent');
+    const iframe = document.getElementById('gameFrame');
+
+    // 2. SCORE HANDLING
+    window.addEventListener('message', function(event) {
+        if (event.data.type === 'SAVE_SCORE') {
+            const newScore = event.data.score;
+            const displayName = "GUEST AGENT";
+
+            let leaderboard = JSON.parse(localStorage.getItem('cyberDashLeaderboard') || "[]");
+            const existingEntryIndex = leaderboard.findIndex(entry => entry.username === displayName);
+
+            if (existingEntryIndex !== -1) {
+                if (newScore > leaderboard[existingEntryIndex].score) {
+                    leaderboard[existingEntryIndex].score = newScore;
+                    leaderboard[existingEntryIndex].date = new Date().toISOString();
+                }
+            } else {
+                leaderboard.push({
+                    username: displayName,
+                    score: newScore,
+                    date: new Date().toISOString()
+                });
+            }
+
+            leaderboard.sort((a, b) => b.score - a.score);
+            leaderboard = leaderboard.slice(0, 10);
+            localStorage.setItem('cyberDashLeaderboard', JSON.stringify(leaderboard));
+        }
+    });
+
+    // 3. NAVIGATION FUNCTIONS
+    function toggleNav() {
+        const nav = document.getElementById('mainNav');
+        const toggleBtn = document.getElementById('toggleBtn');
+        if (nav && toggleBtn) {
+            nav.classList.toggle('collapsed');
+            toggleBtn.innerText = nav.classList.contains('collapsed') ? ">" : "X";
+        }
+    }
+
+    function showHome() {
+        if (iframe) {
+            iframe.classList.remove('active');
+            iframe.src = "";
+        }
+        if (homeView) homeView.style.display = 'block';
+    }
+
+    function loadContent(page) {
+        if (homeView) homeView.style.display = 'none';
+        if (iframe) {
+            iframe.classList.add('active');
+            iframe.src = page;
+        }
+    }
+
+</script>
+</body>
+</html>
