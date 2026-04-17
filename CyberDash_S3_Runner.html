@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CyberTeach - S3 Strategic Dashboard</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    :root {
+        --bg-dark: #050505;
+        --panel-bg: #0d0d0d;
+        --accent-cyan: #7fffd4;
+        --gold: #f1c40f;
+        --hp-green: #2ecc71;
+        --alert-red: #ff4d4d;
+        --font-main: 'Press Start 2P', cursive;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        font-family: var(--font-main);
+        background: var(--bg-dark);
+        color: #fff;
+        margin: 0; display: flex; height: 100vh; width: 100vw; overflow: hidden;
+    }
+
+    #cyber-app { display: flex; width: 100%; height: 100%; }
+
+    /* --- SIDEBAR REPAIR --- */
+    #sidebar {
+        width: 320px; background: var(--panel-bg); border-right: 2px solid #222;
+        padding: 20px; display: flex; flex-direction: column; flex-shrink: 0;
+    }
+
+    .logo { color: var(--accent-cyan); font-size: 10px; margin-bottom: 5px; line-height: 1.5; }
+    
+    .nav-links { margin-top: 20px; flex-grow: 1; }
+    .nav-links button {
+        display: block; width: 100%; padding: 12px; margin-bottom: 10px;
+        background: transparent; border: 1px solid #333; color: #888;
+        font-family: var(--font-main); font-size: 7px; cursor: pointer; text-align: left;
+    }
+    .nav-links button:hover { border-color: var(--accent-cyan); color: #fff; background: #111; }
+
+    /* --- CERTIFICATE GRID REPAIR --- */
+    .certificate-panel { 
+        padding: 15px; background: #000; border: 1px solid #222; 
+        margin-top: auto; /* Pushes to bottom */
+    }
+    .panel-label { font-size: 6px; color: var(--gold); margin-bottom: 15px; text-align: center; line-height: 1.2; }
+    .badge-grid { display: flex; justify-content: space-between; gap: 5px; }
+    .badge {
+        width: 80px; height: 80px; background: #111; border: 1px solid #333;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        cursor: pointer; transition: 0.3s;
+    }
+    .badge.earned { border-color: var(--hp-green); background: #051a0f; }
+    .cert-label { font-size: 5px; margin-top: 8px; color: #444; }
+
+    /* --- MAIN WORKSPACE & TYPEWRITER --- */
+    #display-window { flex-grow: 1; padding: 40px; overflow-y: auto; background: #050505; }
+    .page-view { display: none; }
+    .page-view.active { display: block; }
+
+    #module-card {
+        background: #0a0a0a; padding: 40px; border: 2px solid #222;
+        min-height: 480px; position: relative;
+    }
+
+    #slide-content {
+        color: var(--accent-cyan); font-family: 'Courier New', monospace;
+        font-size: 16px; line-height: 1.8; min-height: 200px;
+        margin: 20px 0; border-left: 3px solid var(--accent-cyan); padding-left: 20px;
+        white-space: pre-wrap; overflow: hidden;
+    }
+
+    /* Typewriter Trigger */
+    .typing { animation: revealText 1.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    @keyframes revealText { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* --- UI ELEMENTS --- */
+    .nav-control {
+        background: #1a1a1a; border: 1px solid #444; color: #fff;
+        padding: 10px 15px; font-family: var(--font-main); font-size: 8px; cursor: pointer;
+    }
+
+    .quiz-option {
+        display: block; width: 100%; padding: 15px; margin: 10px 0;
+        background: #111; border: 1px solid #444; color: #fff;
+        font-family: var(--font-main); font-size: 8px; cursor: pointer;
+    }
+
+    #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; }
+    .toast {
+        background: #000; border-left: 4px solid var(--accent-cyan); color: #fff;
+        padding: 12px 20px; margin-top: 10px; font-size: 7px; box-shadow: 0 5px 15px #000;
+    }
+
+    #cert-modal {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.9); z-index: 5000; align-items: center; justify-content: center;
+        backdrop-filter: blur(8px);
+    }
+
+    .cert-card {
+        width: 400px; background: #0d0d0d; border: 2px solid var(--hp-green);
+        padding: 40px; text-align: center; position: relative;
+    }
+
+    .scanline {
+        position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+        background: rgba(46, 204, 113, 0.3); animation: scan 3s linear infinite;
+    }
+
+    @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
+    .progress-bar { width: 100%; height: 6px; background: #222; margin: 15px 0; }
+    #readiness-fill { width: 0%; height: 100%; background: var(--accent-cyan); transition: 0.8s; }
+</style>
+</head>
+<body>
+<div id="cyber-app">
+    <nav id="sidebar">
+        <div class="logo">CYBERTEACH // S3</div>
+        <div style="font-size: 7px; color: #666; margin-bottom: 20px;">AGENT: DE JESUS, K. [BSIT-3]</div>
+
+        <div style="font-size: 7px; letter-spacing: 1px;">SYSTEM_READINESS</div>
+        <div class="progress-bar"><div id="readiness-fill"></div></div>
+        
+        <div class="nav-links">
+            <button onclick="showSection('home')" id="btn-home">🏠 DASHBOARD</button>
+            <button onclick="loadModule('safe')" id="btn-safe">🛡️ [SAFE] MISSION</button>
+            <button onclick="loadModule('savvy')" id="btn-savvy">🧠 [SAVVY] MISSION</button>
+            <button onclick="loadModule('social')" id="btn-social">🤝 [SOCIAL] MISSION</button>
+        </div>
+
+        <div class="certificate-panel">
+            <p class="panel-label">ACTIVE_CERTIFICATIONS</p>
+            <div class="badge-grid">
+                <div id="badge-safe" class="badge locked" onclick="showBadgeDetails('safe')">
+                    <span class="lock-icon">🔒</span>
+                    <div class="cert-label">SAFE</div>
+                </div>
+                <div id="badge-savvy" class="badge locked" onclick="showBadgeDetails('savvy')">
+                    <span class="lock-icon">🔒</span>
+                    <div class="cert-label">SAVVY</div>
+                </div>
+                <div id="badge-social" class="badge locked" onclick="showBadgeDetails('social')">
+                    <span class="lock-icon">🔒</span>
+                    <div class="cert-label">SOCIAL</div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main id="display-window">
+        <section id="home-sec" class="page-view active">
+            <h1 style="color: var(--accent-cyan); font-size: 18px;">CORE_DASHBOARD: ONLINE</h1>
+            <p style="font-size: 10px; line-height: 2; color: #888;">
+                Welcome, Agent. Complete the S3 Framework missions to unlock the Duel Arena. 
+                Each certification earned increases your System Readiness.
+            </p>
+            <div style="margin-top: 30px; border: 1px solid #222; padding: 20px; background: #0a0a0a;">
+                <p style="color: var(--gold); font-size: 8px;">[!] STATUS_UPDATE</p>
+                <p style="font-size: 8px; color: #555;">CyberTeach Project - System Development Capstone Phase.</p>
+            </div>
+        </section>
+
+        <section id="module-sec" class="page-view">
+            <div id="module-card">
+                <h2 id="mod-title" style="color: var(--accent-cyan); font-size: 12px; margin-bottom: 20px;">MISSION_INIT</h2>
+                
+                <div id="slide-content"></div>
+
+                <div id="quiz-area" style="display:none;"></div>
+
+                <div id="slide-nav" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                    <button class="nav-control" onclick="prevSlide()">[ PREV ]</button>
+                    <span id="slide-num" style="font-size: 8px; color: var(--gold);">STEP: 1</span>
+                    <button class="nav-control" onclick="nextSlide()">[ PROCEED ]</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="arena-sec" class="page-view">
+            <div id="arena-container">
+                <h2 style="color: var(--alert-red); font-size: 12px;">ARENA_LEVEL: ACTIVE</h2>
+                <div class="activity-box">
+                    <p style="color: #666; font-size: 8px;">Waiting for mission completion data...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <div id="cert-modal" onclick="closeCertCard()">
+        <div class="cert-card" onclick="event.stopPropagation()">
+            <div class="scanline"></div>
+            <div class="medal-large">🎖️</div>
+            <h3 id="modal-title">S3_CERTIFIED</h3>
+            <p id="modal-desc">Technical clearance granted for this protocol.</p>
+            <div class="verify-stamp">S3_VERIFIED_DE_JESUS</div>
+            <div style="margin-top: 30px;">
+                <button class="nav-control" onclick="closeCertCard()">[ TERMINATE_VIEW ]</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    const CyberTeachState = {
+        currentModule: 'safe',
+        currentSlideIndex: 0,
+        badgesEarned: { safe: false, savvy: false, social: false },
+        modulesCompleted: [] 
+    };
+
+    const moduleData = {
+        safe: {
+            title: "LOG_FILE: HARDWARE_LOCKDOWN",
+            slides: [
+                "> SYSTEM_LOG: Unauthorized access attempt in Server Block A.\n> ACTION: Enforce BIOS passwords and Multi-Factor Auth (MFA).\n> GOAL: Secure the physical layer.",
+                "> ENCRYPTION_STATUS: Critical.\n> TOOL_REQUIRED: Full Disk Encryption (FDE).\n> MISSION: Protect data-at-rest from physical theft."
+            ],
+            questions: [
+                { q: "Which command initiates Disk Encryption for hardware security?", options: [{t:"> manage-bde", c:true}, {t:"> format c:", c:false}] },
+                { q: "Which shield prevents brute-force login attempts?", options: [{t:"> MFA Protocol", c:true}, {t:"> Screen Saver", c:false}] }
+            ]
+        },
+        savvy: {
+            title: "INTEL_REPORT: PHISH_HUNT",
+            slides: [
+                "> ALERT: Spear-Phishing detected in DLSL network.\n> INDICATOR: Suspicious headers and 'Urgency' tone.\n> ACTION: Analyze metadata before clicking.",
+                "> PROTOCOL: Zero Trust Architecture.\n> CORE_LOGIC: 'Never Trust, Always Verify' every request."
+            ],
+            questions: [
+                { q: "What is the primary rule of Zero Trust Architecture?", options: [{t:"> Trust Employees", c:false}, {t:"> Never Trust, Always Verify", c:true}] },
+                { q: "How do you verify a sender's true identity in an email?", options: [{t:"> Check Email Headers", c:true}, {t:"> Trust the Display Name", c:false}] }
+            ]
+        },
+        social: {
+            title: "LEGAL_BRIEF: PRIVACY_ACT",
+            slides: [
+                "> GOVERNANCE: Data Privacy Act of 2012 (RA 10173).\n> MISSION: Protect citizen data from unauthorized processing.",
+                "> ETHICS: Responsible Disclosure Framework.\n> ACTION: Report vulnerabilities to owners privately."
+            ],
+            questions: [
+                { q: "Which law protects personal information in the Philippines?", options: [{t:"> RA 10173 (DPA)", c:true}, {t:"> RA 9165", c:false}] },
+                { q: "What is the ethical way to handle a found website bug?", options: [{t:"> Exploit it", c:false}, {t:"> Responsible Disclosure", c:true}] }
+            ]
+        }
+    };
+
+    function notify(msg, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const t = document.createElement('div');
+        t.className = `toast ${type}`;
+        t.innerText = `[ SYSTEM ]: ${msg}`;
+        container.appendChild(t);
+        setTimeout(() => t.remove(), 3000);
+    }
+
+    function loadModule(pillar) {
+        CyberTeachState.currentModule = pillar;
+        CyberTeachState.currentSlideIndex = 0;
+        showSection('module');
+        updateSlideDisplay();
+    }
+
+    function updateSlideDisplay() {
+        const mod = moduleData[CyberTeachState.currentModule];
+        const isQuiz = CyberTeachState.currentSlideIndex >= mod.slides.length;
+        
+        document.getElementById('mod-title').innerText = mod.title;
+        const content = document.getElementById('slide-content');
+        const quizArea = document.getElementById('quiz-area');
+        const slideNav = document.getElementById('slide-nav');
+
+        if (isQuiz) {
+            content.style.display = 'none';
+            quizArea.style.display = 'block';
+            slideNav.style.display = 'none';
+            generateQuestion();
+        } else {
+            content.style.display = 'block';
+            quizArea.style.display = 'none';
+            slideNav.style.display = 'flex';
+            content.innerText = mod.slides[CyberTeachState.currentSlideIndex];
+            
+            // Re-trigger Typing Animation
+            content.classList.remove('typing');
+            void content.offsetWidth; 
+            content.classList.add('typing');
+            
+            document.getElementById('slide-num').innerText = `STEP: ${CyberTeachState.currentSlideIndex + 1}`;
+        }
+    }
+
+    function generateQuestion() {
+        const mod = moduleData[CyberTeachState.currentModule];
+        const randomQ = mod.questions[Math.floor(Math.random() * mod.questions.length)];
+        const area = document.getElementById('quiz-area');
+        area.innerHTML = `<p style="font-size:10px; color:var(--gold); margin-bottom:20px;">[ CHALLENGE ]: ${randomQ.q}</p>`;
+        randomQ.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'quiz-option';
+            btn.innerText = opt.t;
+            btn.onclick = () => handleQuiz(opt.c);
+            area.appendChild(btn);
+        });
+    }
+
+    function handleQuiz(isCorrect) {
+        const card = document.getElementById('module-card');
+        if (isCorrect) {
+            notify("ENCRYPTION COMPLETED. CERTIFICATE ISSUED.", "success");
+            awardBadge(CyberTeachState.currentModule);
+            setTimeout(() => showSection('home'), 1000);
+        } else {
+            card.classList.add('wrong-flash');
+            notify("ACCESS DENIED. REGENERATING CHALLENGE...", "error");
+            setTimeout(() => {
+                card.classList.remove('wrong-flash');
+                generateQuestion(); 
+            }, 500);
+        }
+    }
+
+    function awardBadge(pillar) {
+        CyberTeachState.badgesEarned[pillar] = true;
+        if (!CyberTeachState.modulesCompleted.includes(pillar)) CyberTeachState.modulesCompleted.push(pillar);
+        
+        const b = document.getElementById(`badge-${pillar}`);
+        b.classList.remove('locked');
+        b.classList.add('earned');
+        b.innerHTML = `<span style="font-size:24px;">🎖️</span><div class="cert-label" style="color:var(--hp-green);">${pillar.toUpperCase()}</div>`;
+        document.getElementById('readiness-fill').style.width = (CyberTeachState.modulesCompleted.length / 3 * 100) + "%";
+    }
+  
+    function showBadgeDetails(pillar) {
+        if (!CyberTeachState.badgesEarned[pillar]) return;
+        document.getElementById('modal-title').innerText = `S3_${pillar.toUpperCase()}_CERTIFIED`;
+        document.getElementById('cert-modal').style.display = 'flex';
+    }
+
+    function closeCertCard() { document.getElementById('cert-modal').style.display = 'none'; }
+    function showSection(id) { document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active')); document.getElementById(id + '-sec').classList.add('active'); }
+    function nextSlide() { CyberTeachState.currentSlideIndex++; updateSlideDisplay(); }
+    function prevSlide() { if(CyberTeachState.currentSlideIndex > 0) { CyberTeachState.currentSlideIndex--; updateSlideDisplay(); }}
+</script>
+</body>
+</html>
