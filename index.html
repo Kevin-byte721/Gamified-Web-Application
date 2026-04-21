@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cyber Dash Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body, html {
             margin: 0;
@@ -218,24 +219,279 @@
                 <strong>complete the Module training</strong> before 
                 engaging in the Cyber Dash Security Runner simulation.
             </div>
+            <div id="studentStats" style="margin-top: 20px; padding: 20px; border: 2px solid #4CAF50; background: #222;">
+    <h3 style="color: #4CAF50; font-size: 14px;">[ MISSION_ANALYTICS ]</h3>
+    
+    <p style="font-size: 10px; color: #aaa;">LAST MISSION RESULT: 
+        <span id="lastScoreDisplay" style="color: #4CAF50;">NO DATA</span>
+    </p>
+
+    <div id="graphContainer" style="height: 250px; margin-top: 20px;">
+        <canvas id="scoreChart"></canvas>
+        <p id="noDataMessage" style="color: #666; text-align: center; font-size: 10px; margin-top: 50px;">
+            [ STATUS: NO ATTEMPTS RECORDED ]
+        </p>
+    </div>
+</div>
         </div>
+        
         <iframe id="gameFrame"></iframe>
     </div>
 
     <script>
+        function renderStudentGraph() {
+    // Check if the Chart library actually exists
+    if (typeof Chart === 'undefined') {
+        console.error("Chart.js library not loaded yet.");
+        return;
+    }
+
+    const userObj = USERS.find(u => u.username === currentUser);
+    if (!userObj) return;
+    
+    // Use the displayName to find the stats in localStorage
+    const stats = JSON.parse(localStorage.getItem(`stats_${userObj.displayName}`)) || { m1: 0, m2: 0, m3: 0 };
+    const hasData = stats.m1 > 0 || stats.m2 > 0 || stats.m3 > 0;
+
+    const canvas = document.getElementById('scoreChart');
+    const noData = document.getElementById('noDataMessage');
+
+    if (!hasData) {
+        if (canvas) canvas.style.display = 'none';
+        if (noData) noData.style.display = 'block';
+        return;
+    }
+
+    if (canvas) canvas.style.display = 'block';
+    if (noData) noData.style.display = 'none';
+
+    const ctx = canvas.getContext('2d');
+    
+    // Prevent overlapping charts when updating
+    if (window.myScoreChart instanceof Chart) {
+        window.myScoreChart.destroy();
+    }
+
+    window.myScoreChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['SAFE', 'SAVVY', 'SOCIAL'],
+            datasets: [{
+                label: 'Personal High Score',
+                data: [stats.m1, stats.m2, stats.m3],
+                backgroundColor: '#4CAF50',
+                borderColor: '#fff',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { 
+                    beginAtZero: true, 
+                    max: 1000, // Optional: set a max based on your game's typical scores
+                    ticks: { color: '#4CAF50', font: { family: "'Press Start 2P'" } } 
+                },
+                x: { 
+                    ticks: { color: '#4CAF50', font: { family: "'Press Start 2P'" } } 
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+}
     // 1. GLOBAL DATA & STATE
     // Customize the displayNames to match your team/agents
     // Generates 50 students: Student 1 to Student 50
-const USERS = Array.from({ length: 20 }, (_, i) => ({
-    username: `user${i + 1}`,
-    password: `password${i + 1}`,
-    displayName: `STUDENT ${i + 1}`,
-    avatar: `profile-icon.jpg` // Set this as the global icon
-}));
+const USERS = [
+    {
+        username: "admin_instructor",
+        password: "ADMIN123", // This is your Teacher Code
+        displayName: "INSTRUCTOR",
+        avatar: "profile-icon.jpg", // You can set a specific icon for the teacher
+        role: "teacher"
+    },
+    ...Array.from({ length: 20 }, (_, i) => ({
+        username: `user${i + 1}`,
+        password: `password${i + 1}`,
+        displayName: `STUDENT ${i + 1}`,
+        avatar: `profile-icon.jpg`,
+        role: "student"
+    }))
+];
 
     let selectedUser = null;
     let currentUser = null;
+function selectUser(user) {
+    selectedUser = user;
+    
+    const activeName = document.getElementById('activeAgentName');
+    const activeImg = document.getElementById('activeImg');
+    const passwordField = document.getElementById('passwordInput');
+    const gridContainer = document.getElementById('gridContainer');
+    const dotsContainer = document.getElementById('carouselDots');
+    const passwordSection = document.getElementById('passwordSection');
+    
+    // Set identity details
+    if (activeName) activeName.innerText = `AGENT: ${user.displayName}`;
+    
+    if (activeImg) {
+        activeImg.style.display = 'block';
+        activeImg.src = user.avatar; 
+        activeImg.onerror = function() { this.style.display = 'none'; };
+    }
 
+    // --- UPDATED AUTOFILL LOGIC ---
+    if (passwordField) {
+        // Only autofill if the user is NOT the instructor
+        if (user.username === "admin_instructor") {
+            passwordField.value = ""; // Leave blank for teacher
+            passwordField.placeholder = "ENTER ADMIN CODE";
+        } else {
+            passwordField.value = user.password; // Autofill for students
+            passwordField.placeholder = "PASSWORD";
+        }
+    } 
+
+    // Hide selection carousel
+    if (gridContainer) gridContainer.style.display = 'none';
+    if (dotsContainer) dotsContainer.style.display = 'none'; 
+    
+    // Show password entry box
+    if (passwordSection) passwordSection.style.display = 'block';
+    
+    // Focus logic
+    if (user.username === "admin_instructor") {
+        passwordField.focus(); // Focus the input so teacher can type immediately
+    } else {
+        const loginBtn = document.querySelector('.login-btn');
+        if (loginBtn) loginBtn.focus(); // Focus the button for students
+    }
+}
+
+/**
+ * Restoration logic: brings back the full carousel and navigation dots.
+ */
+function cancelSelection() {
+    const passwordSection = document.getElementById('passwordSection');
+    const gridContainer = document.getElementById('gridContainer');
+    const dotsContainer = document.getElementById('carouselDots');
+    const passwordField = document.getElementById('passwordInput');
+    const errorMsg = document.getElementById('loginError');
+
+    // 1. Hide the password entry area
+    if (passwordSection) passwordSection.style.display = 'none';
+    
+    // 2. Restore the selection grid and indicators
+    // Use 'flex' to ensure the arrows and cards align horizontally
+    if (gridContainer) gridContainer.style.display = 'flex'; 
+    if (dotsContainer) dotsContainer.style.display = 'flex'; // Restores indicator
+    
+    // 3. Clear the password input for security
+    if (passwordField) passwordField.value = '';
+    
+    // 4. Hide any existing error messages
+    if (errorMsg) errorMsg.style.display = 'none';
+    
+    // 5. Ensure dots are updated based on current scroll position
+    updateActiveDot();
+}
+
+    function attemptLogin() {
+    const pInput = document.getElementById('passwordInput');
+    const p = pInput.value.trim();
+    
+    if (selectedUser && p === selectedUser.password) {
+        currentUser = selectedUser.username;
+        
+        // 2. SET IDENTITY AND ROLE IN LOCALSTORAGE
+        localStorage.setItem('cyberDashUser', selectedUser.displayName);
+        localStorage.setItem('userRole', selectedUser.role);
+
+        // 3. APPLY PERMISSIONS
+        applyRolePermissions();
+
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('agentName').innerText = selectedUser.displayName;
+
+        // 4. INITIALIZE VIEW
+        if (selectedUser.role === 'student') {
+            renderStudentGraph(); 
+        }
+    } else {
+        const err = document.getElementById('loginError');
+        if (err) {
+            err.style.display = 'block';
+            setTimeout(() => { err.style.display = 'none'; }, 2000);
+        }
+    }
+}
+
+// 5. HELPER TO MANAGE UI VISIBILITY
+function applyRolePermissions() {
+    const role = localStorage.getItem('userRole');
+    const teacherLink = document.getElementById('teacherLink'); // Ensure this ID exists in your Nav
+    const statsSection = document.getElementById('studentStats'); // Ensure this ID exists for your graph
+
+    if (role === 'teacher') {
+        if (teacherLink) teacherLink.style.display = 'block';
+        if (statsSection) statsSection.style.display = 'none';
+    } else {
+        if (teacherLink) teacherLink.style.display = 'none';
+        if (statsSection) statsSection.style.display = 'block';
+    }
+}
+window.addEventListener('message', function(event) {
+    if (event.data.type === 'SAVE_SCORE' || event.data.type === 'UPDATE_GRAPH') {
+        const newScore = event.data.score;
+        const moduleId = event.data.module || "1";
+        
+        // Find the current logged-in student's display name
+        const userObj = USERS.find(u => u.username === currentUser);
+        const displayName = userObj ? userObj.displayName : "STUDENT";
+
+        // 1. Update the "Last Score" text in the UI
+        const lastScoreEl = document.getElementById('lastScoreDisplay');
+        if (lastScoreEl) {
+            lastScoreEl.innerText = `${newScore} PTS (Module ${moduleId})`;
+        }
+
+        // 2. Save Personal Best for the Graph
+        let studentStats = JSON.parse(localStorage.getItem(`stats_${displayName}`)) || { m1: 0, m2: 0, m3: 0 };
+        const moduleKey = `m${moduleId}`;
+        
+        if (newScore > studentStats[moduleKey]) {
+            studentStats[moduleKey] = newScore;
+            localStorage.setItem(`stats_${displayName}`, JSON.stringify(studentStats));
+            console.log("New personal best saved!");
+        }
+
+        // 3. Save to Teacher Leaderboard
+        saveToGlobalLeaderboard(displayName, newScore, moduleId);
+
+        // 4. RE-RENDER GRAPH IMMEDIATELY
+        if (typeof renderStudentGraph === 'function') {
+            renderStudentGraph();
+        }
+    }
+});
+
+function saveToGlobalLeaderboard(name, score, module) {
+    let leaderboard = JSON.parse(localStorage.getItem('cyberDashLeaderboard') || "[]");
+    const existingIdx = leaderboard.findIndex(entry => entry.username === name && entry.module === module);
+
+    if (existingIdx !== -1) {
+        if (score > leaderboard[existingIdx].score) {
+            leaderboard[existingIdx].score = score;
+        }
+    } else {
+        leaderboard.push({ username: name, score: score, module: module, date: new Date().toISOString() });
+    }
+    localStorage.setItem('cyberDashLeaderboard', JSON.stringify(leaderboard));
+}
     // DOM Elements
     const homeView = document.getElementById('homeContent');
     const iframe = document.getElementById('gameFrame');
@@ -342,128 +598,7 @@ function updateActiveDot() {
    /**
  * Handles agent selection: hides carousel, indicators, and autofills password.
  */
-function selectUser(user) {
-    selectedUser = user;
-    
-    const activeName = document.getElementById('activeAgentName');
-    const activeImg = document.getElementById('activeImg');
-    const passwordField = document.getElementById('passwordInput');
-    const gridContainer = document.getElementById('gridContainer');
-    const dotsContainer = document.getElementById('carouselDots');
-    const passwordSection = document.getElementById('passwordSection');
-    
-    // Set identity details
-    if (activeName) activeName.innerText = `AGENT: ${user.displayName}`;
-    
-    if (activeImg) {
-        activeImg.style.display = 'block';
-        activeImg.src = user.avatar; 
-        activeImg.onerror = function() { this.style.display = 'none'; };
-    }
 
-    // --- AUTOFILL LOGIC ---
-    if (passwordField) {
-        passwordField.value = user.password; 
-    } 
-
-    // Hide selection carousel and indicators (dots) as per requested view
-    if (gridContainer) gridContainer.style.display = 'none';
-    if (dotsContainer) dotsContainer.style.display = 'none'; // Removes indicator
-    
-    // Show the focused password entry box
-    if (passwordSection) passwordSection.style.display = 'block';
-    
-    // Focus the button for quick "Initialize"
-    const loginBtn = document.querySelector('.login-btn');
-    if (loginBtn) loginBtn.focus();
-}
-
-/**
- * Restoration logic: brings back the full carousel and navigation dots.
- */
-function cancelSelection() {
-    const passwordSection = document.getElementById('passwordSection');
-    const gridContainer = document.getElementById('gridContainer');
-    const dotsContainer = document.getElementById('carouselDots');
-    const passwordField = document.getElementById('passwordInput');
-    const errorMsg = document.getElementById('loginError');
-
-    // 1. Hide the password entry area
-    if (passwordSection) passwordSection.style.display = 'none';
-    
-    // 2. Restore the selection grid and indicators
-    // Use 'flex' to ensure the arrows and cards align horizontally
-    if (gridContainer) gridContainer.style.display = 'flex'; 
-    if (dotsContainer) dotsContainer.style.display = 'flex'; // Restores indicator
-    
-    // 3. Clear the password input for security
-    if (passwordField) passwordField.value = '';
-    
-    // 4. Hide any existing error messages
-    if (errorMsg) errorMsg.style.display = 'none';
-    
-    // 5. Ensure dots are updated based on current scroll position
-    updateActiveDot();
-}
-
-    function attemptLogin() {
-        const pInput = document.getElementById('passwordInput');
-        const p = pInput.value.trim();
-        
-        // No need to check username; we check the password of the selectedUser
-        if (selectedUser && p === selectedUser.password) {
-            currentUser = selectedUser.username;
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('agentName').innerText = selectedUser.displayName;
-        } else {
-            const err = document.getElementById('loginError');
-            if (err) {
-                err.style.display = 'block';
-                setTimeout(() => { err.style.display = 'none'; }, 2000);
-            }
-        }
-    }
-
-    window.addEventListener('message', function(event) {
-    if (event.data.type === 'SAVE_SCORE') {
-        const newScore = event.data.score;
-        const userObj = USERS.find(u => u.username === currentUser);
-        const displayName = userObj ? userObj.displayName : "STUDENT";
-
-        // 1. Get existing leaderboard data
-        let leaderboard = JSON.parse(localStorage.getItem('cyberDashLeaderboard') || "[]");
-
-        // 2. Check if this specific student already has a recorded score
-        const existingEntryIndex = leaderboard.findIndex(entry => entry.username === displayName);
-
-        if (existingEntryIndex !== -1) {
-            // Student exists: Only update if the new score is a High Score
-            if (newScore > leaderboard[existingEntryIndex].score) {
-                leaderboard[existingEntryIndex].score = newScore;
-                leaderboard[existingEntryIndex].date = new Date().toISOString();
-                console.log(`High score updated for ${displayName}: ${newScore}`);
-            } else {
-                console.log(`Score of ${newScore} did not beat existing record for ${displayName}`);
-                return; // Exit without saving if it's not a personal best
-            }
-        } else {
-            // Student does not exist: Add their first record
-            leaderboard.push({
-                username: displayName,
-                score: newScore,
-                date: new Date().toISOString()
-            });
-            console.log(`First record saved for ${displayName}: ${newScore}`);
-        }
-
-        // 3. Sort (Highest first) and keep top 10 overall
-        leaderboard.sort((a, b) => b.score - a.score);
-        leaderboard = leaderboard.slice(0, 10);
-
-        // 4. Save back to localStorage
-        localStorage.setItem('cyberDashLeaderboard', JSON.stringify(leaderboard));
-    }
-});
 
     // 4. NAVIGATION FUNCTIONS
     function toggleNav() {

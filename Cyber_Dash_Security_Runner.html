@@ -159,41 +159,52 @@
             transform: translate(4px, 4px);
         }
         
-        .option-button {
-            font-family: 'Press Start 2P', cursive; 
-            background-color: #007bff; 
-            color: white;
-            padding: 8px 15px;
-            text-align: center;
-            font-size: 8px; 
-            cursor: pointer;
-            border: 3px solid #333;
-            box-shadow: 3px 3px 0px #333;
-            transition: all 0.1s;
-            line-height: 1.2;
-            width: 100%;
-            white-space: normal; 
-            outline: none; /* remove default focus ring */
-        }
+        /* Keep your original button styles */
+.option-button {
+    font-family: 'Press Start 2P', cursive; 
+    background-color: #007bff; 
+    color: white;
+    padding: 8px 15px;
+    text-align: center;
+    font-size: 8px; 
+    cursor: pointer;
+    border: 3px solid #333;
+    box-shadow: 3px 3px 0px #333;
+    transition: all 0.1s;
+    line-height: 1.2;
+    width: 100%;
+    white-space: normal; 
+    outline: none;
+}
 
-        .option-button:hover:not(:disabled) {
-            background-color: #0056b3;
-        }
+.option-button:hover:not(:disabled) {
+    background-color: #0056b3;
+}
 
-        .option-button:active:not(:disabled) {
-            box-shadow: 0 0 0 #333;
-            transform: translate(3px, 3px);
-        }
-        
-        .correct-answer {
-            background-color: #008000 !important; 
-            color: white;
-        }
+.option-button:active:not(:disabled) {
+    box-shadow: 0 0 0 #333;
+    transform: translate(3px, 3px);
+}
 
-        .incorrect-answer {
-            background-color: #ff0000 !important; 
-            color: white;
-        }
+.correct-answer {
+    background-color: #008000 !important; 
+    color: white;
+    opacity: 1 !important; /* Forces the correct answer to stay vibrant */
+    filter: none !important;
+}
+
+.incorrect-answer {
+    background-color: #ff0000 !important; 
+    color: white;
+}
+
+/* Logic for greying out the non-correct options */
+.fade-answer {
+    opacity: 0.3 !important; 
+    filter: grayscale(100%); /* This creates the "greyed out" effect */
+    box-shadow: none !important;
+    pointer-events: none;
+}
 
         #gameOverScreen {
             position: absolute;
@@ -368,7 +379,7 @@
                 <p class="modal-text" style="margin-bottom: 70px;"></p>
                 <div id="startMenuButtons" style="display: flex; flex-direction: column; gap: 15px;">
                     <button id="quizModeButton" class="button-style" style="margin-top: 0;" tabindex="0">
-                        Quiz Mode (Start)
+                        (Start)
                     </button>
                     <!--
                         <button id="studyModeButton" class="button-style" style="margin-top: 0;" tabindex="0">
@@ -1223,38 +1234,47 @@ function exitStudyMode() {
     const isCorrect = selectedIndex === currentTopic.correctIndex;
     const allButtons = optionContainer.querySelectorAll('.option-button');
 
-    // Disable all buttons to prevent double-clicking
+    // 1. GREY OUT ALL BUTTONS & DISABLE
     allButtons.forEach(btn => {
         btn.disabled = true;
         btn.removeEventListener('click', handleAnswer);
+        btn.classList.add('fade-answer'); // Apply the grey-out class
     });
 
+    // 2. ALWAYS HIGHLIGHT THE CORRECT ONE (Remove grey-out, add green)
+    const correctButton = allButtons[currentTopic.correctIndex];
+    correctButton.classList.remove('fade-answer');
+    correctButton.classList.add('correct-answer');
+
     if (isCorrect) {
-        selectedButton.classList.add('correct-answer');
-        // Point value for correct answers
+        // 3. ADD THE 20 POINTS
         const pointsAwarded = 20; 
         gameState.score += pointsAwarded;
-        feedbackText.textContent = `CORRECT! (+${pointsAwarded} pts)\n\nExplanation: ${currentTopic.explanation}`;
+        
+        feedbackText.textContent = `CORRECT! (+${pointsAwarded} pts)`;
     } else {
+        // Highlight the user's mistake in red (it remains semi-greyed out)
         selectedButton.classList.add('incorrect-answer');
-        allButtons[currentTopic.correctIndex].classList.add('correct-answer');
-        feedbackText.textContent = `INCORRECT. The correct answer is highlighted.\n\nExplanation: ${currentTopic.explanation}`;
+        feedbackText.textContent = `INCORRECT. The correct answer is highlighted.`;
     }
 
+    // 4. UPDATE HUD (Using Math.floor just in case of decimals elsewhere)
+    if (scoreDisplay) {
+        scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore}`;
+    }
+
+    // 5. CONTINUE LOGIC
+    feedbackText.innerHTML += `<br><br>Explanation: ${currentTopic.explanation}`;
     feedbackText.style.display = 'block';
     continueButton.style.display = 'inline-block';
     
-    // Change button text based on mission progress
     if (gameState.checkpointsCleared >= MAX_CHECKPOINTS) {
         continueButton.textContent = 'FINISH MISSION';
     } else {
         continueButton.textContent = 'CONTINUE RUN';
     }
 
-    // Update the HUD display immediately
-    scoreDisplay.innerHTML = `Score: ${Math.floor(gameState.score)} | High: ${gameState.highScore}`;
-    
-    // Shift focus for keyboard navigation
+    // 6. KEYBOARD FOCUS
     if (typeof setFocus === "function") {
         setFocus(continueButton);
     } else {

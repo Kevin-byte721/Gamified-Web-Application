@@ -2,117 +2,101 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Cyber Dash Leaderboards</title>
+    <title>Instructor Command Center</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        body {
-            background-color: #111;
-            color: #4CAF50;
-            font-family: 'Press Start 2P', cursive;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 40px;
-            margin: 0;
-        }
-        h1 { font-size: 20px; text-shadow: 4px 4px #000; margin-bottom: 20px; }
-        
-        .controls {
-            margin-bottom: 20px;
-        }
-
-        .refresh-btn {
-            background: #4CAF50;
-            color: #000;
-            border: 2px solid #fff;
-            padding: 8px 15px;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 10px;
-            cursor: pointer;
-        }
-
-        .refresh-btn:hover {
-            background: #45a049;
-            transform: scale(1.05);
-        }
-
-        table {
-            width: 100%;
-            max-width: 600px;
-            border-collapse: collapse;
-            border: 4px solid #4CAF50;
-            background-color: #000;
-        }
-        th, td {
-            padding: 15px;
-            text-align: left;
-            border: 2px solid #333;
-        }
-        th { background-color: #222; font-size: 12px; color: #fff; }
-        td { font-size: 10px; }
-        tr:nth-child(even) { background-color: #111; }
-        tr:hover { background-color: #1a1a1a; }
-
-        .rank-1 { color: #ffd700; text-shadow: 1px 1px #555; } /* Gold */
-        .rank-2 { color: #c0c0c0; text-shadow: 1px 1px #555; } /* Silver */
-        .rank-3 { color: #cd7f32; text-shadow: 1px 1px #555; } /* Bronze */
+        body { background-color: #111; color: #4CAF50; font-family: 'Press Start 2P', cursive; padding: 40px; }
+        .panel { border: 4px solid #4CAF50; padding: 20px; background: #222; margin-top: 20px; }
+        select { background: #000; color: #4CAF50; border: 2px solid #4CAF50; padding: 10px; font-family: 'Press Start 2P'; margin-bottom: 20px; width: 100%; }
+        .chart-container { height: 300px; position: relative; }
+        h1 { font-size: 18px; text-align: center; margin-bottom: 30px; }
     </style>
 </head>
 <body>
-    <h1>TOP SECURITY AGENTS</h1>
-    
-    
+    <h1>[ TEACHER_ANALYTICS_OVERRIDE ]</h1>
 
-    <table id="leaderboardTable">
-        <thead>
-            <tr>
-                <th>RANK</th>
-                <th>AGENT</th>
-                <th>SCORE</th>
-            </tr>
-        </thead>
-        <tbody id="leaderboardBody">
-            </tbody>
-    </table>
+    <div class="panel">
+        <label>SELECT AGENT TO VIEW PERFORMANCE:</label><br><br>
+        <select id="studentSelector" onchange="updateTeacherChart()">
+            <option value="">-- SELECT STUDENT --</option>
+        </select>
+
+        <div class="chart-container">
+            <canvas id="teacherScoreChart"></canvas>
+            <p id="noDataMsg" style="text-align:center; display:none; margin-top:100px;">[ NO DATA FOUND FOR THIS AGENT ]</p>
+        </div>
+    </div>
 
     <script>
-        
-        function displayScores() {
-            // This reads the specific key used in your consolidated gameWin logic
-            const rawData = localStorage.getItem('cyberDashLeaderboard');
-            const scores = JSON.parse(localStorage.getItem('cyberDashLeaderboard')) || [];
-            const tbody = document.getElementById('leaderboardBody');
-            
-            // Clear existing table rows
-            tbody.innerHTML = '';
+        let myChart = null;
 
-            if (scores.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 30px; color: #666;">NO MISSION DATA FOUND</td></tr>';
+        window.onload = function() {
+            // 1. SECURITY CHECK: Only let teachers see this
+            if (localStorage.getItem('userRole') !== 'teacher') {
+                document.body.innerHTML = "<h1 style='color:red; text-align:center; margin-top:100px;'>[ ACCESS DENIED ]<br>TEACHER CREDENTIALS REQUIRED</h1>";
                 return;
             }
 
-            // Display top 10 scores
-            scores.forEach((entry, index) => {
-                const row = document.createElement('tr');
-                const rankClass = index < 3 ? `rank-${index + 1}` : '';
-                
-                // Ensure name and score exist before displaying
-                const name = entry.username ? entry.username.toUpperCase() : "UNKNOWN";
-                const score = entry.score !== undefined ? entry.score : 0;
+            // 2. POPULATE DROPDOWN
+            const selector = document.getElementById('studentSelector');
+            // Extract unique student names from the leaderboard data
+            const allScores = JSON.parse(localStorage.getItem('cyberDashLeaderboard')) || [];
+            const uniqueStudents = [...new Set(allScores.map(item => item.username))];
 
-                row.innerHTML = `
-                    <td class="${rankClass}">${index + 1}</td>
-                    <td class="${rankClass}">${name}</td>
-                    <td>${score} PTS</td>
-                `;
-                tbody.appendChild(row);
+            uniqueStudents.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.innerHTML = name;
+                selector.appendChild(opt);
             });
-            
-            console.log("Leaderboard updated from storage.");
-        }
+        };
 
-        // Run on load
-        window.onload = displayScores;
+        function updateTeacherChart() {
+            const selectedStudent = document.getElementById('studentSelector').value;
+            const allScores = JSON.parse(localStorage.getItem('cyberDashLeaderboard')) || [];
+            
+            // Filter scores for the specific student
+            const stats = { m1: 0, m2: 0, m3: 0 };
+            allScores.filter(s => s.username === selectedStudent).forEach(entry => {
+                stats[`m${entry.module}`] = entry.score;
+            });
+
+            const canvas = document.getElementById('teacherScoreChart');
+            const noData = document.getElementById('noDataMsg');
+
+            if (!selectedStudent || (stats.m1 === 0 && stats.m2 === 0 && stats.m3 === 0)) {
+                canvas.style.display = 'none';
+                noData.style.display = 'block';
+                return;
+            }
+
+            canvas.style.display = 'block';
+            noData.style.display = 'none';
+
+            const ctx = canvas.getContext('2d');
+            if (myChart) myChart.destroy();
+
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['SAFE', 'SAVVY', 'SOCIAL'],
+                    datasets: [{
+                        label: `High Scores for ${selectedStudent}`,
+                        data: [stats.m1, stats.m2, stats.m3],
+                        backgroundColor: '#4CAF50'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { color: '#4CAF50' } },
+                        x: { ticks: { color: '#4CAF50' } }
+                    }
+                }
+            });
+        }
     </script>
 </body>
 </html>
