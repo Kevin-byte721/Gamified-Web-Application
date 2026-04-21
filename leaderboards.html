@@ -76,6 +76,16 @@
     </table>
 
     <script>
+        async function getTopScores() {
+    const q = query(collection(db, "leaderboard"), orderBy("score", "desc"), limit(10));
+    const querySnapshot = await getDocs(q);
+    
+    let scores = [];
+    querySnapshot.forEach((doc) => {
+        scores.push(doc.data());
+    });
+    return scores; // Use this array to build your table
+}
         function displayScores() {
             // This reads the specific key used in your consolidated gameWin logic
             const rawData = localStorage.getItem('cyberDashLeaderboard');

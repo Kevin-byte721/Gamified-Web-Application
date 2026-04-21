@@ -11,6 +11,7 @@
             --card-bg: #222;
             --accent-green: #4CAF50;
             --text-color: #eee;
+            --lock-overlay: rgba(0, 0, 0, 0.9);
         }
 
         body, html {
@@ -78,12 +79,64 @@
 
         #contentBody h2 { color: #2e7d32; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         #contentBody ul { line-height: 1.8; }
+
+        /* GAME CONTAINER WITH LOCKING LOGIC */
+        #gameContainer {
+            margin-top: 50px;
+            border: 4px solid #333;
+            background: #000;
+            padding: 15px;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #innerGameFrame {
+            width: 100%;
+            height: 600px;
+            border: none;
+            background: #000;
+        }
+
+        #gameLockOverlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--lock-overlay);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            text-align: center;
+            backdrop-filter: blur(5px);
+            transition: opacity 0.5s ease;
+        }
+
+        .lock-text { 
+            font-family: 'Press Start 2P', cursive; 
+            color: #ff4444; 
+            font-size: 12px; 
+            line-height: 2.5;
+        }
+
+        .game-header {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--accent-green);
+            font-size: 12px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
 
     <div id="gridView" class="container">
-<h1 class="header-title">THE S3 FRAMEWORK: CYBER-READY SHS</h1>
+        <h1 class="header-title">THE S3 FRAMEWORK: CYBER-READY SHS</h1>
         <div class="modules-grid" id="cardContainer"></div>
     </div>
 
@@ -91,10 +144,31 @@
         <button class="back-btn" onclick="closeModule()">⬅ BACK</button>
         <h1 id="contentTitle"></h1>
         <div id="contentBody"></div>
+
+        <div id="gameContainer">
+            <div id="gameLockOverlay">
+                <div style="font-size: 40px; margin-bottom: 20px;">🔒</div>
+                <div class="lock-text">
+                    [ ACCESS_DENIED ]<br>
+                    COMPLETE MODULE READING TO<br>
+                    INITIALIZE SECURITY RUNNER
+                </div>
+            </div>
+            <div class="game-header">:: S3_SEC_RUNNER_LINK ::</div>
+            <iframe id="innerGameFrame" src="Cyber_Dash_Security_Runner.html"></iframe>
+        </div>
     </div>
 
 <script>
-    // Configuration: added 'progress' and 'requiredTime' (in seconds)
+    async function syncProgress(moduleId, percentage) {
+    const studentId = localStorage.getItem('cyberDashUser'); // Get the name entered at login
+    const userRef = doc(db, "users", studentId);
+    
+    await setDoc(userRef, {
+        [`progress_module_${moduleId}`]: percentage,
+        lastActive: new Date()
+    }, { merge: true });
+}
     const isoModules = [
     {
         id: 1,
@@ -102,7 +176,7 @@
         desc: "Mastering Defense-in-Depth, Zero Trust architectures, and advanced encryption for the modern professional.",
         image: "photo-1550751827-4bd374c3f58b.jpg",
         progress: 0,
-        requiredTime: 180, // 3 Minutes
+        requiredTime: 10, // 3 Minutes
         content: `
             <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
                 <b>Course Description:</b> Establishing a multi-layered defense strategy to protect personal and organizational data from technical exploitation.
@@ -223,9 +297,9 @@
     }
 ];
 
-    // Global variables for time tracking
     let startTime;
     let currentModuleId = null;
+    let countdownInterval;
 
     function renderCards() {
         const container = document.getElementById('cardContainer');
@@ -235,7 +309,6 @@
                 <div class="card-body">
                     <div class="module-name">${m.title}</div>
                     <div class="module-desc">${m.desc}</div>
-                    
                     <div style="background: #333; height: 8px; border-radius: 4px; margin-top: 15px; overflow: hidden;">
                         <div style="background: #4CAF50; height: 100%; width: ${m.progress}%; transition: width 0.3s;"></div>
                     </div>
@@ -247,43 +320,101 @@
 
     function openModule(id) {
         currentModuleId = id;
-        startTime = Date.now(); // Mark the start time
-
+        startTime = Date.now();
         const module = isoModules.find(m => m.id === id);
+        
         document.getElementById('gridView').style.display = 'none';
         document.getElementById('moduleViewer').style.display = 'block';
         document.getElementById('contentTitle').innerText = module.title;
-        document.getElementById('contentBody').innerHTML = module.content;
+        
+        // Reset Lock State for the new module
+        const overlay = document.getElementById('gameLockOverlay');
+        overlay.style.display = 'flex';
+        overlay.style.opacity = '1';
+        document.getElementById('gameContainer').style.borderColor = '#333';
+
+        document.getElementById('contentBody').innerHTML = `
+            ${module.content}
+            <div id="securityGate" style="text-align: center; padding: 20px; background: #f9f9f9; border-radius: 8px; margin-top: 20px; border: 1px solid #ddd;">
+                <p id="timerMessage" style="font-weight: bold; color: #666; font-family: 'Inter', sans-serif;">
+                    S3 VERIFICATION: <span id="remainingTime">${module.requiredTime}</span>s REMAINING
+                </p>
+            </div>
+        `;
+
+        startReadingTimer(module.requiredTime);
         window.scrollTo(0, 0);
     }
 
+    function startReadingTimer(seconds) {
+        clearInterval(countdownInterval);
+        let timeLeft = seconds;
+        const timerDisplay = document.getElementById('remainingTime');
+
+        countdownInterval = setInterval(() => {
+            timeLeft--;
+            if (timerDisplay) timerDisplay.innerText = timeLeft;
+
+            if (timeLeft <= 0) {
+                clearInterval(countdownInterval);
+                unlockGame();
+            }
+        }, 1000);
+    }
+
+    function unlockGame() {
+        const overlay = document.getElementById('gameLockOverlay');
+        const container = document.getElementById('gameContainer');
+        const msg = document.getElementById('timerMessage');
+
+        overlay.style.opacity = '0';
+        setTimeout(() => { overlay.style.display = 'none'; }, 500);
+        
+        container.style.borderColor = 'var(--accent-green)';
+        msg.innerHTML = "✅ SECURITY RUNNER AUTHORIZED";
+        msg.style.color = "var(--accent-green)";
+        
+        // Signal Parent
+        window.parent.postMessage({ type: 'UNLOCK_GAME' }, '*');
+    }
+
     function closeModule() {
+        // 1. Clear the timer to prevent it from running in the background
+        clearInterval(countdownInterval);
+
+        // 2. Calculate and save progress based on time spent
         if (currentModuleId !== null) {
-            const endTime = Date.now();
-            const timeSpentSeconds = Math.floor((endTime - startTime) / 1000);
-            
-            updateProgress(currentModuleId, timeSpentSeconds);
+            const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+            updateProgress(currentModuleId, timeSpent);
         }
 
+        // 3. INTERNAL NAVIGATION: Toggle visibility within module.html
+        // This ensures you stay on the same page but see the grid again
         document.getElementById('moduleViewer').style.display = 'none';
         document.getElementById('gridView').style.display = 'block';
         
-        // Re-render cards to update the progress bars
+        // 4. Reset the game iframe so it's fresh for the next module
+        const gameFrame = document.getElementById('innerGameFrame');
+        if (gameFrame) {
+            gameFrame.src = 'Cyber_Dash_Security_Runner.html'; 
+        }
+
+        // 5. Re-render the cards to reflect the new progress bars
         renderCards();
+
+        // 6. Scroll back to the top of the grid
+        window.scrollTo(0, 0);
+
+        // REMOVED: window.parent.showHome() 
+        // Removing this prevents the dashboard from exiting the module.html file.
     }
 
     function updateProgress(id, timeSpent) {
-    const module = isoModules.find(m => m.id === id);
-    
-    // Calculate percentage
-    let newProgress = Math.floor((timeSpent / module.requiredTime) * 100);
-    
-    if (newProgress > 100) newProgress = 100;
-    
-    if (newProgress > module.progress) {
-        module.progress = newProgress;
+        const module = isoModules.find(m => m.id === id);
+        let newProgress = Math.floor((timeSpent / module.requiredTime) * 100);
+        if (newProgress > 100) newProgress = 100;
+        if (newProgress > module.progress) module.progress = newProgress;
     }
-}
 
     renderCards();
 </script>

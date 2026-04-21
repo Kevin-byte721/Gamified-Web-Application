@@ -430,6 +430,32 @@
     </div>
 
     <script>
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDFoGVg6FACTySUloXIc5hN0ioftSjjRLk",
+  authDomain: "cyberteach-50899.firebaseapp.com",
+  projectId: "cyberteach-50899",
+  storageBucket: "cyberteach-50899.firebasestorage.app",
+  messagingSenderId: "594550425667",
+  appId: "1:594550425667:web:e5d127df15c317a2366cf6",
+  measurementId: "G-DWPN8RGZNN"
+};
+
+async function saveScoreToCloud(name, score) {
+    try {
+        // Create a unique ID for the entry
+        const scoreRef = doc(collection(db, "leaderboard")); 
+        await setDoc(scoreRef, {
+            username: name,
+            score: parseInt(score),
+            timestamp: new Date()
+        });
+        console.log("Score synced to Firebase!");
+    } catch (e) {
+        console.error("Firebase Error:", e);
+    }
+}
+
         // --- GAME ASSET SETUP ---
 
         const canvas = document.getElementById('gameCanvas');

@@ -197,10 +197,6 @@
             📦 <span>Module</span>
         </button>
 
-        <button class="nav-button" onclick="loadContent('Cyber_Dash_Security_Runner.html')">
-            🎮 <span>Play Game</span>
-        </button>
-
         <button class="nav-button" onclick="loadContent('leaderboards.html')">
     🏆 <span>Scores</span>
 </button>
@@ -227,6 +223,22 @@
     </div>
 
     <script>
+
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "...",
+  appId: "..."
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
     // 1. GLOBAL DATA & STATE
     // Customize the displayNames to match your team/agents
     // Generates 50 students: Student 1 to Student 50
