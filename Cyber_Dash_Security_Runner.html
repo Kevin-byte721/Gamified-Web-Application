@@ -588,103 +588,100 @@ function handleMenuNavigation(key, container) {
         // --- CYBERSECURITY DATA (Quiz Mode) ---
         const CYBER_TOPICS = [
             {
-                topic: "Phishing Awareness",
-                
-                question: "What is the primary sign of a malicious email?",
+                topic: "Strong Passwords",
+                question: "According to the SAFE module, what is a key requirement for a strong password?",
                 options: [
-                    "It uses a generic greeting like 'Dear Customer.'",
-                    "It has urgent language demanding immediate action or clicking a suspicious link.",
-                    "It contains no images or logos.",
-                    "It is sent during non-business hours."
+                    "Using your birthday or school name so it's easy to remember.",
+                    "At least 12 characters including uppercase, lowercase, numbers, and symbols.",
+                    "Sharing it with a trusted friend for backup.",
+                    "Using the same password across Facebook, Gmail, and school portals."
                 ],
                 correctIndex: 1,
-                explanation: "Urgent language demanding immediate action and links to unknown sites are classic red flags for phishing. Generic greetings are also common, but the threat of immediate action is key."
+                explanation: "A strong password serves as the first barrier against hackers and should be at least 12 characters long with a mix of character types[cite: 8, 13, 20]. Avoid using personal info like birthdays or school names[cite: 26, 29]."
             },
             {
-                topic: "Strong Passwords & Passphrases",
-                question: "Which of the following creates the most secure login credential?",
+                topic: "Credential Stuffing",
+                question: "What happens during a 'credential stuffing' attack?",
                 options: [
-                    "P@sswOrd1!",
-                    "A 4-word phrase: CorrectHorseBatteryStaple",
-                    "Your name followed by your birth year.",
-                    "A 10-character mix of letters and numbers."
+                    "A hacker creates a fake login page that looks like Facebook.",
+                    "Attackers use stolen usernames and passwords to attempt to access multiple other accounts.",
+                    "A device becomes slow due to a malware infection.",
+                    "A user forgets their password and is locked out of their account."
                 ],
                 correctIndex: 1,
-                explanation: "Passphrases (long, random sequences of words) are often significantly more secure and easier to remember than short, complex character strings."
+                explanation: "Credential stuffing occurs when attackers use stolen credentials to access multiple platforms, taking advantage of users who reuse the same password across different services[cite: 41, 42]."
             },
             {
                 topic: "Multi-Factor Authentication (MFA)",
-                
-                question: "If a hacker steals your password, what stops them from logging in if MFA is enabled?",
+                question: "How does Multi-Factor Authentication (MFA) protect an account even if the password is stolen?",
                 options: [
-                    "The MFA system will automatically lock their IP address.",
-                    "The hacker cannot provide the second verification step (like a code from your phone or biometric scan).",
-                    "MFA only works if the password is changed every 30 days.",
-                    "MFA forces the hacker to use a different browser."
+                    "It automatically changes the stolen password to a stronger one.",
+                    "It requires a second form of verification, such as an OTP or biometric scan, before granting access.",
+                    "It blocks the hacker's internet connection immediately.",
+                    "It notifies the school administrator to lock the student's portal."
                 ],
                 correctIndex: 1,
-                explanation: "MFA requires something the hacker *has* (like your phone/token) in addition to something they *know* (your password). Without the second factor, the login fails."
+                explanation: "MFA adds another layer of protection by requiring verification like an SMS OTP, fingerprint, or authentication app[cite: 57, 59, 60, 62]. Even if a hacker has your password, they cannot enter without the code[cite: 64]."
             },
             {
-                topic: "Software Updates & Patching",
-                question: "What is the main reason security experts recommend immediate software updates?",
+                topic: "Device Security",
+                question: "Why is it important to keep your smartphone and laptop software updated?",
                 options: [
-                    "To introduce new graphical features.",
-                    "To fix bugs that cause applications to crash.",
-                    "To patch security vulnerabilities that attackers can exploit.",
-                    "To optimize battery life on mobile devices."
+                    "To ensure you have the latest emojis and social media filters.",
+                    "Updates are primarily used to delete old school files and photos.",
+                    "Updates fix security weaknesses and include patches that protect against cyberattacks.",
+                    "It is only necessary if the device is already infected with malware."
                 ],
                 correctIndex: 2,
-                explanation: "Security updates and patches often close critical vulnerabilities (holes) in the software that hackers look for. Delaying updates leaves your system exposed."
+                explanation: "Software updates provide critical security patches and fix weaknesses that cybercriminals exploit to steal information or install malware[cite: 88, 89, 92]."
             },
             {
-                topic: "Public Wi-Fi Security",
-                question: "What is the safest practice when using public Wi-Fi at a cafe or airport?",
+                topic: "Phishing Awareness",
+                question: "What is a common tactic used in phishing messages to trick students?",
                 options: [
-                    "Avoid using any Wi-Fi that requires a password.",
-                    "Assume all connections are secure and browse as normal.",
-                    "Use a Virtual Private Network (VPN) for all sensitive activities.",
-                    "Only visit websites that start with 'http://'."
+                    "Sending a physical letter to the student's home address.",
+                    "Providing a link to a website with the exact URL: www.facebook.com.",
+                    "Creating panic with urgent messages like 'Your account will be deleted' to pressure quick decisions.",
+                    "Asking the user to update their software from the official app store."
                 ],
                 correctIndex: 2,
-                explanation: "Public Wi-Fi is often unencrypted, meaning data can be easily intercepted. A VPN encrypts your connection, protecting your data."
+                explanation: "Scammers often create panic by sending urgent messages about account deletion or prizes to pressure users into clicking fake links[cite: 159, 160, 161, 163]."
             },
             {
-                topic: "Identifying Malware",
-                question: "What is the term for software designed to secretly monitor your actions and capture keystrokes?",
+                topic: "Deepfakes and Misinformation",
+                question: "What are AI-generated videos or audio recordings that make people appear to say things they never did?",
                 options: [
-                    "Adware",
-                    "Ransomware",
-                    "Spyware",
-                    "Firmware"
+                    "Disinformation",
+                    "Deepfakes",
+                    "Phishing",
+                    "Digital Footprints"
                 ],
-                correctIndex: 2,
-                explanation: "Spyware is malicious software designed to gather information about a person or organization without their knowledge and send it to another entity."
-            },
-             {
-                topic: "Device Encryption",
-                question: "Why is full-disk encryption (FDE) important for laptops and phones?",
-                options: [
-                    "It speeds up the device's boot time.",
-                    "It prevents unauthorized access to data if the device is lost or stolen.",
-                    "It automatically deletes sensitive files after 30 days.",
-                    "It prevents phishing emails from reaching the device."
-                ]
-                ,
                 correctIndex: 1,
-                explanation: "If a device with FDE is stolen, the data on it is unreadable without the correct decryption key, protecting sensitive information."
+                explanation: "Deepfakes are AI-generated media that can realistically simulate a person's voice or appearance, often used for scams or political misinformation[cite: 180, 195]."
             },
-             {
-                topic: "Data Backup",
-                question: "What is the most critical principle of effective data backup?",
+            {
+                topic: "Digital Footprint",
+                question: "Why should students 'Think Before Posting' on social media?",
                 options: [
-                    "Storing all backups in the cloud.",
-                    "Storing backups on a separate, external hard drive.",
-                    "The 3-2-1 Rule: 3 copies, 2 media types, 1 offsite.",
-                    "Backing up data only once per year."
+                    "Because online content is temporary and disappears after 24 hours.",
+                    "Because colleges and employers often review an applicant's online presence during evaluation.",
+                    "Because social media platforms charge a fee for every post made.",
+                    "It is only important if the student has a public profile."
+                ],
+                correctIndex: 1,
+                explanation: "Traces of online activity are permanent and can be accessed through screenshots or archives[cite: 210]. Employers and scholarship committees may review these footprints for background evaluations[cite: 212]."
+            },
+            {
+                topic: "Cyberbullying",
+                question: "What is the responsible action for a digital citizen who witnesses or experiences cyberbullying?",
+                options: [
+                    "Ignoring the messages until the bully stops on their own.",
+                    "Forwarding the hurtful messages to other group chats to show what happened.",
+                    "Reporting the incident to parents, teachers, or trusted adults.",
+                    "Responding with similar insults to defend themselves."
                 ],
                 correctIndex: 2,
-                explanation: "The 3-2-1 rule is the industry standard: keep 3 copies of your data, on 2 different storage types, with 1 copy located offsite (e.g., in the cloud or a different location)."
+                explanation: "Students should not tolerate cyberbullying and should report incidents to trusted adults, teachers, or school administrators to stop the harmful behavior[cite: 232, 233]."
             }
         ];
         /*
@@ -1123,64 +1120,31 @@ function exitStudyMode() {
 
        function gameWin() {
     gameState.isRunning = false;
-    
-    // Stop the game loop
-    if (gameState.animationFrameId) {
-        cancelAnimationFrame(gameState.animationFrameId);
-    }
+    if (gameState.animationFrameId) cancelAnimationFrame(gameState.animationFrameId);
 
-    // Update UI elements
-    setGameOverScreen(true); 
-    gameOverScreen.style.display = 'flex';
-    finalScoreSpan.innerText = Math.floor(gameState.score);
-
-    // --- COMBINED LEADERBOARD LOGIC ---
     const finalScore = Math.floor(gameState.score);
-    const currentUser = (window.parent && window.parent.currentUser) ? window.parent.currentUser : "Guest";
+    const currentUser = localStorage.getItem('cyberDashUser') || "Guest";
 
-    // 1. Retrieve the existing leaderboard or start fresh
-    let scores = JSON.parse(localStorage.getItem('cyberDashLeaderboard')) || [];
-    
-    // 2. Update the user's score if it's their new personal best
-    const userIdx = scores.findIndex(s => s.username === currentUser);
-    if (userIdx !== -1) {
-        if (finalScore > scores[userIdx].score) {
-            scores[userIdx].score = finalScore;
-        }
-    } else {
-        // Add new user entry
-        scores.push({ username: currentUser, score: finalScore });
+    // --- SINGLE RECORD LOGIC ---
+    // Look for the existing record for this specific student
+    const existingScore = parseInt(localStorage.getItem(`runner_high_score_${currentUser}`)) || 0;
+
+    // Only overwrite if the new score is higher
+    if (finalScore > existingScore) {
+        localStorage.setItem(`runner_high_score_${currentUser}`, finalScore);
+        console.log(`[SYSTEM] New Personal Best for ${currentUser}: ${finalScore}`);
     }
 
-    // 3. Sort by highest score and keep the top 10
-    scores.sort((a, b) => b.score - a.score);
-    scores = scores.slice(0, 10);
-    
-    // 4. Save the updated list back to localStorage
-    localStorage.setItem('cyberDashLeaderboard', JSON.stringify(scores));
+    // --- UI & DASHBOARD SYNC ---
+    setGameOverScreen(true);
+    if (finalScoreSpan) finalScoreSpan.innerText = finalScore;
 
-    // --- HUD HIGH SCORE LOGIC ---
-    if (finalScore > gameState.highScore) {
-        gameState.highScore = finalScore;
-        localStorage.setItem('cyberDashHighScore', gameState.highScore);
-        scoreDisplay.innerHTML = `Score: ${finalScore} | High: ${gameState.highScore} (NEW!)`;
-    } else {
-        scoreDisplay.innerHTML = `Score: ${finalScore} | High: ${gameState.highScore}`;
-    }
-
-    // Handle button focus for keyboard navigation
-    const focusable = getFocusableElements(gameOverButtons);
-    if (focusable.length > 0) {
-        setFocus(focusable[0]);
-    }
-    // --- ADD THIS BLOCK ---
-    window.parent.postMessage({ 
-        type: 'SAVE_SCORE', 
-        score: Math.floor(gameState.score) 
-    }, '*');
-    // -----------------------
-    // ADD THIS LINE:
-    window.parent.postMessage({ type: 'SAVE_SCORE', score: Math.floor(gameState.score) }, '*');
+    // Inside your gameWin function
+window.parent.postMessage({ 
+    type: 'SAVE_SCORE', 
+    score: Math.floor(gameState.score),
+    username: localStorage.getItem('cyberDashUser') // Ensure this is "STUDENT 1"
+}, '*');
 }
         
         function pauseGameForSecurityCheck() {

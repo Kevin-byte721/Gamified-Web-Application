@@ -2,101 +2,164 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Instructor Command Center</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Instructor Analytics | CyberDash</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #111; color: #4CAF50; font-family: 'Press Start 2P', cursive; padding: 40px; }
-        .panel { border: 4px solid #4CAF50; padding: 20px; background: #222; margin-top: 20px; }
-        select { background: #000; color: #4CAF50; border: 2px solid #4CAF50; padding: 10px; font-family: 'Press Start 2P'; margin-bottom: 20px; width: 100%; }
-        .chart-container { height: 300px; position: relative; }
-        h1 { font-size: 18px; text-align: center; margin-bottom: 30px; }
+        body { background: #0d0d0d; color: #4CAF50; font-family: 'Press Start 2P', cursive; padding: 20px; }
+        .container { border: 2px solid #4CAF50; padding: 20px; background: rgba(0, 20, 0, 0.9); max-width: 600px; margin: auto; }
+        h2 { font-size: 14px; text-align: center; color: #fff; text-shadow: 0 0 5px #4CAF50; }
+        .selector-box { margin: 30px 0; text-align: center; }
+        select { background: #000; color: #4CAF50; border: 1px solid #4CAF50; padding: 12px; font-family: 'Press Start 2P'; font-size: 10px; width: 100%; cursor: pointer; }
+        .record-card {
+    border: 2px dashed #4CAF50;
+    padding: 20px; /* Reduced from 30px to fit the game title */
+    text-align: center;
+    margin-top: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+}
+
+.agent-label {
+    font-size: 12px; /* Slightly larger for the agent name */
+    color: #fff;
+    margin-bottom: 5px;
+}
+        .score-value { font-size: 24px; color: #fff; margin: 15px 0; }
+        .status-badge { font-size: 8px; color: #4CAF50; border: 1px solid #4CAF50; padding: 5px; display: inline-block; }
     </style>
 </head>
 <body>
-    <h1>[ TEACHER_ANALYTICS_OVERRIDE ]</h1>
 
-    <div class="panel">
-        <label>SELECT AGENT TO VIEW PERFORMANCE:</label><br><br>
-        <select id="studentSelector" onchange="updateTeacherChart()">
-            <option value="">-- SELECT STUDENT --</option>
+<body>
+<div class="container">
+    <h2>[ TEACHER_ANALYTICS_OVERRIDE ]</h2>
+
+    <div class="selector-box">
+        <select id="agentSelect" onchange="showRecord()">
+            <option value="">-- SELECT AGENT --</option>
         </select>
+    </div>
 
-        <div class="chart-container">
-            <canvas id="teacherScoreChart"></canvas>
-            <p id="noDataMsg" style="text-align:center; display:none; margin-top:100px;">[ NO DATA FOUND FOR THIS AGENT ]</p>
+    <div id="recordCard" class="record-card" style="display: none;">
+        <div class="agent-label" id="displayName">AGENT_NAME</div>
+        
+        <div style="display: flex; justify-content: space-around; margin: 20px 0; border-bottom: 1px solid #333; padding-bottom: 15px;">
+            <div>
+                <div style="font-size: 7px; color: #888; margin-bottom: 5px;">SECURITY_RUNNER:</div>
+                <div class="score-value" id="displayScore" style="font-size: 14px;">0</div>
+            </div>
+            <div style="border-left: 1px solid #333; height: 30px;"></div>
+            <div>
+                <div style="font-size: 7px; color: #888; margin-bottom: 5px;">CYBER_TERMINAL:</div>
+                <div class="score-value" id="displayTerminalScore" style="font-size: 14px;">0</div>
+            </div>
+        </div>
+
+        <div id="moduleProgressSection" style="text-align: left; margin-top: 20px;">
+            <div style="font-size: 8px; color: #4CAF50; margin-bottom: 10px;">[ S3_FRAMEWORK_PROGRESS ]</div>
+            
+            <div style="margin-bottom: 10px;">
+                <div style="font-size: 7px;">SAFE: <span id="p1-val">0%</span></div>
+                <div style="width:100%; height:8px; background:#222; border:1px solid #4CAF50;">
+                    <div id="p1-bar" style="width:0%; height:100%; background:#4CAF50; transition: width 0.3s;"></div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+                <div style="font-size: 7px;">SAVVY: <span id="p2-val">0%</span></div>
+                <div style="width:100%; height:8px; background:#222; border:1px solid #4CAF50;">
+                    <div id="p2-bar" style="width:0%; height:100%; background:#4CAF50; transition: width 0.3s;"></div>
+                </div>
+            </div>
+
+            <div>
+                <div style="font-size: 7px;">SOCIAL: <span id="p3-val">0%</span></div>
+                <div style="width:100%; height:8px; background:#222; border:1px solid #4CAF50;">
+                    <div id="p3-bar" style="width:0%; height:100%; background:#4CAF50; transition: width 0.3s;"></div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script>
-        let myChart = null;
+    <div id="noRecord" style="display: none; text-align: center; color: #ff4444; font-size: 8px; margin-top: 30px; border: 1px solid #ff4444; padding: 15px;">
+        [ ! ] NO MISSION DATA FOUND FOR THIS AGENT
+    </div>
+</div>
+<script>
+    // List of Agents (Matches your 20 students)
+    const agents = Array.from({length: 20}, (_, i) => `STUDENT ${i + 1}`);
 
-        window.onload = function() {
-            // 1. SECURITY CHECK: Only let teachers see this
-            if (localStorage.getItem('userRole') !== 'teacher') {
-                document.body.innerHTML = "<h1 style='color:red; text-align:center; margin-top:100px;'>[ ACCESS DENIED ]<br>TEACHER CREDENTIALS REQUIRED</h1>";
-                return;
-            }
+    function init() {
+        const select = document.getElementById('agentSelect');
+        select.innerHTML = '<option value="">-- SELECT AGENT --</option>';
+        agents.forEach(name => {
+            let opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            select.appendChild(opt);
+        });
+    }
+function showRecord() {
+    const name = document.getElementById('agentSelect').value;
+    const card = document.getElementById('recordCard');
+    const error = document.getElementById('noRecord');
+    
+    if (!name) { 
+        card.style.display = 'none'; 
+        if (error) error.style.display = 'none';
+        return; 
+    }
 
-            // 2. POPULATE DROPDOWN
-            const selector = document.getElementById('studentSelector');
-            // Extract unique student names from the leaderboard data
-            const allScores = JSON.parse(localStorage.getItem('cyberDashLeaderboard')) || [];
-            const uniqueStudents = [...new Set(allScores.map(item => item.username))];
+    // 1. Fetch Scores (Runner and Terminal Games)
+    const runnerScore = localStorage.getItem(`runner_high_score_${name}`);
+    const terminalScore = localStorage.getItem(`terminal_high_score_${name}`);
+    
+    // 2. Fetch Centralized Progress Map
+    // This key matches the one used in module.html to save reading progress
+    const progressKey = `${name}_overall_progress_map`;
+    const progressMap = JSON.parse(localStorage.getItem(progressKey)) || {};
 
-            uniqueStudents.forEach(name => {
-                const opt = document.createElement('option');
-                opt.value = name;
-                opt.innerHTML = name;
-                selector.appendChild(opt);
-            });
-        };
+    // 3. Check for any existing data to determine if the card should show
+    const hasData = runnerScore !== null || terminalScore !== null || Object.keys(progressMap).length > 0;
 
-        function updateTeacherChart() {
-            const selectedStudent = document.getElementById('studentSelector').value;
-            const allScores = JSON.parse(localStorage.getItem('cyberDashLeaderboard')) || [];
-            
-            // Filter scores for the specific student
-            const stats = { m1: 0, m2: 0, m3: 0 };
-            allScores.filter(s => s.username === selectedStudent).forEach(entry => {
-                stats[`m${entry.module}`] = entry.score;
-            });
-
-            const canvas = document.getElementById('teacherScoreChart');
-            const noData = document.getElementById('noDataMsg');
-
-            if (!selectedStudent || (stats.m1 === 0 && stats.m2 === 0 && stats.m3 === 0)) {
-                canvas.style.display = 'none';
-                noData.style.display = 'block';
-                return;
-            }
-
-            canvas.style.display = 'block';
-            noData.style.display = 'none';
-
-            const ctx = canvas.getContext('2d');
-            if (myChart) myChart.destroy();
-
-            myChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['SAFE', 'SAVVY', 'SOCIAL'],
-                    datasets: [{
-                        label: `High Scores for ${selectedStudent}`,
-                        data: [stats.m1, stats.m2, stats.m3],
-                        backgroundColor: '#4CAF50'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, ticks: { color: '#4CAF50' } },
-                        x: { ticks: { color: '#4CAF50' } }
-                    }
-                }
-            });
+    if (hasData) {
+        document.getElementById('displayName').innerText = `AGENT: ${name}`;
+        
+        // Update Game Scores
+        document.getElementById('displayScore').innerText = runnerScore ? parseInt(runnerScore).toLocaleString() : "0";
+        
+        const terminalUI = document.getElementById('displayTerminalScore');
+        if (terminalUI) {
+            terminalUI.innerText = terminalScore ? parseInt(terminalScore).toLocaleString() : "0";
         }
-    </script>
+        
+        // 4. Update S3 Framework Progress UI
+        // These IDs (1, 2, 3) correspond to the module IDs in module.html
+        updateModuleUI(1, progressMap[1] || 0); // Module 1: SAFE
+        updateModuleUI(2, progressMap[2] || 0); // Module 2: SAVVY
+        updateModuleUI(3, progressMap[3] || 0); // Module 3: SOCIAL
+        
+        card.style.display = 'block';
+        if (error) error.style.display = 'none';
+    } else {
+        card.style.display = 'none';
+        if (error) error.style.display = 'block';
+    }
+}    // Helper function to handle bar width and text updates
+    function updateModuleUI(id, value) {
+        const bar = document.getElementById(`p${id}-bar`);
+        const text = document.getElementById(`p${id}-val`);
+        
+        if (bar && text) {
+            bar.style.width = value + '%';
+            text.innerText = value + '%';
+            
+            // Add a glow effect for 100% completion
+            bar.style.boxShadow = value >= 100 ? '0 0 10px #4CAF50' : 'none';
+        }
+    }
+
+    window.onload = init;
+</script>
 </body>
 </html>

@@ -5,48 +5,137 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>S3 Framework - Digital Citizenship Room</title>
     <style>
-        body {
-            margin: 0; padding: 0; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; 
-            background-color: #2c3e50; color: white; font-family: 'Arial', sans-serif;
-            overflow: hidden; height: 100vh;
-        }
-        #game-container {
-            position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.5);
-            border: 4px solid #34495e; background: #f5f0e6;
-        }
-        canvas { display: block; max-width: 100%; height: auto; }
-        #instructions {
-            position: absolute; bottom: 20px; left: 20px; color: #464646;
-            font-size: 18px; pointer-events: none; background: rgba(255,255,255,0.7);
-            padding: 5px 10px; border-radius: 5px;
-        }
-        #popup-overlay {
-            display: none; position: absolute; top: 0; left: 0;
-            width: 800px; height: 600px; background: rgba(0,0,0,0.6);
-            justify-content: center; align-items: center; z-index: 10;
-        }
-        #popup-content {
-            background: #fff5b4; border: 6px solid #dcc23c; border-radius: 24px;
-            width: 640px; max-height: 90%; overflow-y: auto; padding: 40px;
-            color: #000; box-sizing: border-box; position: relative; text-align: center;
-        }
-        #popup-image {
-            display: none; width: 280px; height: 180px;
-            object-fit: contain; background: white;
-            margin: 0 auto 20px auto; border-radius: 10px;
-            border: 3px solid #dcc23c;
-        }
-        #popup-text { font-size: 19px; line-height: 1.5; margin-bottom: 20px; text-align: left; white-space: pre-line; }
-        .option {
-            background: rgba(255,255,255,0.6); margin: 10px 0; padding: 12px;
-            border-radius: 8px; cursor: pointer; border: 2px solid #dcc23c;
-            transition: 0.2s; text-align: left; font-size: 18px;
-        }
-        .option:hover { background: #fff; transform: translateX(5px); }
-        .feedback { font-weight: bold; margin-top: 20px; font-size: 22px; }
-        .close-hint { margin-top: 20px; color: #777; font-size: 14px; }
-    </style>
+    body {
+        margin: 0; padding: 0; display: flex; flex-direction: column; 
+        align-items: center; justify-content: center; 
+        background-color: #2c3e50; color: white; font-family: 'Arial', sans-serif;
+        overflow: hidden; height: 100vh;
+    }
+
+    #game-container {
+        position: relative; 
+        box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        border: 4px solid #34495e; 
+        background: #f5f0e6;
+        /* ADJUST VISUAL SIZE HERE */
+        width: 55vw;        /* Uses 95% of screen width */
+        max-width: 1000px;  /* Stops growing at 1000px wide */
+        aspect-ratio: 8 / 6; /* Keeps the 800x600 proportions */
+    }
+
+    canvas { 
+        display: block; 
+        width: 100%;        /* Stretches the 800 internal pixels to fill container */
+        height: 100%; 
+        image-rendering: auto; /* Change to 'pixelated' for a crisp retro look */
+    }
+
+    #instructions {
+        position: absolute; bottom: 20px; left: 20px; color: #464646;
+        font-size: 1.2rem; pointer-events: none; background: rgba(255,255,255,0.7);
+        padding: 5px 15px; border-radius: 5px;
+        z-index: 5;
+    }
+
+    #popup-overlay {
+        display: none; 
+        position: absolute; 
+        top: 0; left: 0;
+        width: 100%; height: 100%; /* Now follows container size, not fixed pixels */
+        background: rgba(0,0,0,0.6);
+        justify-content: center; align-items: center; 
+        z-index: 10;
+    }
+
+    
+    #popup-image {
+        display: none; width: 280px; height: 180px;
+        max-width: 100%; /* Added for responsiveness */
+        object-fit: contain; background: white;
+        margin: 0 auto 20px auto; border-radius: 10px;
+        border: 3px solid #dcc23c;
+    }
+    
+    #popup-text { font-size: 1.1rem; line-height: 1.5; margin-bottom: 20px; text-align: left; white-space: pre-line; }
+    
+    .option {
+        background: rgba(255,255,255,0.6); margin: 10px 0; padding: 12px;
+        border-radius: 8px; cursor: pointer; border: 2px solid #dcc23c;
+        transition: 0.2s; text-align: left; font-size: 1rem;
+    }
+
+    .option:hover { background: #fff; transform: translateX(5px); }
+    .feedback { font-weight: bold; margin-top: 20px; font-size: 1.3rem; }
+    .close-hint { margin-top: 20px; color: #777; font-size: 0.9rem; }
+    #popup-content {
+    background: #fff5b4; 
+    border: 6px solid #dcc23c; 
+    border-radius: 24px;
+    width: 85%; 
+    max-height: 95%; 
+    overflow: hidden; /* No scrollbars */
+    padding: 20px;    /* Uniform padding */
+    color: #000; 
+    box-sizing: border-box; 
+    position: relative; 
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Ensure images don't push content off-screen */
+#popup-image {
+    max-width: 200px; /* Smaller for better fit */
+    max-height: 150px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+/* Remove the automatic "Press Space to Close" text if you want it gone */
+.close-hint {
+    display: none; 
+}
+
+/* Compact Email styling */
+.email-container {
+    background: #fff;
+    border: 1px solid #ccc;
+    text-align: left;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 8px;
+}
+
+.email-header {
+    background: #f2f2f2;
+    padding: 8px 15px; /* Compact padding */
+    border-bottom: 1px solid #ddd;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.email-body {
+    padding: 12px 15px; /* Compact padding */
+    color: #333;
+    font-size: 0.95rem;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.email-option {
+    padding: 8px 15px; /* Reduced padding to fit height */
+    margin: 5px 0; /* Reduced margin */
+    border: 2px solid #eee;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.email-option.selected {
+    border-color: #4285f4; 
+    background: #e8f0fe;
+}
+</style>
 </head>
 <body>
 
@@ -65,233 +154,312 @@
             </div>
         </div>
     </div>
-
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const popupOverlay = document.getElementById('popup-overlay');
-    const popupImg = document.getElementById('popup-image');
     
     const images = {};
     const imageFiles = {
         background: 'room_background.jpg',
-        paper: 'paper_icon.png',
         idle: 'avatar_idle.png',
         walkLeft: 'avatar_walk_left.png',
         walkRight: 'avatar_walk_right.png',
-        laptop: 'Laptop-computer.jpg',
-        charger: '9f99de48-1180-4687-8339-901f66eb5f77.d934e5257ee17db8263aac956eadd381.jpg',
-        printer: '204-2042717_printer-epson-color-png-download-hd-epson-printer.jpg'
+        laptopEmail: 'Laptop-computer1.png'
     };
 
     let imagesLoaded = 0;
     const totalImages = Object.keys(imageFiles).length;
 
     function loadImages() {
-        for (let key in imageFiles) {
-            images[key] = new Image();
-            images[key].src = imageFiles[key];
-            images[key].onload = () => {
-                imagesLoaded++;
-                if (imagesLoaded === totalImages) gameLoop();
-            };
-            images[key].onerror = () => {
-                imagesLoaded++;
-                if (imagesLoaded === totalImages) gameLoop();
-            };
-        }
+    for (let key in imageFiles) {
+        images[key] = new Image();
+        images[key].src = imageFiles[key];
+        
+        // Success handler
+        images[key].onload = () => { 
+            if (++imagesLoaded === totalImages) {
+                draw(); // Changed from gameLoop() to draw()
+            } 
+        };
+
+        // Error handler: ensures game starts even if an image path is broken
+        images[key].onerror = () => {
+            console.warn(`Failed to load image: ${imageFiles[key]}`);
+            if (++imagesLoaded === totalImages) {
+                draw(); 
+            }
+        };
     }
+}
 
     let isPaused = false;
     let currentPaper = null;
-    const interactionDist = 100;
-
+    const interactionDist = 80;
     const avatar = { 
-        x: 400, y: 300, width: 70, height: 70, 
-        speed: 5, moving: false, lastDir: 'right', angle: 0, frame: 0, lastFrameSwap: 0
-    };
+    x: 300, y: 380, width: 70, height: 70, 
+    speed: 5, moving: false, lastDir: 'right', angle: 0, 
+    frame: 0,           // 0 for idle/frame1, 1 for walk/frame2
+    lastFrameSwap: 0    // Timestamp of the last step
+};
     const keys = {};
 
-    const infoContents = [
-        "LAPTOP: A portable computer used to access the internet. \n\nOVERVIEW: The S3 Framework stands for Safe, Savvy, and Social. It supports the nine elements of digital citizenship by providing guiding principles for safe, educated, and respectful use of technology.",
-        "CHARGER: A cable that provides power to your devices. \n\nSAFE: Protecting yourself and others from harm. Just as a charger keeps a device alive, digital security and privacy prevent viruses and protect personal information.",
-        "PRINTER: A machine that puts digital text and pictures onto paper. \n\nSAVVY: Creating educated digital citizens by understanding technology and making good decisions. This covers digital fluency and discerning reliable information online.",
-        "SOCIAL: Respecting yourself and others as digital citizens. This involves digital etiquette, rights and responsibilities, and proper communication and collaboration.",
-        "CONNECTION: The S3 Framework reinforces the nine elements such as Digital Access, Commerce, Communication, Etiquette, Law, Rights & Responsibilities, Health & Wellness, and Security."
+    // FIXED COLLISION ZONES (Removed overlap with start pos 300,380)
+    const collisionZones = [
+        { x: 0, y: 60, w: 800, h: 45 },    // Top Wall
+        { x: 0, y: 520, w: 800, h: 80 },  // Bottom Wall
+        { x: 0, y: 0, w: 60, h: 600 },    // Left Wall
+        { x: 740, y: 0, w: 60, h: 600 },  // Right Wall
+        { x: 280, y: 0, w: 250, h: 300 }   // Bed Area
     ];
 
-    const questions = [
-        { q: "What does the 'S3' in S3 Framework stand for?", opts: ["Safe, Secure, Social", "Safe, Savvy, Social", "Smart, Savvy, Secure", "Safe, Smart, Social"], correct: 1 },
-        { q: "Which part of S3 focuses on protecting from harm?", opts: ["Savvy", "Social", "Safe", "All of them"], correct: 2 },
-    ];
+    let cyberknowledgeScore = 0;
+    let selectedEmailOption = 0; 
 
+    // Interactable Laptop
     const papers = [
-    {x: 130, y: 140, type: 'info', id: 0, read: false}, // Laptop
-    {x: 430, y: 330, type: 'info', id: 1, read: false}, // Charger
-    {x: 580, y: 130, type: 'info', id: 2, read: false}, // Moved Printer away from X:650+
-    {x: 690, y: 490, type: 'info', id: 3, read: false},
-    {x: 240, y: 430, type: 'info', id: 4, read: false},
-    {x: 150, y: 530, type: 'question', id: 0, answered: false},
-    {x: 340, y: 230, type: 'question', id: 1, answered: false},
-];
+        {x: 245, y: 100, id: 0, answered: false, userWasCorrect: false}
+    ];
 
     window.addEventListener('keydown', e => {
-        keys[e.code] = true;
-        if ((e.code === 'Space' || e.code === 'Escape') && isPaused) {
-            if (currentPaper.type === 'info' || currentPaper.answered) closePopup();
-        } else if (e.code === 'Space' && !isPaused) {
-            checkInteraction();
+    keys[e.code] = true;
+    
+    if (isPaused && currentPaper) {
+        // 1. Navigation (Only if not answered yet)
+        if (!currentPaper.answered) {
+            if (e.code === 'ArrowDown') { selectedEmailOption = 1; updateEmailUI(); }
+            if (e.code === 'ArrowUp') { selectedEmailOption = 0; updateEmailUI(); }
         }
-    });
-    window.addEventListener('keyup', e => keys[e.code] = false);
+
+        // 2. Interaction Logic
+        if (e.code === 'Space') {
+            e.preventDefault(); // Prevent page scrolling
+            
+            if (!currentPaper.answered) {
+                // FIRST CLICK: Confirm the answer and show feedback
+                confirmEmailChoice(); 
+            } else {
+                // SECOND CLICK: Close the popup
+                closePopup(); 
+            }
+        }
+
+        if (e.code === 'Escape') { closePopup(); }
+        return;
+    }
+
+    if (e.code === 'Space' && !isPaused) checkInteraction();
+});
+
+    window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+    function updateEmailUI() {
+        const opt0 = document.getElementById('opt-0');
+        const opt1 = document.getElementById('opt-1');
+        if (opt0) opt0.className = 'email-option' + (selectedEmailOption === 0 ? ' selected' : '');
+        if (opt1) opt1.className = 'email-option' + (selectedEmailOption === 1 ? ' selected' : '');
+    }
 
     function checkInteraction() {
         papers.forEach(p => {
             const dx = (avatar.x + 35) - p.x;
             const dy = (avatar.y + 35) - p.y;
-            if (Math.sqrt(dx*dx + dy*dy) < interactionDist && (p.type === 'info' || !p.answered)) showPopup(p);
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < interactionDist) showEmailPopup(p);
         });
     }
 
-    function showPopup(paper) {
-        isPaused = true;
-        currentPaper = paper;
-        popupOverlay.style.display = 'flex';
-        document.getElementById('options-container').innerHTML = '';
-        document.getElementById('feedback-area').innerHTML = '';
 
-        if (paper.type === 'info') {
-            document.getElementById('popup-title').innerText = "INFORMATION";
-            document.getElementById('popup-text').innerText = infoContents[paper.id];
-            paper.read = true;
-
-            if (paper.id === 0 && images.laptop.naturalWidth > 0) {
-                popupImg.src = images.laptop.src; popupImg.style.display = 'block';
-            } else if (paper.id === 1 && images.charger.naturalWidth > 0) {
-                popupImg.src = images.charger.src; popupImg.style.display = 'block';
-            } else if (paper.id === 2 && images.printer.naturalWidth > 0) {
-                popupImg.src = images.printer.src; popupImg.style.display = 'block';
-            } else { popupImg.style.display = 'none'; }
-        } else {
-            popupImg.style.display = 'none';
-            document.getElementById('popup-title').innerText = "QUESTION";
-            document.getElementById('popup-text').innerText = questions[paper.id].q;
-            questions[paper.id].opts.forEach((opt, idx) => {
-                const btn = document.createElement('div');
-                btn.className = 'option';
-                btn.innerText = `${idx + 1}. ${opt}`;
-                btn.onclick = () => handleAnswer(idx);
-                document.getElementById('options-container').appendChild(btn);
-            });
-        }
+    function confirmEmailChoice() {
+    currentPaper.answered = true;
+    
+    // 1. Calculate Score
+    // Option 1 (Ignore/Trash) is the correct security practice
+    if (selectedEmailOption === 1) {
+        cyberknowledgeScore += 20;
+        currentPaper.userWasCorrect = true;
+    } else {
+        currentPaper.userWasCorrect = false;
     }
 
-    function handleAnswer(index) {
-        if (currentPaper.answered) return;
-        const qData = questions[currentPaper.id];
-        currentPaper.answered = true;
-        if (index === qData.correct) {
-            document.getElementById('feedback-area').innerHTML = `<p class="feedback" style="color: green">Correct!</p>`;
-        } else {
-            document.getElementById('feedback-area').innerHTML = `<p class="feedback" style="color: #b40000">Incorrect. The answer was: ${qData.opts[qData.correct]}</p>`;
-        }
+    // 2. Save to LocalStorage for Teacher Analytics
+    const currentUser = localStorage.getItem('cyberDashUser');
+    
+    // Ensure we only save for students, not the instructor
+    if (currentUser && currentUser !== "INSTRUCTOR") {
+        // Use 'terminal_high_score_' to match the new dual-score leaderboard
+// In game.html
+localStorage.setItem(`terminal_high_score_${currentUser}`, cyberknowledgeScore);        
+        console.log(`[SYSTEM] Terminal Score of ${cyberknowledgeScore} saved for ${currentUser}`);
     }
 
+    // 3. Refresh UI (Shows the feedback and "Press Space to Exit" hint)
+    showEmailPopup(currentPaper); 
+}
+
+function showEmailPopup(paper) {
+    isPaused = true;
+    currentPaper = paper;
+    const content = document.getElementById('popup-content');
+    
+    let html = `
+        <h2 id="popup-title">SECURITY TERMINAL</h2>
+        <div class="email-container">
+            <div class="email-header">From: HR Dept | Subject: Verification Required</div>
+            <div class="email-body">We noticed a login from a new device. Please <b>click here</b> to verify your account immediately.</div>
+        </div>`;
+
+    if (!paper.answered) {
+        // UI for initial question
+        html += `
+            <div id="email-options">
+                <div class="email-option selected" id="opt-0">➤ RESPOND TO EMAIL</div>
+                <div class="email-option" id="opt-1">➤ IGNORE / TRASH</div>
+            </div>
+            <div class="close-hint" style="display:block; color: #444;">Use Arrows to select | Space to CONFIRM</div>`;
+    } else {
+        // UI for feedback (This shows after the first Space click)
+        const resultMsg = paper.userWasCorrect ? 
+            "<span style='color:green; font-weight:bold;'>✅ CORRECT: You identified the phishing attempt!</span>" : 
+            "<span style='color:red; font-weight:bold;'>❌ FAILED: You fell for the phishing link.</span>";
+        
+        html += `
+            <div class="feedback" style="margin-top:20px; padding:15px; border:2px solid #333; background: rgba(255,255,255,0.5);">
+                ${resultMsg}
+            </div>
+            <div class="close-hint" style="display:block; color: #d32f2f; font-weight:bold; margin-top:15px;">
+                PRESS SPACE AGAIN TO EXIT TERMINAL
+            </div>`;
+    }
+
+    content.innerHTML = html;
+    document.getElementById('popup-overlay').style.display = 'flex';
+}
     function closePopup() {
-        popupOverlay.style.display = 'none';
         isPaused = false;
-        if (papers.every(p => p.type === 'info' ? p.read : p.answered)) {
-            setTimeout(() => alert("CONGRATULATIONS! You completed the module!"), 300);
-        }
+        currentPaper = null;
+        popupOverlay.style.display = 'none';
     }
 
     function update() {
     if (isPaused) return;
+    let moveX = 0, moveY = 0;
+    
+    if (keys['ArrowLeft']) moveX = -1;
+    if (keys['ArrowRight']) moveX = 1;
+    if (keys['ArrowUp']) moveY = -1;
+    if (keys['ArrowDown']) moveY = 1;
 
-    let nextX = avatar.x;
-    let nextY = avatar.y;
-    avatar.moving = false;
-
-    // Determine intended next position
-    if (keys['ArrowLeft'] && avatar.x > 0) { 
-        nextX -= avatar.speed; avatar.moving = true; avatar.angle = 270; avatar.lastDir = 'left'; 
-    }
-    else if (keys['ArrowRight'] && avatar.x < canvas.width - avatar.width) { 
-        nextX += avatar.speed; avatar.moving = true; avatar.angle = 90; avatar.lastDir = 'right'; 
-    }
-    else if (keys['ArrowUp'] && avatar.y > 0) { 
-        nextY -= avatar.speed; avatar.moving = true; avatar.angle = 0; 
-    }
-    else if (keys['ArrowDown'] && avatar.y < canvas.height - avatar.height) { 
-        nextY += avatar.speed; avatar.moving = true; avatar.angle = 180; 
-    }
-
-    // --- COLLISION CHECK ---
-    // Define the "No-Walk" zone based on your coordinates:
-    // Min X: 649, Max X: 891 | Min Y: 178, Max Y: 393
-    const isColliding = (nextX + avatar.width > 649 && nextX < 891 && 
-                         nextY + avatar.height > 178 && nextY < 393);
-
-    if (!isColliding) {
-        avatar.x = nextX;
-        avatar.y = nextY;
-    } else {
-        avatar.moving = false; // Stop animation if hitting a wall
+    if (moveX !== 0 || moveY !== 0) {
+        // --- 8-DIRECTIONAL ANGLE LOGIC ---
+        if (moveX > 0 && moveY === 0) avatar.angle = 90;       // Right
+        else if (moveX < 0 && moveY === 0) avatar.angle = 270;  // Left
+        else if (moveY < 0 && moveX === 0) avatar.angle = 0;    // Up
+        else if (moveY > 0 && moveX === 0) avatar.angle = 180;  // Down
+        else if (moveX > 0 && moveY < 0) avatar.angle = 45;     // Up-Right
+        else if (moveX < 0 && moveY < 0) avatar.angle = 315;    // Up-Left
+        else if (moveX > 0 && moveY > 0) avatar.angle = 135;    // Down-Right
+        else if (moveX < 0 && moveY > 0) avatar.angle = 225;    // Down-Left
+        
+        let dx = moveX * avatar.speed;
+        let dy = moveY * avatar.speed;
+        
+        // Check collisions for each axis separately to allow sliding along walls
+        if (!checkCollisionAt(avatar.x + dx, avatar.y)) avatar.x += dx;
+        if (!checkCollisionAt(avatar.x, avatar.y + dy)) avatar.y += dy;
+        
+        avatar.moving = true;
+        if (moveX < 0) avatar.lastDir = 'left';
+        if (moveX > 0) avatar.lastDir = 'right';
+    } else { 
+        avatar.moving = false; 
     }
 }
 
-    function draw() {
-        // Draw Background
-        if (images.background.naturalWidth > 0) ctx.drawImage(images.background, 0, 0, 800, 600);
-        else { ctx.fillStyle = "#f5f0e6"; ctx.fillRect(0, 0, 800, 600); }
-
-        papers.forEach(p => {
-            if (p.type === 'info' || !p.answered) {
-                const dist = Math.sqrt(Math.pow((avatar.x + 35) - p.x, 2) + Math.pow((avatar.y + 35) - p.y, 2));
-                if (dist < interactionDist) {
-                    ctx.beginPath(); ctx.arc(p.x, p.y, 65, 0, Math.PI*2);
-                    ctx.fillStyle = "rgba(255, 255, 100, 0.4)"; ctx.fill();
-                }
-
-                const objW = 100;
-                const objH = 70;
-
-                if (p.type === 'info' && p.id === 0 && images.laptop.naturalWidth > 0) {
-                    ctx.drawImage(images.laptop, p.x - objW/2, p.y - objH/2, objW, objH);
-                } else if (p.type === 'info' && p.id === 1 && images.charger.naturalWidth > 0) {
-                    ctx.drawImage(images.charger, p.x - objW/2, p.y - objH/2, objW, objH);
-                } else if (p.type === 'info' && p.id === 2 && images.printer.naturalWidth > 0) {
-                    ctx.drawImage(images.printer, p.x - objW/2, p.y - objH/2, objW, objH);
-                } else if (images.paper.naturalWidth > 0) {
-                    ctx.drawImage(images.paper, p.x - 25, p.y - 32, 50, 65);
-                } else {
-                    // Placeholder if paper image fails
-                    ctx.fillStyle = "#fff"; ctx.fillRect(p.x - 15, p.y - 20, 30, 40);
-                }
-            }
-        });
-
-        // Draw Avatar
-        let img;
-        if (avatar.moving) {
-            const now = Date.now();
-            if (now - avatar.lastFrameSwap > 150) { avatar.frame = avatar.frame === 0 ? 1 : 0; avatar.lastFrameSwap = now; }
-            img = (avatar.frame === 0) ? images.idle : (avatar.lastDir === 'left' ? images.walkLeft : images.walkRight);
-        } else { img = images.idle; }
-        
-        if (img && img.naturalWidth > 0) {
-            ctx.save();
-            ctx.translate(avatar.x + 35, avatar.y + 35);
-            ctx.rotate(avatar.angle * Math.PI / 180);
-            ctx.drawImage(img, -35, -35, 70, 70);
-            ctx.restore();
-        } else {
-            ctx.fillStyle = "red"; ctx.fillRect(avatar.x, avatar.y, 70, 70);
-        }
-        requestAnimationFrame(gameLoop);
+    function checkCollisionAt(tx, ty) {
+        return collisionZones.some(z => tx + 50 > z.x && tx < z.x + z.w && ty + 50 > z.y && ty < z.y + z.h);
+    }
+function draw() {
+    // 1. Clear the canvas for the new frame
+    ctx.clearRect(0, 0, 800, 600);
+    
+    // 2. Draw Background
+    if (images.background && images.background.naturalWidth > 0) {
+        ctx.drawImage(images.background, 0, 0, 800, 600);
     }
 
-    function gameLoop() { update(); draw(); }
+    // 3. Draw Laptop / Interactable Items
+    papers.forEach(p => {
+        if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
+            ctx.drawImage(images.laptopEmail, p.x - 50, p.y - 35, 100, 70);
+        }
+        
+        const dx = (avatar.x + 35) - p.x;
+        const dy = (avatar.y + 35) - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < interactionDist) {
+            ctx.strokeStyle = "yellow"; 
+            ctx.lineWidth = 3;
+            ctx.strokeRect(p.x - 55, p.y - 40, 110, 80);
+        }
+    });
+
+    // --- 4. ANIMATION & IMAGE SELECTION LOGIC ---
+    let now = Date.now();
+    if (avatar.moving) {
+        // Switch frames every 150ms to create an alternating "walking" effect
+        if (now - avatar.lastFrameSwap > 150) {
+            avatar.frame = (avatar.frame === 0) ? 1 : 0;
+            avatar.lastFrameSwap = now;
+        }
+    } else {
+        avatar.frame = 0; // Reset to idle frame when stopped
+    }
+
+    let img;
+    if (!avatar.moving || avatar.frame === 0) {
+        // Show idle image when standing still OR during the "neutral" part of the walk
+        img = images.idle;
+    } else {
+        // Show the directional walk image for the "step" part of the walk
+        img = (avatar.lastDir === 'left') ? images.walkLeft : images.walkRight;
+    }
+    
+    // --- 5. RENDER AVATAR WITH ROTATION ---
+    if (img && img.naturalWidth > 0) {
+        ctx.save(); 
+        
+        // Center rotation on avatar
+        ctx.translate(avatar.x + 35, avatar.y + 35); 
+        
+        // Apply 8-directional rotation
+        ctx.rotate(avatar.angle * Math.PI / 180);
+        
+        // Draw centered sprite
+        ctx.drawImage(img, -35, -35, 70, 70);
+        
+        ctx.restore(); 
+    }
+
+    // --- 6. UI SCORE BOX ---
+    ctx.fillStyle = "rgba(0,0,0,0.7)"; 
+    ctx.fillRect(580, 10, 210, 40);
+    ctx.strokeStyle = "#dcc23c";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(580, 10, 210, 40);
+
+    ctx.fillStyle = "white"; 
+    ctx.font = "bold 14px Arial";
+    ctx.textAlign = "left"; 
+    ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
+
+    // 7. Loop the animation
+    if (!isPaused) {
+        update(); 
+    }
+    requestAnimationFrame(draw);
+}
     loadImages();
 </script>
 </body>

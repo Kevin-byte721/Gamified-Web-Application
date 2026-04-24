@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -161,6 +162,16 @@
     justify-content: start; 
     width: 100%;
 }
+#userGrid::-webkit-scrollbar {
+    height: 8px;
+}
+#userGrid::-webkit-scrollbar-track {
+    background: #222;
+}
+#userGrid::-webkit-scrollbar-thumb {
+    background: #4CAF50;
+    border-radius: 4px;
+}
 
 /* --- 4. INSTRUCTOR PROFILE (FIXED BOTTOM RIGHT) --- */
 #instructorQuickAccess {
@@ -178,24 +189,35 @@
     transform: scale(1.1);
     background: #222;
 }
+#userGrid {
+    display: grid !important; 
+    grid-template-rows: repeat(2, 160px); 
+    grid-auto-flow: column; 
+    /* 5 cards per view calculation */
+    grid-auto-columns: calc(20% - 16px); 
+    gap: 20px;
+    padding: 10px 0;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory; 
+    scroll-behavior: smooth;
+    scrollbar-width: none; 
+    width: 100%;
+}
 
-/* Custom Scrollbar for a retro look */
-#userGrid::-webkit-scrollbar {
-    height: 8px;
-}
-#userGrid::-webkit-scrollbar-track {
-    background: #222;
-}
-#userGrid::-webkit-scrollbar-thumb {
-    background: #4CAF50;
-    border-radius: 4px;
-}
-
-/* Apply snapping to the cards */
 .agent-card {
-    flex: 0 0 calc(20% - 20px); /* Exactly 5 cards per view minus gap */
     scroll-snap-align: start;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.2s;
 }
+
+#userGrid::-webkit-scrollbar {
+    display: none; /* Recommended: keeps the UI focused on your dots */
+}
+
+
 /* Container for password and toggle */
 .password-container {
     position: relative;
@@ -250,8 +272,6 @@
             <button onclick="scrollGrid(1)" class="nav-btn" style="background: none; border: 2px solid #4CAF50; color: #4CAF50; cursor: pointer; padding: 10px; font-family: 'Press Start 2P'; font-size: 16px; border-radius: 5px;">&gt;</button>
         </div>
 
-        <div id="carouselDots" style="display: flex; justify-content: center; gap: 10px; margin: 10px 0 20px 0;"></div>
-
         <div id="instructorQuickAccess" onclick="selectInstructor()">
             <div style="width: 50px; height: 50px; background: #333; border-radius: 50%; margin: 0 auto 5px; border: 2px solid #4CAF50; overflow: hidden;">
                 <img src="profile-icon.jpg" style="width:100%; height:100%; object-fit:cover;">
@@ -289,24 +309,28 @@
     <div class="user-info">AGENT: <span id="agentName">---</span></div>
     
     <button class="nav-button" onclick="showHome()">
-        🏠 <span>Home</span>
-    </button>
-    
-    <button class="nav-button" onclick="loadContent('module.html')">
-        📦 <span>Module</span>
-    </button>
+    🏠 <span>Home</span>
+</button>
 
-    <button id="securityRunnerBtn" class="nav-button" onclick="loadContent('Cyber_Dash_Security_Runner.html')" style="border-color: #ff4444;">
-        🎮 <span style="color: #ff4444;">Runner</span>
-    </button>
+<button class="nav-button" onclick="loadContent('module.html')">
+    📦 <span>Module</span>
+</button>
 
-    <button class="nav-button" onclick="loadContent('leaderboards.html')">
-        🏆 <span>Scores</span>
-    </button>
-    
-    <button class="nav-button" onclick="location.reload()" style="margin-top: auto; border-color: #ff4444;">
-        🚫 <span>Logout</span>
-    </button>
+<button id="securityRunnerBtn" class="nav-button" onclick="loadContent('Cyber_Dash_Security_Runner.html')">
+    🎮 <span>Runner</span>
+</button>
+
+<button id="securityTerminalBtn" class="nav-button" onclick="loadContent('game.html')">
+    💻 <span>Terminal</span>
+</button>
+
+<button class="nav-button" onclick="loadContent('leaderboards.html')">
+    🏆 <span>Scores</span>
+</button>
+
+<button class="nav-button" onclick="location.reload()" style="margin-top: auto; border-color: #ff4444;">
+    🚫 <span>Logout</span>
+</button>
     
     <div class="version-tag" style="color: #666; font-size: 8px; margin-top: 10px;">v1.1.0-SEC</div>
 </nav>
@@ -326,67 +350,6 @@
     </div>
 
     <script>
-        function renderStudentGraph() {
-    if (typeof Chart === 'undefined') return;
-
-    const userObj = USERS.find(u => u.username === currentUser);
-    if (!userObj) return;
-    
-    // Retrieve independent module scores
-    const stats = JSON.parse(localStorage.getItem(`stats_${userObj.displayName}`)) || { m1: 0, m2: 0, m3: 0 };
-    const hasData = stats.m1 > 0 || stats.m2 > 0 || stats.m3 > 0;
-
-    const canvas = document.getElementById('scoreChart');
-    const noData = document.getElementById('noDataMessage');
-
-    if (!hasData) {
-        if (canvas) canvas.style.display = 'none';
-        if (noData) noData.style.display = 'block';
-        return;
-    }
-
-    if (canvas) canvas.style.display = 'block';
-    if (noData) noData.style.display = 'none';
-
-    const ctx = canvas.getContext('2d');
-    
-    if (window.myScoreChart instanceof Chart) {
-        window.myScoreChart.destroy();
-    }
-
-    window.myScoreChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            // 'SAFE' (m1), 'SAVVY' (m2), 'SOCIAL' (m3) correspond to your modules
-            labels: ['SAFE', 'SAVVY', 'SOCIAL'],
-            datasets: [{
-                label: 'Personal High Score',
-                // Data points are now separate module values
-                data: [stats.m1, stats.m2, stats.m3],
-                backgroundColor: '#4CAF50',
-                borderColor: '#fff',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { 
-                    beginAtZero: true, 
-                    max: 1000, 
-                    ticks: { color: '#4CAF50', font: { family: "'Press Start 2P'", size: 8 } } 
-                },
-                x: { 
-                    ticks: { color: '#4CAF50', font: { family: "'Press Start 2P'", size: 8 } } 
-                }
-            },
-            plugins: {
-                legend: { display: false }
-            }
-        }
-    });
-}
     // 1. GLOBAL DATA & STATE
     // Customize the displayNames to match your team/agents
     // Generates 50 students: Student 1 to Student 50
@@ -416,7 +379,6 @@ function selectUser(user) {
     const activeImg = document.getElementById('activeImg');
     const passwordField = document.getElementById('passwordInput');
     const gridContainer = document.getElementById('gridContainer');
-    const dotsContainer = document.getElementById('carouselDots');
     const passwordSection = document.getElementById('passwordSection');
     
     // Set identity details
@@ -442,7 +404,6 @@ function selectUser(user) {
 
     // Hide selection carousel
     if (gridContainer) gridContainer.style.display = 'none';
-    if (dotsContainer) dotsContainer.style.display = 'none'; 
     
     // Show password entry box
     if (passwordSection) passwordSection.style.display = 'block';
@@ -467,24 +428,34 @@ function attemptLogin() {
     const pInput = document.getElementById('passwordInput');
     const p = pInput.value.trim();
     
+    // Check if a user is selected and the password matches
     if (selectedUser && p === selectedUser.password) {
         currentUser = selectedUser.username;
         
-        // 2. SET IDENTITY AND ROLE IN LOCALSTORAGE
+        // 1. SET IDENTITY AND ROLE IN LOCALSTORAGE
+        // Use displayName for the UI and role for permissions
         localStorage.setItem('cyberDashUser', selectedUser.displayName);
         localStorage.setItem('userRole', selectedUser.role);
 
-        // 3. APPLY PERMISSIONS
-        applyRolePermissions();
-
+        // 2. HIDE LOGIN & SET UI NAME
         document.getElementById('loginOverlay').style.display = 'none';
         document.getElementById('agentName').innerText = selectedUser.displayName;
 
-        // 4. INITIALIZE VIEW
-        if (selectedUser.role === 'student') {
-            renderStudentGraph(); 
+        // 3. APPLY PERMISSIONS 
+        // This function should handle showing/hiding buttons based on the role
+        applyRolePermissions();
+
+        // 4. UPDATE RUNNER VISIBILITY
+        // Checks if the student has 100% progress to unlock the game
+        if (typeof updateGameButtonVisibility === 'function') {
+            updateGameButtonVisibility();
         }
+
+        // Clean up password input for next time
+        pInput.value = '';
+
     } else {
+        // Handle failed login
         const err = document.getElementById('loginError');
         if (err) {
             err.style.display = 'block';
@@ -492,56 +463,41 @@ function attemptLogin() {
         }
     }
 }
-
-// 5. HELPER TO MANAGE UI VISIBILITY
 function applyRolePermissions() {
     const role = localStorage.getItem('userRole');
-    const teacherLink = document.getElementById('teacherLink'); 
-    const statsSection = document.getElementById('studentStats'); 
-    
-    // Select the "Scores" button (typically the 3rd nav button) to hide/show
     const navButtons = document.querySelectorAll('.nav-button');
-    const scoresBtn = navButtons[2]; 
+    
+    // index 3 corresponds to the 'Scores' button in your nav list
+    const scoresBtn = navButtons[4]; 
 
     if (role === 'teacher') {
-        if (teacherLink) teacherLink.style.display = 'block';
-        if (scoresBtn) scoresBtn.style.display = 'none'; // Teachers can see scores
-        if (statsSection) statsSection.style.display = 'none';
+        if (scoresBtn) {
+            scoresBtn.style.display = 'flex'; // Show for teacher
+            scoresBtn.innerHTML = '📊 <span>Analytics</span>'; // Label it for clarity
+        }
     } else {
-        if (teacherLink) teacherLink.style.display = 'none';
-        if (scoresBtn) scoresBtn.style.display = 'none'; // Students cannot see scores nav
-        if (statsSection) statsSection.style.display = 'block';
+        if (scoresBtn) scoresBtn.style.display = 'none'; // Hide from students
     }
 }
 
 window.addEventListener('message', (event) => {
-    // Listen for the SAVE_SCORE type sent from the game
     if (event.data.type === 'SAVE_SCORE') {
-        const score = event.data.score;
-        const moduleId = event.data.moduleId || '1'; 
-        
-        const userObj = USERS.find(u => u.username === currentUser);
-        if (userObj) {
-            // 1. Retrieve current stats or initialize
-            let stats = JSON.parse(localStorage.getItem(`stats_${userObj.displayName}`)) || { m1: 0, m2: 0, m3: 0 };
+        const score = parseInt(event.data.score);
+        const studentName = event.data.username || localStorage.getItem('cyberDashUser');
 
-            // 2. Map the moduleId to the correct stat key
-            const statKey = `m${moduleId}`;
-            
-            // 3. Update the personal high score for that specific module
-            if (score > stats[statKey]) {
-                stats[statKey] = score;
-                localStorage.setItem(`stats_${userObj.displayName}`, JSON.stringify(stats));
+        if (studentName && !isNaN(score)) {
+            // 1. Get the current saved high score for this specific user
+            const storageKey = `runner_high_score_${studentName}`;
+            const existingHigh = parseInt(localStorage.getItem(storageKey)) || 0;
+
+            // 2. Only overwrite if the new score is higher
+            if (score > existingHigh) {
+                localStorage.setItem(storageKey, score);
+                console.log(`[SYSTEM] High score updated for ${studentName}: ${score}`);
             }
 
-            // 4. Update the "Last Mission Result" display
-            const lastScoreDisplay = document.getElementById('lastScoreDisplay');
-            if (lastScoreDisplay) {
-                lastScoreDisplay.innerText = `${score} PTS (Module ${moduleId})`;
-            }
-
-            // 5. Refresh the student-specific chart
-            renderStudentGraph();
+            // 3. (Optional) Also update your global leaderboard array
+            updateGlobalLeaderboardArray(studentName, score);
         }
     }
 });
@@ -560,17 +516,38 @@ function togglePasswordVisibility() {
         toggleIcon.innerText = '👁'; // Change icon to indicate "show"
     }
 }
-function saveToGlobalLeaderboard(name, score, module) {
+function saveToGlobalLeaderboard(name, score) {
+    // 1. Retrieve existing leaderboard or start with an empty array
     let leaderboard = JSON.parse(localStorage.getItem('cyberDashLeaderboard') || "[]");
-    const existingIdx = leaderboard.findIndex(entry => entry.username === name && entry.module === module);
+    
+    // 2. Find if this specific agent already has a record in the global list
+    const existingIdx = leaderboard.findIndex(entry => entry.username === name);
 
     if (existingIdx !== -1) {
+        // 3. OVERWRITE logic: Only update if the new score is higher
         if (score > leaderboard[existingIdx].score) {
             leaderboard[existingIdx].score = score;
+            leaderboard[existingIdx].date = new Date().toISOString();
+            
+            // Also update the specific instructor-view key used in leaderboards.html
+            localStorage.setItem(`runner_high_score_${name}`, score);
         }
     } else {
-        leaderboard.push({ username: name, score: score, module: module, date: new Date().toISOString() });
+        // 4. Create a new record for first-time agents
+        leaderboard.push({ 
+            username: name, 
+            score: score, 
+            date: new Date().toISOString() 
+        });
+        
+        // Ensure the instructor-view key is also initialized
+        localStorage.setItem(`runner_high_score_${name}`, score);
     }
+
+    // 5. Sort the global list so the top performers appear first
+    leaderboard.sort((a, b) => b.score - a.score);
+
+    // 6. Save back to localStorage
     localStorage.setItem('cyberDashLeaderboard', JSON.stringify(leaderboard));
 }
     // DOM Elements
@@ -587,41 +564,54 @@ function initUserGrid() {
     if (!grid) return;
     grid.innerHTML = ''; 
 
-    // Filter out the teacher from the scrollable student grid
+    // 1. Filter out the teacher from the scrollable student grid
     const studentsOnly = USERS.filter(u => u.role === 'student');
 
+    // 2. Render cards
     studentsOnly.forEach(user => {
         const card = document.createElement('div');
         card.className = 'agent-card';
         
-        // Removed fixed width to allow the CSS Grid layout to manage sizing
+        // Use flexbox inside the card to keep the avatar and text aligned
         card.style.cssText = `
             cursor: pointer; 
             padding: 10px; 
             text-align: center; 
-            scroll-snap-align: center; 
-            transition: transform 0.2s;
-            width: 100%; 
+            scroll-snap-align: start; 
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
         `;
         
         card.innerHTML = `
-            <div class="avatar-circle" style="width: 80px; height: 80px; background: #222; border-radius: 50%; margin: 0 auto 10px; border: 3px solid #4CAF50; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;">
+            <div class="avatar-circle" style="width: 80px; height: 80px; background: #000; border-radius: 50%; margin-bottom: 15px; border: 2px solid #4CAF50; overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);">
                 <img src="${user.avatar}" 
                      style="width:100%; height:100%; object-fit:cover;" 
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                <span style="display:none; color:#4CAF50; font-size:8px; font-family:sans-serif;">[ AGENT ]</span>
+                     onerror="this.src='path/to/default-avatar.png';">
             </div>
-            <div style="font-size: 7px; color: #fff; font-family: 'Press Start 2P'; text-transform: uppercase;">${user.displayName}</div>
+            <div style="font-size: 7px; color: #fff; font-family: 'Press Start 2P'; text-transform: uppercase; letter-spacing: 1px;">
+                ${user.displayName}
+            </div>
         `;
         
-        card.onmouseover = () => card.style.transform = 'scale(1.05)';
-        card.onmouseout = () => card.style.transform = 'scale(1.0)';
+        // Hover Effects
+        card.onmouseover = () => {
+            card.style.transform = 'scale(1.08)';
+            card.querySelector('.avatar-circle').style.boxShadow = '0 0 15px #4CAF50';
+        };
+        card.onmouseout = () => {
+            card.style.transform = 'scale(1.0)';
+            card.querySelector('.avatar-circle').style.boxShadow = '0 0 5px rgba(76, 175, 80, 0.3)';
+        };
         
         card.onclick = () => selectUser(user);
         grid.appendChild(card);
     });
 
-    createDots(); 
+    // 3. Re-calculate and draw dots based on student count
 }
 
 function selectInstructor() {
@@ -638,7 +628,6 @@ function selectInstructor() {
 function cancelSelection() {
     const passwordSection = document.getElementById('passwordSection');
     const gridContainer = document.getElementById('gridContainer');
-    const dotsContainer = document.getElementById('carouselDots');
     const passwordField = document.getElementById('passwordInput');
     const errorMsg = document.getElementById('loginError');
     const instructorBtn = document.getElementById('instructorQuickAccess');
@@ -676,50 +665,6 @@ function scrollGrid(direction) {
     });
 }
 
-/**
- * Generates navigation dots based on the total number of agent pages.
- */
-function createDots() {
-    const dotsContainer = document.getElementById('carouselDots');
-    const totalPages = Math.ceil(USERS.length / CARDS_PER_PAGE);
-    dotsContainer.innerHTML = '';
-
-    for (let i = 0; i < totalPages; i++) {
-        const dot = document.createElement('div');
-        dot.className = 'dot';
-        dot.style.cssText = `width: 10px; height: 10px; border-radius: 50%; border: 1px solid #4CAF50; background: transparent; cursor: pointer; transition: 0.3s;`;
-        dot.onclick = () => {
-            const grid = document.getElementById('userGrid');
-            grid.scrollTo({ left: i * grid.offsetWidth, behavior: 'smooth' });
-        };
-        dotsContainer.appendChild(dot);
-    }
-    updateActiveDot();
-}
-
-/**
- * Updates the visual state of the circle indicators 
- * during scroll events.
- */
-function updateActiveDot() {
-    const grid = document.getElementById('userGrid');
-    const dots = document.querySelectorAll('.dot');
-    const scrollPosition = grid.scrollLeft;
-    const pageWidth = grid.offsetWidth;
-    
-    // Calculate the active page index
-    const activeIndex = Math.round(scrollPosition / pageWidth);
-
-    dots.forEach((dot, index) => {
-        if (index === activeIndex) {
-            dot.style.background = '#4CAF50';
-            dot.style.boxShadow = '0 0 8px #4CAF50';
-        } else {
-            dot.style.background = 'transparent';
-            dot.style.boxShadow = 'none';
-        }
-    });
-}
    /**
  * Handles agent selection: hides carousel, indicators, and autofills password.
  */
@@ -749,9 +694,6 @@ function loadContent(page) {
     if (iframe) {
         iframe.classList.add('active');
         iframe.src = page;
-        
-        // Re-check progress every time a new page is loaded
-        updateSecurityRunnerVisibility();
     }
 }
 
@@ -766,41 +708,22 @@ function loadContent(page) {
  * Monitors module progress to show the Security Runner game.
  * Logic: Show if (completedModules == 1), otherwise Hide.
  */
-// Listen for messages from modules that progress has updated
-window.addEventListener('message', (event) => {
-    if (event.data === 'updateProgress') {
-        updateSecurityRunnerVisibility();
-    }
-});
+
 
 /**
  * Modified: Always maintains visibility of the Security Runner game.
  */
-function updateSecurityRunnerVisibility() {
-    const securityBtn = document.getElementById('securityRunnerBtn');
-    if (!securityBtn) return;
-
-    // We still calculate progress for other dashboard features, 
-    // but we force the button to remain visible.
-    securityBtn.style.display = 'flex'; 
-    
-    // Optional: Add a visual indicator if they HAVE finished a module
-    const progress = JSON.parse(localStorage.getItem('moduleProgress')) || {};
-    const completedCount = Object.values(progress).filter(p => p >= 100).length;
-
-    if (completedCount >= 1) {
-        securityBtn.innerHTML = 'SECURITY RUNNER <span style="font-size:8px; color:#fff;">[UNLOCKED]</span>';
-        securityBtn.style.boxShadow = '0 0 10px #ff4444';
-    }
-}
-
-// Keep the listeners so the UI stays synced
-window.addEventListener('load', updateSecurityRunnerVisibility);
-window.addEventListener('message', (event) => {
-    if (event.data === 'updateProgress') {
-        updateSecurityRunnerVisibility();
-    }
-});
+/**
+ * Monitors module progress to show the Security Runner game.
+ * Logic: Hide if total progress is 0%, Show if any progress (>0%) exists.
+ */
+/**
+ * Monitors user-specific progress to unlock the Security Runner game.
+ */
+/**
+ * Monitors user-specific progress to unlock the Security Runner game.
+ * Logic: Hide if progress is 0%, Show if progress > 0%.
+ */
 </script>
 </body>
 </html>
