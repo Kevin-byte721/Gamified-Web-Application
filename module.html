@@ -84,20 +84,37 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        #progressIndicator {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: var(--accent-green);
+    color: #000;
+    padding: 10px;
+    font-family: 'Press Start 2P';
+    font-size: 8px;
+    border: 2px solid #fff;
+    z-index: 2000;
+}
     </style>
 </head>
 <body>
 
-    <div id="gridView" class="container">
-        <h1 class="header-title">THE S3 FRAMEWORK: CYBER-READY SHS</h1>
-        <div class="modules-grid" id="cardContainer"></div>
-    </div>
+    <body>
 
-    <div id="moduleViewer">
-        <button class="back-btn" onclick="closeModule()">⬅ BACK</button>
-        <h1 id="contentTitle"></h1>
-        <div id="contentBody"></div>
-    </div>
+   <div id="progressIndicator" style="position: fixed; top: 10px; right: 10px; background: #4CAF50; color: #000; padding: 10px; font-family: 'Press Start 2P'; font-size: 8px; border: 2px solid #fff; z-index: 2000; display: none;">
+    READING PROGRESS: 0%
+</div>
+
+<div id="gridView" class="container">
+    <h1 class="header-title">THE S3 FRAMEWORK: CYBER-READY SHS</h1>
+    <div class="modules-grid" id="cardContainer"></div> </div>
+
+<div id="moduleViewer" style="display: none;">
+    <button class="back-btn" onclick="closeModule()">⬅ BACK</button>
+    <h1 id="contentTitle"></h1>
+    <div id="contentBody"></div>
+</div>
 
 <script>
     
@@ -105,46 +122,52 @@
     {
         id: 1,
         title: "Module 1: SAFE (Technical Defense)",
-        desc: "Mastering Defense-in-Depth, Zero Trust architectures, and advanced encryption for the modern professional.",
+        desc: "Mastering account security, device hardening, and multi-layered defense strategies for Senior High students.",
         image: "photo-1550751827-4bd374c3f58b.jpg",
         progress: 0,
-        requiredTime: 10, // 3 Minutes
+        requiredTime: 30, 
         content: `
-            <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
-                <b>Course Description:</b> Establishing a multi-layered defense strategy to protect personal and organizational data from technical exploitation.
+            <p style="background: #f0f0f0; padding: 15px; border-radius: 5px; color: #333; line-height: 1.6;">
+                <b>Course Description:</b> Establishing a proactive defense-in-depth strategy to protect academic and personal data from technical exploitation.
             </p>
             <p><i>(S3 Framework: Senior High School Edition)</i></p>
             
             <h3>Introduction</h3>
-            <p>For Grade 11 and 12 students, cybersecurity is no longer just about avoiding "bad links." As you prepare for higher education or the global workforce, you must transition from basic habits to a professional security mindset known as <b>Defense-in-Depth</b>.</p>
+            <p>In today’s hyper-connected environment, cybersecurity is no longer just a technical subject for experts; it is a fundamental life skill for every Senior High School student. As you transition toward higher education or the professional workforce, the stakes for protecting your digital identity increase significantly, requiring a shift from basic habits to a professional security mindset known as Defense-in-Depth. This module is designed to help you move beyond simple precautions and start thinking like a security professional who builds multiple barriers against threats.</p>
 
-            <h3>The Zero Trust Architecture</h3>
-            <p>The traditional security model was "trust but verify." In today's threat landscape, we use <b>Zero Trust</b>: "Never trust, always verify." This means even if you are logged into a trusted network, every access request to sensitive data must be authenticated and encrypted.</p>
+            <p>The core philosophy of this module is that a single lock is never enough to protect your most valuable assets. By understanding how attackers exploit weak points in passwords, reused credentials, and unpatched software, you will learn to implement a multi-layered defense system. Whether it is securing your school portal, protecting your social media presence, or safeguarding your mobile banking, the "Safe" module provides the technical foundation needed to ensure that the failure of one security measure does not lead to a total compromise of your digital life.</p>
 
-            <h3>1. Hardening Your Digital Identity</h3>
-            <p>Your password is the first line of defense, but it is never enough on its own. Professionals use <b>Multi-Factor Authentication (MFA)</b>. 
+            <h3>1. Hardening Your Digital Identity: Beyond Passwords</h3>
+            <p>Your password is your first barrier, but against modern automated tools, it is rarely enough. Hackers use programs that can guess millions of combinations a second.
             <ul>
-                <li><b>MFA Fatigue:</b> Be wary of "push bombing," where attackers spam your phone with login approvals hoping you will click 'Yes' just to stop the notifications.</li>
-                <li><b>Hardware Keys:</b> Consider using physical security keys (like YubiKeys) for your most sensitive professional accounts.</li>
+                <li><b>The 12-Character Standard:</b> Move away from short passwords like "josh123." Use a mix of uppercase, lowercase, numbers, and symbols. A strong example is <i>Josh@Secure2026!</i></li>
+                <li><b>Avoid Personal Patterns:</b> Never use your birthday, name, school, or favorite sports team. These are the first things hackers scrape from your public social media profiles.</li>
+                <li><b>Multi-Factor Authentication (MFA):</b> This is the single most effective tool for account safety. By requiring a second factor—like an OTP code from Google Authenticator or a biometric scan—you ensure that even if someone steals your password, they cannot enter your account.</li>
             </ul></p>
 
-            <h3>2. Data at Rest: Disk Encryption</h3>
-            <p>If your laptop or mobile device is physically stolen, a login password will not stop a sophisticated thief from pulling out the hard drive to read your files. Ensure <b>Full Disk Encryption</b> (BitLocker for Windows or FileVault for macOS) is active to scramble your data into unreadable ciphertext.</p>
+            <h3>2. The Risk of Credential Stuffing</h3>
+            <p>Many students use the same password for Facebook, Gmail, and their school portal for convenience. This is a massive vulnerability. In a <b>Credential Stuffing</b> attack, hackers take a list of leaked passwords from one small, insecure website and "stuff" them into major platforms. If you reuse passwords, one breach means <i>all</i> your accounts are compromised.</p>
 
-            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border-left: 5px solid #4CAF50; margin-top: 20px;">
-                <h3>Professional Concept: The Layered Onion</h3>
-                <p>Imagine your digital life as an onion:</p>
+            <h3>3. Data at Rest: Disk and Device Protection</h3>
+            <p>If your laptop or phone is physically stolen at a café or school, a login password won't stop a thief from pulling the data directly from the storage drive.
+            <ul>
+                <li><b>Full Disk Encryption:</b> Ensure tools like BitLocker (Windows) or FileVault (macOS) are active. This turns your files into unreadable ciphertext that only your key can unlock.</li>
+                <li><b>System Updates:</b> When you see an update notification, it’s usually not for "new emojis"—it’s a security patch. Updates fix holes in your software that hackers use to install malware secretly.</li>
+            </ul></p>
+
+            <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; border-left: 5px solid #2e7d32; margin: 25px 0;">
+                <h3>The "Layered Onion" Concept</h3>
+                <p>Imagine your digital life as an onion. An attacker must peel back every layer to reach your data:</p>
                 <ul>
-                    <li><b>Outer Layer:</b> Secure Network (VPN/Firewall).</li>
-                    <li><b>Middle Layer:</b> Strong Identity (MFA/Password Manager).</li>
-                    <li><b>Inner Core:</b> Encrypted Data (Disk Encryption).</li>
+                    <li><b>Outer Layer:</b> Secure Network (Avoiding Public Wi-Fi for sensitive tasks).</li>
+                    <li><b>Middle Layer:</b> Strong Identity (Unique passwords + MFA).</li>
+                    <li><b>Inner Core:</b> Encrypted Data (Disk encryption and secure backups).</li>
                 </ul>
-                <p>An attacker must peel back every single layer to reach your information.</p>
             </div>
 
             <h3>Reflection</h3>
-            <p>If you lost your laptop today at school or a café, is your data encrypted? Or is a simple login password the only thing standing between a stranger and your entire digital life?</p>
-            <p><b>Key Takeaway:</b> Being "Safe" means building multiple technical barriers so that the failure of one layer does not lead to a total compromise.</p>
+            <p>If you lost your device today, is a simple 6-digit PIN the only thing protecting your entire digital life? How many of your accounts share the same password?</p>
+            <p><b>Key Takeaway:</b> Being "Safe" means building multiple technical barriers. One layer of protection is a gamble; three layers is a defense.</p>
         `
     },
     {
@@ -153,104 +176,131 @@
         desc: "Navigating deepfakes, sophisticated social engineering, and the legalities of the Data Privacy Act.",
         image: "photo-1563986768609-322da13575f3.jpg",
         progress: 0,
-        requiredTime: 10, // 3 Minutes
+        requiredTime: 30,
         content: `
-            <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
-                <b>Course Description:</b> Developing the analytical skills to identify sophisticated psychological manipulation and understanding digital legal rights.
+            <p style="background: #f0f0f0; padding: 15px; border-radius: 5px; color: #333; line-height: 1.6;">
+                <b>Course Description:</b> Developing the analytical skills to identify psychological manipulation and understanding your legal rights under Philippine law.
             </p>
             <p><i>(S3 Framework: Senior High School Edition)</i></p>
 
+            <h3>Introduction</h3>
+            <p>While technical defenses are vital, the most sophisticated firewall in the world cannot stop an attack that targets the human mind. Being "Savvy" is about developing a high level of information intelligence and critical thinking to navigate an internet filled with psychological manipulation and social engineering. Most modern cyberattacks do not begin with a complex "hack" into a computer system; they begin with a simple conversation or an urgent email designed to trick you into giving up your own security.</p>
+
+            <p>This module focuses on turning you into a "Human Firewall" by teaching you how to spot the subtle red flags of phishing, spear phishing, and the growing threat of AI-generated deepfakes. Beyond identifying threats, being savvy also means understanding the legal landscape of the Philippines. We will explore your rights under the Data Privacy Act of 2012, ensuring you know how to protect your personal information and hold platforms accountable for how they handle your data.</p>
+
             <h3>The Human Firewall</h3>
-            <p>Most cyberattacks do not start with a "hack"—they start with a conversation. Being "Savvy" means recognizing that psychology is often used as a weapon through <b>Social Engineering</b>.</p>
+            <p>Recognizing that psychology is being used as a weapon is the first step toward safety. Attackers exploit human emotions like fear, curiosity, or greed to bypass even the strongest technical protections.</p>
 
-            <h3>1. Spear Phishing and OSINT</h3>
-            <p>Generic phishing emails are easy to spot. However, <b>Spear Phishing</b> uses Open Source Intelligence (OSINT) to target you specifically. Attackers might research your school (De La Salle Lipa), your current projects, or your friends to create a fake email that looks 100% authentic.</p>
+            <h3>1. Advanced Phishing and Spear Phishing</h3>
+            <p>Generic phishing emails (e.g., "Dear Customer") are becoming rare. Attackers now use <b>Spear Phishing</b>, where they research you specifically using Open Source Intelligence (OSINT). They might mention your specific school, a club you belong to, or a project you're working on to make a fake email look 100% legitimate.</p>
 
-            <h3>2. The Era of Synthetic Media (Deepfakes)</h3>
-            <p>As AI improves, we can no longer trust our eyes or ears. Deepfake technology can mimic a parent's voice or a teacher's face in a video call. Always verify urgent requests for money or sensitive data by calling the person back on a known, trusted number.</p>
+            <h3>2. Synthetic Media: The Deepfake Era</h3>
+            <p>As AI improves, we can no longer trust our eyes or ears. <b>Deepfakes</b> can mimic a parent's voice or a teacher’s face in a video call. 
+            <ul>
+                <li><b>Verify the Source:</b> If you receive an urgent request for money or sensitive school data, never use the contact method provided in the message. Call the person back on a known, trusted number.</li>
+                <li><b>Misinformation vs. Disinformation:</b> Misinformation is sharing false info by mistake; Disinformation is the intentional spread of lies to manipulate people.</li>
+            </ul></p>
 
             <h3>3. Compliance: Data Privacy Act of 2012</h3>
-            <p>In the Philippines, the <b>Data Privacy Act (RA 10173)</b> protects your rights. You have the right to be informed, the right to object to processing, and the right to access your data. Being Savvy means reading a "Privacy Policy" to ensure a company isn't selling your habits to third-party brokers.</p>
+            <p>In the Philippines, the <b>Data Privacy Act (RA 10173)</b> protects you. You have legal rights:
+            <ul>
+                <li><b>Right to be Informed:</b> Companies must tell you what data they collect.</li>
+                <li><b>Right to Object:</b> You can say no to your data being sold to advertisers.</li>
+                <li><b>Right to Access:</b> You can demand to see what information a platform has on you.</li>
+            </ul></p>
 
-            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border-left: 5px solid #4CAF50; margin-top: 20px;">
+            <div style="background: #fff3e0; padding: 20px; border-radius: 8px; border-left: 5px solid #ef6c00; margin: 25px 0;">
                 <h3>Savvy Strategy: The "S.T.O.P." Method</h3>
                 <ul>
-                    <li><b>S</b>crutinize the sender's actual email address.</li>
+                    <li><b>S</b>crutinize the sender's actual email address (is it DLSL.edu or DLSL-portal.com?).</li>
                     <li><b>T</b>ake a breath; attackers use artificial urgency to make you panic.</li>
-                    <li><b>O</b>bserve the links without clicking (hover to see the real URL).</li>
-                    <li><b>P</b>hone a friend or the official institution to verify the request.</li>
+                    <li><b>O</b>bserve links by hovering your mouse over them to see the real destination.</li>
+                    <li><b>P</b>hone the official institution to verify if the request is real.</li>
                 </ul>
             </div>
 
             <h3>Reflection</h3>
-            <p>Have you ever clicked 'Accept' on a Terms of Service without reading it? What data did you just legally give away about your location, your contacts, or your private messages?</p>
-            <p><b>Key Takeaway:</b> Intelligence is your best defense. If a digital interaction feels urgent, strange, or too good to be true, it likely is.</p>
+            <p>Have you ever clicked 'Accept' on a Terms of Service without reading it? What did you just give away about your location, your contacts, or your private school records?</p>
+            <p><b>Key Takeaway:</b> Intelligence is your best defense. If a digital interaction feels too urgent or too good to be true, it likely is.</p>
         `
     },
     {
         id: 3,
         title: "Module 3: SOCIAL (Digital Citizenship)",
-        desc: "Protecting your professional digital footprint and the ethics of social responsibility in cybersecurity.",
+        desc: "Protecting your professional digital footprint, preventing cyberbullying, and ethical social responsibility.",
         image: "photo-1522202176988-66273c2fd55f.jpg",
         progress: 0,
-        requiredTime: 10, // 3 Minutes
+        requiredTime: 30,
         content: `
-            <p style="background: #f0f0f0; padding: 10px; border-radius: 5px; color: #333;">
-                <b>Course Description:</b> Understanding the long-term impact of a digital footprint and the ethical responsibilities of a connected citizen.
+            <p style="background: #f0f0f0; padding: 15px; border-radius: 5px; color: #333; line-height: 1.6;">
+                <b>Course Description:</b> Understanding the long-term impact of a digital footprint and the ethical responsibilities of a connected citizen in the Philippines.
             </p>
             <p><i>(S3 Framework: Senior High School Edition)</i></p>
 
-            <h3>The Permanent Shadow</h3>
-            <p>Everything you do online—every post, comment, and "private" message—is a permanent part of your <b>Digital Footprint</b>. For SHS students, this footprint is often the first thing university admissions or future employers will investigate.</p>
+            <h3>Introduction</h3>
+            <p>The internet is not a temporary space; it is a permanent archive of our actions, words, and interactions. Being "Social" in the context of the S3 Framework means understanding that you are a digital citizen with a reputation that follows you long after you close a browser tab. Every post, comment, and shared photo contributes to a permanent Digital Footprint that university admissions officers, future employers, and even scholarship committees will eventually investigate to judge your character and professional integrity.</p>
 
-            <h3>1. The Risk of Oversharing</h3>
-            <p>Posting photos of your school ID, your home, or even a view from your window provides "metadata" to attackers. This information can lead to <b>Doxing</b> (publishing your private info) or physical security risks. Practice "Digital Minimalism" by only sharing what is absolutely necessary.</p>
+            <p>This module goes beyond personal reputation to explore our collective responsibility toward others in the digital world. We will discuss the impact of cyberbullying, the dangers of oversharing personal data that could lead to doxing, and the ethical boundaries set by the Cybercrime Prevention Act of 2012. By the end of this module, you will learn how to curate a professional online presence and understand that being a good digital citizen is about protecting not just yourself, but your entire community from harm.</p>
 
-            <h3>2. Collective Security and Reporting</h3>
-            <p>Cybersecurity is a team effort. If you notice a classmate’s social media account is compromised or posting spam, don't just ignore it. Being "Socially" responsible means alerting them through a different channel and reporting the compromised account to protect your entire network.</p>
+            <h3>The Permanent Shadow: Your Digital Footprint</h3>
+            <p>Everything you do online—every post, comment, and "private" message—is a permanent part of your <b>Digital Footprint</b>. Even if you "delete" a post, it may live on in archives or through screenshots taken by others.</p>
 
-            <h3>3. Ethical Boundaries: The Law</h3>
-            <p>With the technical skills you learn in Information Technology, you have the power to help or harm. The <b>Cybercrime Prevention Act of 2012 (RA 10175)</b> makes unauthorized access and data interference a criminal offense. Aim to be a "White Hat"—using your knowledge to build a safer community for everyone.</p>
+            <h3>1. The Risk of Oversharing and Doxing</h3>
+            <p>Sharing photos of your school ID, your home address, or even a specific view from your window provides "metadata" to attackers. This can lead to <b>Doxing</b> (the public release of your private information). 
+            <ul>
+                <li><b>Digital Minimalism:</b> Only share what is absolutely necessary. Ask yourself: "Does the world need to know my exact location right now?"</li>
+            </ul></p>
 
-            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border-left: 5px solid #4CAF50; margin-top: 20px;">
+            <h3>2. Cyberbullying: Impact and Action</h3>
+            <p>Cyberbullying is the repeated use of digital tools to harass or humiliate. In a group chat environment, messages spread instantly, making the impact severe.
+            <ul>
+                <li><b>Reporting:</b> Being "Socially" responsible means not being a silent bystander. If you see bullying, report the content to the platform and alert a trusted adult.</li>
+                <li><b>Privacy Violations:</b> Sharing private conversations or photos without consent is a form of online abuse.</li>
+            </ul></p>
+
+            <h3>3. Ethics and the Law: RA 10175</h3>
+            <p>The <b>Cybercrime Prevention Act of 2012 (RA 10175)</b> makes unauthorized access, data interference, and online libel criminal offenses. As IT-literate students, you have the power to help or harm. Aim to be a "White Hat"—using your technical skills to build a safer community.</p>
+
+            <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 5px solid #1565c0; margin: 25px 0;">
                 <h3>The Social Integrity Test</h3>
-                <p>Before you post or share, ask yourself:</p>
+                <p>Before you post, share, or comment, run the "Secure-Kind-True" check:</p>
                 <ul>
-                    <li><b>Is it secure?</b> (Does this reveal my location or private data?)</li>
-                    <li><b>Is it kind?</b> (Does this maintain my professional reputation?)</li>
-                    <li><b>Is it true?</b> (Am I spreading misinformation or a verified fact?)</li>
+                    <li><b>Is it Secure?</b> Does this reveal my location or private school data?</li>
+                    <li><b>Is it Kind?</b> Does this maintain my professional reputation?</li>
+                    <li><b>Is it True?</b> Am I spreading a verified fact or potentially harmful rumors?</li>
                 </ul>
             </div>
 
             <h3>Reflection</h3>
-            <p>If a recruiter for your dream job looked at your social media history from three years ago, would they still want to hire you? How can you start curating a more professional "Social" presence today?</p>
-            <p><b>Key Takeaway:</b> Your digital footprint is your legacy. Use your social platform to protect your community and build your professional future.</p>
+            <p>If a recruiter for your dream job looked at your social media history from three years ago, would they still want to hire you? How can you start curating a professional presence today?</p>
+            <p><b>Key Takeaway:</b> Your digital footprint is your legacy. Use your platform to protect your community and build your professional future.</p>
         `
     }
 ];
-
-    // --- CONSOLIDATED SCRIPT FOR module.html (GAME-INDEPENDENT) ---
-
+// --- CONSOLIDATED SCRIPT FOR module.html (STRICT READ-TIMER PROGRESSION) ---
+// --- UPDATED SCRIPT FOR module.html ---
 let currentModuleId = null;
+let startTime = null;
+let progressInterval = null;
 
-/**
- * Loads progress from localStorage to ensure the grid displays current completion status.
+/** * Loads progress from the central map used by the Teacher Analytics page.
  */
 function loadSavedProgress() {
+    const currentUser = localStorage.getItem('cyberDashUser');
+    if (!currentUser || currentUser === "INSTRUCTOR") return;
+
+    // Matches the key used in leaderboards.html
+    const key = `${currentUser}_overall_progress_map`;
+    const progressMap = JSON.parse(localStorage.getItem(key)) || {};
+
     s3modules.forEach(m => {
-        const saved = localStorage.getItem(`module_progress_${m.id}`);
-        if (saved) {
-            m.progress = parseInt(saved);
+        if (progressMap[m.id]) {
+            m.progress = parseInt(progressMap[m.id]);
         }
     });
 }
 
-/**
- * Renders the module selection cards based on the s3modules array.
- */
-/**
- * Renders the module selection cards based on the s3modules array.
- * This function handles the display of module covers and progress bars.
+/** * Renders the module selection cards with updated progress bars.
  */
 function renderCards() {
     loadSavedProgress(); 
@@ -260,11 +310,9 @@ function renderCards() {
     container.innerHTML = s3modules.map(m => `
         <div class="module-card" onclick="openModule(${m.id})">
             <img src="${m.image}" alt="${m.title}" style="width: 100%; height: 150px; object-fit: cover; border-bottom: 2px solid #333;">
-            
             <div class="card-body">
                 <div class="module-name">${m.title}</div>
                 <div class="module-desc">${m.desc}</div>
-                
                 <div style="background: #333; height: 8px; border-radius: 4px; margin-top: 15px; overflow: hidden;">
                     <div style="background: #4CAF50; height: 100%; width: ${m.progress}%; transition: width 0.3s;"></div>
                 </div>
@@ -274,8 +322,7 @@ function renderCards() {
     `).join('');
 }
 
-/**
- * Opens the module viewer and displays content immediately without timers or game locks.
+/** * Opens the module and starts the automatic reading timer.
  */
 function openModule(id) {
     currentModuleId = id;
@@ -286,62 +333,65 @@ function openModule(id) {
     document.getElementById('contentTitle').innerText = module.title;
     document.getElementById('contentBody').innerHTML = module.content;
 
-    // Update the button state based on existing progress
-    const btn = document.getElementById('markReadBtn');
-    if (btn) {
-        btn.innerText = (module.progress === 100) ? "COMPLETED ✅" : "MARK AS READ";
+    // Reset UI Indicator
+    const indicator = document.getElementById('progressIndicator');
+    if (indicator) {
+        indicator.innerText = `READING PROGRESS: ${module.progress}%`;
     }
+
+    // Initialize Timer
+    startTime = Date.now();
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = setInterval(updateTimerProgress, 1000);
 
     window.scrollTo(0, 0);
 }
 
-/**
- * Manually marks a module as 100% complete and saves it to localStorage.
- * This replaces the previous game-driven completion logic.
+/** * Automatically calculates and saves progress every second.
  */
-function markAsComplete() {
-    if (currentModuleId !== null) {
-        localStorage.setItem(`module_progress_${currentModuleId}`, "100");
+function updateTimerProgress() {
+    if (!currentModuleId || !startTime) return;
+    const module = s3modules.find(m => m.id === currentModuleId);
+    if (module.progress >= 100) return;
+
+    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+    const newProgress = Math.min(100, Math.floor((elapsedSeconds / module.requiredTime) * 100));
+
+    if (newProgress > module.progress) {
+        module.progress = newProgress;
         
-        const btn = document.getElementById('markReadBtn');
-        if (btn) btn.innerText = "COMPLETED ✅";
+        // Update UI
+        const indicator = document.getElementById('progressIndicator');
+        if (indicator) indicator.innerText = `READING PROGRESS: ${newProgress}%`;
         
-        // Optional: Notify the dashboard index.html that a module was finished
-        window.parent.postMessage({ 
-            type: 'MODULE_COMPLETE', 
-            moduleId: currentModuleId 
-        }, "*");
+        // Save to LocalStorage
+        saveProgress(currentModuleId, newProgress);
     }
 }
+function saveProgress(moduleId, percentage) {
+    const currentUser = localStorage.getItem('cyberDashUser');
+    if (!currentUser || currentUser === "INSTRUCTOR") return;
 
-/**
- * Returns to the grid view and refreshes the cards to show updated progress.
- */
+    // Use the same central map key that leaderboards.html looks for
+    const key = `${currentUser}_overall_progress_map`;
+    let progressMap = JSON.parse(localStorage.getItem(key)) || {};
+    
+    // Only save if the new percentage is higher than the stored one
+    const currentStoredProgress = parseInt(progressMap[moduleId]) || 0;
+    if (percentage > currentStoredProgress) {
+        progressMap[moduleId] = percentage;
+        localStorage.setItem(key, JSON.stringify(progressMap));
+    }
+}
 function closeModule() {
+    if (progressInterval) clearInterval(progressInterval);
     document.getElementById('moduleViewer').style.display = 'none';
     document.getElementById('gridView').style.display = 'block';
     renderCards();
     window.scrollTo(0, 0);
 }
 
-/**
- * Wipes all progress from localStorage for testing or reset purposes.
- */
-function clearAllProgress() {
-    if (confirm("Reset all learning progress? This cannot be undone.")) {
-        s3modules.forEach(m => {
-            localStorage.removeItem(`module_progress_${m.id}`);
-            m.progress = 0;
-        });
-        renderCards();
-    }
-}
-
-// Initial call to draw the interface
 renderCards();
-// Example logic inside the module completion script
-localStorage.setItem('moduleProgress', JSON.stringify(progress));
-window.parent.postMessage('updateProgress', '*');
 </script>
 </body>
 </html>
