@@ -15,12 +15,7 @@
             position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.5);
             border: 4px solid #34495e; background: #f5f0e6;
         }
-        canvas { display: block; }
-        #hud {
-            position: absolute; top: 20px; left: 20px; font-size: 34px;
-            font-weight: bold; color: #000; pointer-events: none;
-            text-shadow: 1px 1px 0px white;
-        }
+        canvas { display: block; max-width: 100%; height: auto; }
         #instructions {
             position: absolute; bottom: 20px; left: 20px; color: #464646;
             font-size: 18px; pointer-events: none; background: rgba(255,255,255,0.7);
@@ -37,16 +32,12 @@
             color: #000; box-sizing: border-box; position: relative; text-align: center;
         }
         #popup-image {
-    display: none; 
-    width: 280px;      /* Fixed width */
-    height: 180px;     /* Fixed height */
-    object-fit: contain; /* Ensures the whole image fits without distortion */
-    margin: 0 auto 20px auto; 
-    border-radius: 10px;
-    border: 3px solid #dcc23c;
-    background: #fff;  /* Adds a clean white background behind transparent PNGs */
-}
-        #popup-text { font-size: 19px; line-height: 1.5; margin-bottom: 20px; text-align: left; }
+            display: none; width: 280px; height: 180px;
+            object-fit: contain; background: white;
+            margin: 0 auto 20px auto; border-radius: 10px;
+            border: 3px solid #dcc23c;
+        }
+        #popup-text { font-size: 19px; line-height: 1.5; margin-bottom: 20px; text-align: left; white-space: pre-line; }
         .option {
             background: rgba(255,255,255,0.6); margin: 10px 0; padding: 12px;
             border-radius: 8px; cursor: pointer; border: 2px solid #dcc23c;
@@ -61,13 +52,12 @@
 
     <div id="game-container">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
-        <div id="hud">Score: 0/30</div>
         <div id="instructions">Arrows = Move | Space = Interact</div>
         
         <div id="popup-overlay">
             <div id="popup-content">
-                <h2 id="popup-title">PAPER</h2>
-                <img id="popup-image" src="" alt="Laptop">
+                <h2 id="popup-title">ITEM INFO</h2>
+                <img id="popup-image" src="" alt="Item Image">
                 <div id="popup-text"></div>
                 <div id="options-container"></div>
                 <div id="feedback-area"></div>
@@ -79,21 +69,20 @@
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    const hud = document.getElementById('hud');
     const popupOverlay = document.getElementById('popup-overlay');
     const popupImg = document.getElementById('popup-image');
     
     const images = {};
     const imageFiles = {
-    background: 'room_background.jpg',
-    paper: 'paper_icon.png',
-    idle: 'avatar_idle.png',
-    walkLeft: 'avatar_walk_left.png',
-    walkRight: 'avatar_walk_right.png',
-    laptop: 'Laptop-computer.jpg',
-    printer: '204-2042717_printer-epson-color-png-download-hd-epson-printer.jpg',
-    charger: '9f99de48-1180-4687-8339-901f66eb5f77.d934e5257ee17db8263aac956eadd381.jpg' // New Charger Asset
-};
+        background: 'room_background.jpg',
+        paper: 'paper_icon.png',
+        idle: 'avatar_idle.png',
+        walkLeft: 'avatar_walk_left.png',
+        walkRight: 'avatar_walk_right.png',
+        laptop: 'Laptop-computer.jpg',
+        charger: '9f99de48-1180-4687-8339-901f66eb5f77.d934e5257ee17db8263aac956eadd381.jpg',
+        printer: '204-2042717_printer-epson-color-png-download-hd-epson-printer.jpg'
+    };
 
     let imagesLoaded = 0;
     const totalImages = Object.keys(imageFiles).length;
@@ -107,38 +96,28 @@
                 if (imagesLoaded === totalImages) gameLoop();
             };
             images[key].onerror = () => {
-                console.warn(`Could not load ${imageFiles[key]}`);
                 imagesLoaded++;
                 if (imagesLoaded === totalImages) gameLoop();
             };
         }
     }
 
-    let score = 0;
     let isPaused = false;
     let currentPaper = null;
-    const interactionDist = 80;
+    const interactionDist = 100;
 
     const avatar = { 
-        x: 400, 
-        y: 300, 
-        width: 70, 
-        height: 70, 
-        speed: 5, 
-        moving: false,
-        lastDir: 'right', 
-        angle: 0,
-        frame: 0,
-        lastFrameSwap: 0
+        x: 400, y: 300, width: 70, height: 70, 
+        speed: 5, moving: false, lastDir: 'right', angle: 0, frame: 0, lastFrameSwap: 0
     };
     const keys = {};
 
     const infoContents = [
-        "A portable computer with a screen and keyboard. It allows you to visit websites, write documents, and talk to people online.",
-        "A cord that connects your device to a power outlet in the wall. It feeds the battery so the device doesn't turn off.",
-        "A machine that takes digital information (like a photo or a letter) from a computer and puts it onto a piece of paper using ink.",
-        "Social: Respecting yourself and others as digital citizens. This involves digital etiquette, rights and responsibilities, and proper communication and collaboration.",
-        "Connection to Nine Elements: The S3 Framework reinforces the nine elements such as Digital Access, Commerce, Communication, Etiquette, Law, Rights & Responsibilities, Health & Wellness, and Security."
+        "LAPTOP: A portable computer used to access the internet. \n\nOVERVIEW: The S3 Framework stands for Safe, Savvy, and Social. It supports the nine elements of digital citizenship by providing guiding principles for safe, educated, and respectful use of technology.",
+        "CHARGER: A cable that provides power to your devices. \n\nSAFE: Protecting yourself and others from harm. Just as a charger keeps a device alive, digital security and privacy prevent viruses and protect personal information.",
+        "PRINTER: A machine that puts digital text and pictures onto paper. \n\nSAVVY: Creating educated digital citizens by understanding technology and making good decisions. This covers digital fluency and discerning reliable information online.",
+        "SOCIAL: Respecting yourself and others as digital citizens. This involves digital etiquette, rights and responsibilities, and proper communication and collaboration.",
+        "CONNECTION: The S3 Framework reinforces the nine elements such as Digital Access, Commerce, Communication, Etiquette, Law, Rights & Responsibilities, Health & Wellness, and Security."
     ];
 
     const questions = [
@@ -147,14 +126,14 @@
     ];
 
     const papers = [
-        {x: 130, y: 140, type: 'info', id: 0, read: false}, // Cover changed to laptop
-        {x: 240, y: 430, type: 'info', id: 1, read: false},
-        {x: 630, y: 130, type: 'info', id: 2, read: false},
-        {x: 690, y: 490, type: 'info', id: 3, read: false},
-        {x: 430, y: 330, type: 'info', id: 4, read: false},
-        {x: 150, y: 530, type: 'question', id: 0, answered: false},
-        {x: 340, y: 230, type: 'question', id: 1, answered: false},
-    ];
+    {x: 130, y: 140, type: 'info', id: 0, read: false}, // Laptop
+    {x: 430, y: 330, type: 'info', id: 1, read: false}, // Charger
+    {x: 580, y: 130, type: 'info', id: 2, read: false}, // Moved Printer away from X:650+
+    {x: 690, y: 490, type: 'info', id: 3, read: false},
+    {x: 240, y: 430, type: 'info', id: 4, read: false},
+    {x: 150, y: 530, type: 'question', id: 0, answered: false},
+    {x: 340, y: 230, type: 'question', id: 1, answered: false},
+];
 
     window.addEventListener('keydown', e => {
         keys[e.code] = true;
@@ -178,32 +157,24 @@
         isPaused = true;
         currentPaper = paper;
         popupOverlay.style.display = 'flex';
-        
         document.getElementById('options-container').innerHTML = '';
         document.getElementById('feedback-area').innerHTML = '';
 
-        // Inside function showPopup(paper)
-if (paper.type === 'info') {
-    document.getElementById('popup-title').innerText = "INFORMATION PAPER";
-    document.getElementById('popup-text').innerText = infoContents[paper.id];
-    paper.read = true;
+        if (paper.type === 'info') {
+            document.getElementById('popup-title').innerText = "INFORMATION";
+            document.getElementById('popup-text').innerText = infoContents[paper.id];
+            paper.read = true;
 
-    // Inside function showPopup(paper)
-if (paper.id === 0 && images.laptop.complete) {
-    popupImg.src = images.laptop.src;
-    popupImg.style.display = 'block';
-} else if (paper.id === 1 && images.charger.complete) { // Added for ID 1
-    popupImg.src = images.charger.src;
-    popupImg.style.display = 'block';
-} else if (paper.id === 2 && images.printer.complete) {
-    popupImg.src = images.printer.src;
-    popupImg.style.display = 'block';
-} else {
-    popupImg.style.display = 'none';
-}
-} else {
+            if (paper.id === 0 && images.laptop.naturalWidth > 0) {
+                popupImg.src = images.laptop.src; popupImg.style.display = 'block';
+            } else if (paper.id === 1 && images.charger.naturalWidth > 0) {
+                popupImg.src = images.charger.src; popupImg.style.display = 'block';
+            } else if (paper.id === 2 && images.printer.naturalWidth > 0) {
+                popupImg.src = images.printer.src; popupImg.style.display = 'block';
+            } else { popupImg.style.display = 'none'; }
+        } else {
             popupImg.style.display = 'none';
-            document.getElementById('popup-title').innerText = "QUESTION PAPER";
+            document.getElementById('popup-title').innerText = "QUESTION";
             document.getElementById('popup-text').innerText = questions[paper.id].q;
             questions[paper.id].opts.forEach((opt, idx) => {
                 const btn = document.createElement('div');
@@ -220,9 +191,7 @@ if (paper.id === 0 && images.laptop.complete) {
         const qData = questions[currentPaper.id];
         currentPaper.answered = true;
         if (index === qData.correct) {
-            score += 10;
-            hud.innerText = `Score: ${score}/30`;
-            document.getElementById('feedback-area').innerHTML = `<p class="feedback" style="color: green">Correct! +10 points</p>`;
+            document.getElementById('feedback-area').innerHTML = `<p class="feedback" style="color: green">Correct!</p>`;
         } else {
             document.getElementById('feedback-area').innerHTML = `<p class="feedback" style="color: #b40000">Incorrect. The answer was: ${qData.opts[qData.correct]}</p>`;
         }
@@ -232,91 +201,93 @@ if (paper.id === 0 && images.laptop.complete) {
         popupOverlay.style.display = 'none';
         isPaused = false;
         if (papers.every(p => p.type === 'info' ? p.read : p.answered)) {
-            setTimeout(() => alert("CONGRATULATIONS! You mastered the S3 Framework!"), 300);
+            setTimeout(() => alert("CONGRATULATIONS! You completed the module!"), 300);
         }
     }
 
     function update() {
-        if (isPaused) return;
-        avatar.moving = false;
+    if (isPaused) return;
 
-        if (keys['ArrowLeft'] && avatar.x > 0) { 
-            avatar.x -= avatar.speed; 
-            avatar.moving = true; 
-            avatar.angle = 270; 
-            avatar.lastDir = 'left';
-        } else if (keys['ArrowRight'] && avatar.x < canvas.width - avatar.width) { 
-            avatar.x += avatar.speed; 
-            avatar.moving = true; 
-            avatar.angle = 90; 
-            avatar.lastDir = 'right';
-        } else if (keys['ArrowUp'] && avatar.y > 0) { 
-            avatar.y -= avatar.speed; 
-            avatar.moving = true; 
-            avatar.angle = 0; 
-        } else if (keys['ArrowDown'] && avatar.y < canvas.height - avatar.height) { 
-            avatar.y += avatar.speed; 
-            avatar.moving = true; 
-            avatar.angle = 180; 
-        }
+    let nextX = avatar.x;
+    let nextY = avatar.y;
+    avatar.moving = false;
+
+    // Determine intended next position
+    if (keys['ArrowLeft'] && avatar.x > 0) { 
+        nextX -= avatar.speed; avatar.moving = true; avatar.angle = 270; avatar.lastDir = 'left'; 
+    }
+    else if (keys['ArrowRight'] && avatar.x < canvas.width - avatar.width) { 
+        nextX += avatar.speed; avatar.moving = true; avatar.angle = 90; avatar.lastDir = 'right'; 
+    }
+    else if (keys['ArrowUp'] && avatar.y > 0) { 
+        nextY -= avatar.speed; avatar.moving = true; avatar.angle = 0; 
+    }
+    else if (keys['ArrowDown'] && avatar.y < canvas.height - avatar.height) { 
+        nextY += avatar.speed; avatar.moving = true; avatar.angle = 180; 
     }
 
+    // --- COLLISION CHECK ---
+    // Define the "No-Walk" zone based on your coordinates:
+    // Min X: 649, Max X: 891 | Min Y: 178, Max Y: 393
+    const isColliding = (nextX + avatar.width > 649 && nextX < 891 && 
+                         nextY + avatar.height > 178 && nextY < 393);
+
+    if (!isColliding) {
+        avatar.x = nextX;
+        avatar.y = nextY;
+    } else {
+        avatar.moving = false; // Stop animation if hitting a wall
+    }
+}
+
     function draw() {
-        if (images.background.complete) ctx.drawImage(images.background, 0, 0, 800, 600);
+        // Draw Background
+        if (images.background.naturalWidth > 0) ctx.drawImage(images.background, 0, 0, 800, 600);
         else { ctx.fillStyle = "#f5f0e6"; ctx.fillRect(0, 0, 800, 600); }
 
         papers.forEach(p => {
             if (p.type === 'info' || !p.answered) {
                 const dist = Math.sqrt(Math.pow((avatar.x + 35) - p.x, 2) + Math.pow((avatar.y + 35) - p.y, 2));
                 if (dist < interactionDist) {
-                    ctx.beginPath(); ctx.arc(p.x, p.y, 55, 0, Math.PI*2);
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 65, 0, Math.PI*2);
                     ctx.fillStyle = "rgba(255, 255, 100, 0.4)"; ctx.fill();
                 }
 
-// INCREASE THESE VALUES:
-        const objW = 100; // Increased from 70
-        const objH = 70;  // Increased from 50
+                const objW = 100;
+                const objH = 70;
 
-if (p.type === 'info' && p.id === 0 && images.laptop.complete) {
-    ctx.drawImage(images.laptop, p.x - objW/2, p.y - objH/2, objW, objH);
-} else if (p.type === 'info' && p.id === 1 && images.charger.complete) {
-    // Standardized Charger Size
-    ctx.drawImage(images.charger, p.x - objW/2, p.y - objH/2, objW, objH); 
-} else if (p.type === 'info' && p.id === 2 && images.printer.complete) {
-    // Standardized Printer Size
-    ctx.drawImage(images.printer, p.x - objW/2, p.y - objH/2, objW, objH);
-} else if (images.paper.complete) {
-    // Keep standard paper icons for questions or other info
-    ctx.drawImage(images.paper, p.x - 25, p.y - 32, 50, 65);
-}
+                if (p.type === 'info' && p.id === 0 && images.laptop.naturalWidth > 0) {
+                    ctx.drawImage(images.laptop, p.x - objW/2, p.y - objH/2, objW, objH);
+                } else if (p.type === 'info' && p.id === 1 && images.charger.naturalWidth > 0) {
+                    ctx.drawImage(images.charger, p.x - objW/2, p.y - objH/2, objW, objH);
+                } else if (p.type === 'info' && p.id === 2 && images.printer.naturalWidth > 0) {
+                    ctx.drawImage(images.printer, p.x - objW/2, p.y - objH/2, objW, objH);
+                } else if (images.paper.naturalWidth > 0) {
+                    ctx.drawImage(images.paper, p.x - 25, p.y - 32, 50, 65);
+                } else {
+                    // Placeholder if paper image fails
+                    ctx.fillStyle = "#fff"; ctx.fillRect(p.x - 15, p.y - 20, 30, 40);
+                }
             }
         });
 
+        // Draw Avatar
         let img;
         if (avatar.moving) {
             const now = Date.now();
-            if (now - avatar.lastFrameSwap > 150) {
-                avatar.frame = avatar.frame === 0 ? 1 : 0;
-                avatar.lastFrameSwap = now;
-            }
-            if (avatar.frame === 0) {
-                img = images.idle;
-            } else {
-                img = (avatar.lastDir === 'left') ? images.walkLeft : images.walkRight;
-            }
-        } else {
-            img = images.idle;
-            avatar.frame = 0;
-        }
+            if (now - avatar.lastFrameSwap > 150) { avatar.frame = avatar.frame === 0 ? 1 : 0; avatar.lastFrameSwap = now; }
+            img = (avatar.frame === 0) ? images.idle : (avatar.lastDir === 'left' ? images.walkLeft : images.walkRight);
+        } else { img = images.idle; }
         
-        if (img && img.complete) {
+        if (img && img.naturalWidth > 0) {
             ctx.save();
-            ctx.translate(avatar.x + avatar.width / 2, avatar.y + avatar.height / 2);
+            ctx.translate(avatar.x + 35, avatar.y + 35);
             ctx.rotate(avatar.angle * Math.PI / 180);
-            ctx.drawImage(img, -avatar.width / 2, -avatar.height / 2, avatar.width, avatar.height);
+            ctx.drawImage(img, -35, -35, 70, 70);
             ctx.restore();
+        } else {
+            ctx.fillStyle = "red"; ctx.fillRect(avatar.x, avatar.y, 70, 70);
         }
-        
         requestAnimationFrame(gameLoop);
     }
 
