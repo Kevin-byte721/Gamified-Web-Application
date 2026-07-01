@@ -363,8 +363,10 @@
 
                 if (currentPaper) {
                     if (!currentPaper.answered) {
-                        if (e.code === 'ArrowDown') { selectedEmailOption = 1; updateEmailUI(); }
-                        if (e.code === 'ArrowUp') { selectedEmailOption = 0; updateEmailUI(); }
+                        // Support ArrowDown or KeyS for navigating downwards
+                        if (e.code === 'ArrowDown' || e.code === 'KeyS') { selectedEmailOption = 1; updateEmailUI(); }
+                        // Support ArrowUp or KeyW for navigating upwards
+                        if (e.code === 'ArrowUp' || e.code === 'KeyW') { selectedEmailOption = 0; updateEmailUI(); }
                     }
                     if (e.code === 'Space') {
                         e.preventDefault(); 
@@ -474,7 +476,7 @@
                 <div style="font-size: 1.3rem; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
                     🔒 Terminal Access Locked
                     <div style="font-size: 0.95rem; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
-                        You must consult the floating attention marker at the <b>AI Avatar</b> first to clear incoming threat directives before logging in.
+                        You must consult the floating attention marker at the <b>AI Monitor</b> first to clear incoming threat directives before logging in.
                     </div>
                 </div>
             `;
@@ -545,7 +547,7 @@
                 <div style="font-size: 1.5rem; font-weight: bold; width: 100%; text-align: center; line-height: 1.5;">
                     Email processing complete!
                     <div style="font-size: 1.05rem; margin-top: 15px; font-weight: normal; color: #666; line-height: 1.4;">
-                        Walk over to the AI Avatar to check your network metrics and collect your score breakdown.
+                        Walk over to the AI Monitor to check your network metrics and collect your score breakdown.
                     </div>
                 </div>
             `;
@@ -638,10 +640,11 @@
         if (isPaused || gameState !== 'game') return;
         let moveX = 0, moveY = 0;
             
-        if (keys['ArrowLeft']) moveX = -1;
-        if (keys['ArrowRight']) moveX = 1;
-        if (keys['ArrowUp']) moveY = -1;
-        if (keys['ArrowDown']) moveY = 1;
+        // Map W, A, S, D alongside the standard Arrow Inputs
+        if (keys['ArrowLeft'] || keys['KeyA']) moveX = -1;
+        if (keys['ArrowRight'] || keys['KeyD']) moveX = 1;
+        if (keys['ArrowUp'] || keys['KeyW']) moveY = -1;
+        if (keys['ArrowDown'] || keys['KeyS']) moveY = 1;
 
         if (moveX !== 0 || moveY !== 0) {
             if (moveX > 0 && moveY === 0) avatar.angle = 90;       
@@ -783,7 +786,7 @@
             ctx.fillStyle = "yellow"; 
             ctx.fillText("Status: SPACE TO TALK", 595, 86);
         } else {
-            ctx.fillText("Status: AI Avatar", 595, 86);
+            ctx.fillText("Status: AI MONITOR", 595, 86);
         }
 
         if (!isPaused) {
