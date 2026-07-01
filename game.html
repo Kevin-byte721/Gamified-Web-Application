@@ -39,17 +39,18 @@
     }
 
     #menu-overlay {
-        position: absolute;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background: radial-gradient(circle at center, #1a1c29 0%, #0d0e15 100%);
-        z-index: 8;
-        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    }
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 800px;
+    height: 600px;
+    background: transparent; /* Allows the semi-transparent canvas to shine completely through */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
 
     .menu-title-container {
         text-align: center;
@@ -270,7 +271,9 @@
         laptopEmail: 'Laptop-computer1.png',
         aiNPC: 'avatar_idle.png' 
     };
-
+    let skipTitleScreen = false;
+    let debugMode = false; // Starts off by default
+    let showGuideControls = false;
     let imagesLoaded = 0;
     const totalImages = Object.keys(imageFiles).length;
 
@@ -305,8 +308,8 @@
     };
 
     const aiAvatar = {
-        x: 550,             
-        y: 380,             
+        x: 100,             
+        y: 240,             
         width: 70,
         height: 70,
         angle: 180,         
@@ -316,11 +319,16 @@
     const keys = {};
 
     const collisionZones = [
-        { x: 0, y: 60, w: 800, h: 45 },    
+        { x: 0, y: 75, w: 800, h: 45 },    
         { x: 0, y: 520, w: 800, h: 80 },  
         { x: 0, y: 0, w: 60, h: 600 },    
-        { x: 740, y: 0, w: 60, h: 600 },  
-        { x: 280, y: 0, w: 250, h: 300 }   
+        { x: 700, y: 0, w: 60, h: 600 },  
+        { x: 280, y: 0, w: 250, h: 340 },
+        { x: 25, y: 450, w: 295, h: 50 },
+        { type: 'circle', x: 200, y: 410, radius: 40 },
+        { type: 'circle', x: 130, y: 160, radius: 40 },
+        { type: 'circle', x: 385, y: 499, radius: 35 },
+           
     ];
 
     let cyberknowledgeScore = 0;
@@ -329,7 +337,7 @@
     // CRITICAL STATE CONFIGURATIONS (Unified Setup)
     var laptopLocked = true; 
     const papers = [
-        {x: 245, y: 100, id: 0, answered: false, userWasCorrect: false, scoreAwarded: false}
+        {x: 238, y: 90, id: 0, answered: false, userWasCorrect: false, scoreAwarded: false}
     ];
 
     window.addEventListener('keydown', e => {
@@ -348,6 +356,34 @@
             }
             return;
         }
+        // Toggle Title Screen state with the 'T' key
+if (e.code === 'KeyT') {
+    if (gameState === 'title') {
+        gameState = 'game';
+        document.getElementById('menu-overlay').style.display = 'none';
+        document.getElementById('instructions').style.display = 'block';
+        if (typeof sounds !== 'undefined' && sounds.bgm) {
+            sounds.bgm.play().catch(err => console.log("Audio playback blocked."));
+        }
+    } else if (gameState === 'game') {
+        // Drop back to title screen
+        gameState = 'title';
+        document.getElementById('menu-overlay').style.display = 'flex';
+        document.getElementById('instructions').style.display = 'none';
+    }
+    console.log("Game State toggled via T key. Current state:", gameState);
+    return;
+}
+// Toggle Guide Controls UI block with the 'G' key
+if (e.code === 'KeyG') {
+    showGuideControls = !showGuideControls;
+    const instructionsElement = document.getElementById('instructions');
+    if (instructionsElement) {
+        instructionsElement.style.display = (showGuideControls && gameState === 'game') ? 'block' : 'none';
+    }
+    console.log("Guide Controls:", showGuideControls ? "VISIBLE" : "HIDDEN");
+    return;
+}
 
         if (gameState === 'game') {
             keys[e.code] = true;
@@ -430,7 +466,7 @@
         const badge = document.getElementById('ai-attention-badge');
         if (badge && badge.style.display !== 'none') {
             const canvasWidth = 800;
-            const canvasHeight = 600;
+            const canvasHeight = 550;
             
             const leftPercent = (((aiAvatar.x + 35) / canvasWidth) * 100);
             const topPercent = (((aiAvatar.y - 45) / canvasHeight) * 100); 
@@ -476,7 +512,7 @@
                 <div style="font-size: 1.3rem; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
                     🔒 Terminal Access Locked
                     <div style="font-size: 0.95rem; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
-                        You must consult the floating attention marker at the <b>AI Monitor</b> first to clear incoming threat directives before logging in.
+                        You must consult the floating attention marker at the <b>AI Avatar</b> first to clear incoming threat directives before logging in.
                     </div>
                 </div>
             `;
@@ -509,59 +545,74 @@
     }
 
     function showEmailPopup(paper) {
-        isPaused = true;
-        currentPaper = paper;
-        showingAIDialogue = false;
+    isPaused = true;
+    currentPaper = paper;
+    showingAIDialogue = false;
+    
+    const content = document.getElementById('popup-content');
+    content.classList.remove('dialogue-mode');
         
-        const content = document.getElementById('popup-content');
-        content.classList.remove('dialogue-mode');
-            
-        if (!paper.answered) {
-            content.style.width = "340px";
-            content.style.padding = "20px 25px";
-            content.style.left = "50%";
-            content.style.top = "50%";
-            content.style.transform = "translate(-50%, -50%)";
+    if (!paper.answered) {
+        content.style.width = "340px";
+        content.style.padding = "20px 25px";
+        content.style.left = "50%";
+        content.style.top = "50%";
+        content.style.transform = "translate(-50%, -50%)";
 
-            content.innerHTML = `
-                <div class="popup-layout-wrapper" style="font-size: 0.95rem; font-weight: normal;">
-                    <h3 style="margin: 0 0 8px 0; font-size: 1.1rem; color: #3a3a3a;">Workstation Terminal</h3>
-                    <div class="email-container">
-                        <div class="email-header">From: HR Dept | Subject: Action Required</div>
-                        <div class="email-body">We detected an unusual login. Please <b>click here</b> to verify your account right away.</div>
-                    </div>
-                    <div id="email-options">
-                        <div class="email-option selected" id="opt-0">➤ RESPOND TO EMAIL</div>
-                        <div class="email-option" id="opt-1">➤ IGNORE / TRASH</div>
-                    </div>
+        content.innerHTML = `
+            <div class="popup-layout-wrapper" style="font-size: 0.95rem; font-weight: normal;">
+                <h3 style="margin: 0 0 8px 0; font-size: 1.1rem; color: #3a3a3a;">Workstation Terminal</h3>
+                <div class="email-container">
+                    <div class="email-header">From: HR Dept | Subject: Action Required</div>
+                    <div class="email-body">We detected an unusual login. Please <b>click here</b> to verify your account right away.</div>
                 </div>
-            `;
-        } else {
-            content.style.width = "500px"; 
-            content.style.padding = "40px 45px"; 
-            content.style.left = "50%";
-            content.style.top = "50%";
-            content.style.transform = "translate(-50%, -50%)";
-
-            content.innerHTML = `
-                <div style="font-size: 1.5rem; font-weight: bold; width: 100%; text-align: center; line-height: 1.5;">
-                    Email processing complete!
-                    <div style="font-size: 1.05rem; margin-top: 15px; font-weight: normal; color: #666; line-height: 1.4;">
-                        Walk over to the AI Monitor to check your network metrics and collect your score breakdown.
-                    </div>
+                <div id="email-options">
+                    <div class="email-option selected" id="opt-0">➤ RESPOND TO EMAIL</div>
+                    <div class="email-option" id="opt-1">➤ IGNORE / TRASH</div>
                 </div>
-            `;
+            </div>
+        `;
+    } else {
+        content.style.width = "500px"; 
+        content.style.padding = "40px 45px"; 
+        content.style.left = "50%";
+        content.style.top = "50%";
+        content.style.transform = "translate(-50%, -50%)";
 
-            // SHOW THE AI ATTENTION BADGE AGAIN: Directs user back to AI Monitor base room position
-            const badge = document.getElementById('ai-attention-badge');
-            if (badge) {
-                badge.style.display = 'block';
-            }
+        content.innerHTML = `
+            <div style="font-size: 1.5rem; font-weight: bold; width: 100%; text-align: center; line-height: 1.5;">
+                Email processing complete!
+                <div style="font-size: 1.05rem; margin-top: 15px; font-weight: normal; color: #666; line-height: 1.4;">
+                    Walk over to the AI Avatar to check your network metrics and collect your score breakdown.
+                </div>
+            </div>
+        `;
+
+        // SHOW THE AI ATTENTION BADGE: Flags that a new prompt/alert is waiting at the AI Monitor
+        const badge = document.getElementById('ai-attention-badge');
+        if (badge) {
+            badge.style.display = 'block';
         }
-
-        document.getElementById('popup-overlay').style.display = 'block';
     }
 
+    document.getElementById('popup-overlay').style.display = 'block';
+}
+
+function closePopup() {
+    isPaused = false;
+    
+    // Hide the badge when closing the dialogue box ONLY if they were actively talking to the AI
+    if (showingAIDialogue) {
+        const badge = document.getElementById('ai-attention-badge');
+        if (badge) {
+            badge.style.display = 'none';
+        }
+    }
+
+    currentPaper = null;
+    showingAIDialogue = false;
+    popupOverlay.style.display = 'none';
+}
     function showAIDialoguePopup() {
         isPaused = true;
         showingAIDialogue = true;
@@ -570,11 +621,11 @@
         const content = document.getElementById('popup-content');
         const terminalState = papers[0]; 
         let textToShow = "";
-
+        
         content.classList.add('dialogue-mode');
         content.style.width = "340px";
         content.style.padding = "20px 25px";
-
+        
         const canvasWidth = 800;
         const canvasHeight = 600;
         
@@ -620,12 +671,6 @@
         document.getElementById('popup-overlay').style.display = 'block';
     }
 
-    function closePopup() {
-        isPaused = false;
-        currentPaper = null;
-        showingAIDialogue = false;
-        popupOverlay.style.display = 'none';
-    }
 
     function updateAI() {
         if (isPaused || gameState !== 'game') return;
@@ -683,117 +728,206 @@
     }
 
     function checkCollisionAt(tx, ty) {
-        return collisionZones.some(z => tx + 50 > z.x && tx < z.x + z.w && ty + 50 > z.y && ty < z.y + z.h);
-    }
+    // Treat the player's physical core boundary as a circle centered on their 70x70 sprite
+    const playerCenterX = tx + 35;
+    const playerCenterY = ty + 35;
+    const playerRadius = 25; // Change this value to make the player's slide footprint tight or loose
+
+    return collisionZones.some(z => {
+        if (z.type === 'circle') {
+            // Circle-to-Circle distance comparison
+            const dx = playerCenterX - z.x;
+            const dy = playerCenterY - z.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            return distance < (playerRadius + z.radius);
+        } else {
+            // Standard bounding rectangle check
+            return tx + 50 > z.x && tx < z.x + z.w && ty + 50 > z.y && ty < z.y + z.h;
+        }
+    });
+}
 
     function drawTitleScreen() {
-        ctx.fillStyle = '#0d0e15';
-        ctx.fillRect(0, 0, 800, 600);
-    }
-
-    function draw() {
-        if (gameState === 'title') {
-            drawTitleScreen();
-            requestAnimationFrame(draw);
-            return;
-        }
-
+        // Clear anything from previous frames
         ctx.clearRect(0, 0, 800, 600);
-            
+        
+        // 1. Draw the game map room layer beneath at 50% opacity
+        ctx.save();
+        ctx.globalAlpha = 0.50; // Sets rendering opacity to 50%
         if (images.background && images.background.naturalWidth > 0) {
             ctx.drawImage(images.background, 0, 0, 800, 600);
         }
-
+        
+        // Draw the laptop terminal sprite so players can spot it behind the dim overlay
         papers.forEach(p => {
             if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
                 ctx.drawImage(images.laptopEmail, p.x - 50, p.y - 35, 100, 70);
             }
-                    
-            const dx = (avatar.x + 35) - p.x;
-            const dy = (avatar.y + 35) - p.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < interactionDist) {
-                ctx.strokeStyle = "yellow"; 
-                ctx.lineWidth = 3;
-                ctx.strokeRect(p.x - 55, p.y - 40, 110, 80);
-            }
         });
 
-        let now = Date.now();
-        if (avatar.moving) {
-            if (now - avatar.lastFrameSwap > 150) {
-                avatar.frame = (avatar.frame === 0) ? 1 : 0;
-                avatar.lastFrameSwap = now;
-            }
-        } else {
-            avatar.frame = 0;
-        }
+        // REMOVED: The AI NPC drawing block has been taken out from here 
+        // so it won't appear until the game officially starts.
 
-        let img;
-        if (!avatar.moving || avatar.frame === 0) {
-            img = images.idle;
-        } else {
-            img = (avatar.lastDir === 'left') ? images.walkLeft : images.walkRight;
-        }
-            
-        if (img && img.naturalWidth > 0) {
-            ctx.save();                 
-            ctx.translate(avatar.x + 35, avatar.y + 35);                 
-            ctx.rotate(avatar.angle * Math.PI / 180); 
-            ctx.drawImage(img, -35, -35, 70, 70); 
-            ctx.restore(); 
-        }
+        ctx.restore(); // Restores opacity back to 100% for anything drawn next
 
-        if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
-            ctx.save();
-            ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
-            
-            let correctedAngle = aiAvatar.angle + 180; 
-            
-            ctx.rotate(correctedAngle * Math.PI / 180);
-            ctx.drawImage(images.aiNPC, -35, -35, 70, 70);
-            ctx.restore();
-        }
-
-        // --- UI OVERLAY LAYER ---
-        ctx.fillStyle = "rgba(0,0,0,0.7)"; 
-        ctx.fillRect(580, 10, 210, 40);
-        ctx.strokeStyle = "#dcc23c";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(580, 10, 210, 40);
-
-        ctx.fillStyle = "white"; 
-        ctx.font = "bold 14px Arial";
-        ctx.textAlign = "left"; 
-        ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
-
-        const aiDx = (avatar.x + 35) - (aiAvatar.x + 35);
-        const aiDy = (avatar.y + 35) - (aiAvatar.y + 35);
-        const distanceToAI = Math.sqrt(aiDx * aiDx + aiDy * aiDy);
-
-        ctx.fillStyle = "rgba(0,0,0,0.7)"; 
-        ctx.fillRect(580, 60, 210, 40); 
-        ctx.strokeStyle = "#dcc23c";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(580, 60, 210, 40);
-
-        ctx.fillStyle = "white"; 
-        ctx.font = "bold 14px Arial";
-        ctx.textAlign = "left"; 
-
-        if (distanceToAI < 100) {
-            ctx.fillStyle = "yellow"; 
-            ctx.fillText("Status: SPACE TO TALK", 595, 86);
-        } else {
-            ctx.fillText("Status: AI MONITOR", 595, 86);
-        }
-
-        if (!isPaused) {
-            update(); 
-        }
-        requestAnimationFrame(draw);
+        // 2. Apply a sleek dark tint overlay to make the menu HTML text stand out sharply
+        ctx.fillStyle = 'rgba(13, 14, 21, 0.4)'; 
+        ctx.fillRect(0, 0, 800, 600);
     }
+
+    function draw() {
+    // Force bypass if skipTitleScreen configuration is enabled
+    if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
+        gameState = 'game';
+        document.getElementById('menu-overlay').style.display = 'none';
+        
+        // Respect the guide controls flag when transitioning states
+        const inst = document.getElementById('instructions');
+        if (inst) {
+            inst.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
+        }
+    }
+
+    // If the player is on the title screen, render the dimmed preview frame
+    if (gameState === 'title') {
+        drawTitleScreen();
+        requestAnimationFrame(draw);
+        return;
+    }
+
+    // --- ACTIVE GAMEPLAY RENDERING (100% Opacity) ---
+    ctx.clearRect(0, 0, 800, 600);
+        
+    if (images.background && images.background.naturalWidth > 0) {
+        ctx.drawImage(images.background, 0, 0, 800, 600);
+    }
+
+    papers.forEach(p => {
+        if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
+            ctx.drawImage(images.laptopEmail, p.x - 50, p.y - 35, 100, 70);
+        }
+                
+        const dx = (avatar.x + 35) - p.x;
+        const dy = (avatar.y + 35) - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < interactionDist) {
+            ctx.strokeStyle = "yellow"; 
+            ctx.lineWidth = 3;
+            ctx.strokeRect(p.x - 55, p.y - 40, 110, 80);
+        }
+    });
+
+    let now = Date.now();
+    if (avatar.moving) {
+        if (now - avatar.lastFrameSwap > 150) {
+            avatar.frame = (avatar.frame === 0) ? 1 : 0;
+            avatar.lastFrameSwap = now;
+        }
+    } else {
+        avatar.frame = 0;
+    }
+
+    let img;
+    if (!avatar.moving || avatar.frame === 0) {
+        img = images.idle;
+    } else {
+        img = (avatar.lastDir === 'left') ? images.walkLeft : images.walkRight;
+    }
+        
+    if (img && img.naturalWidth > 0) {
+        ctx.save();                 
+        ctx.translate(avatar.x + 35, avatar.y + 35);                 
+        ctx.rotate(avatar.angle * Math.PI / 180); 
+        ctx.drawImage(img, -35, -35, 70, 70); 
+        ctx.restore(); 
+    }
+
+    if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
+        ctx.save();
+        ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
+        let correctedAngle = aiAvatar.angle + 180; 
+        ctx.rotate(correctedAngle * Math.PI / 180);
+        ctx.drawImage(images.aiNPC, -35, -35, 70, 70);
+        ctx.restore();
+    }
+
+    // --- DEBUG: DRAW COLLISION ZONES IN RED (Supports Rectangles, Rotation, and Circles) ---
+    if (typeof debugMode !== 'undefined' && debugMode) {
+        ctx.lineWidth = 2;
+        collisionZones.forEach(z => {
+            ctx.save();
+            
+            if (z.type === 'circle') {
+                ctx.beginPath();
+                ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = "red";
+                ctx.stroke();
+                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
+                ctx.fill();
+            } else {
+                ctx.translate(z.x, z.y);
+                if (z.deg) {
+                    ctx.rotate(z.deg * Math.PI / 180);
+                }
+                ctx.strokeStyle = "red";
+                ctx.strokeRect(0, 0, z.w, z.h);
+                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
+                ctx.fillRect(0, 0, z.w, z.h);
+            }
+            
+            ctx.restore();
+        });
+    }
+
+    // --- UI OVERLAY LAYER ---
+    ctx.fillStyle = "rgba(0,0,0,0.7)"; 
+    ctx.fillRect(580, 10, 210, 40);
+    ctx.strokeStyle = "#dcc23c";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(580, 10, 210, 40);
+
+    ctx.fillStyle = "white"; 
+    ctx.font = "bold 14px Arial";
+    ctx.textAlign = "left"; 
+    ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
+
+    const aiDx = (avatar.x + 35) - (aiAvatar.x + 35);
+    const aiDy = (avatar.y + 35) - (aiAvatar.y + 35);
+    const distanceToAI = Math.sqrt(aiDx * aiDx + aiDy * aiDy);
+
+    ctx.fillStyle = "rgba(0,0,0,0.7)"; 
+    ctx.fillRect(580, 60, 210, 40); 
+    ctx.strokeStyle = "#dcc23c";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(580, 60, 210, 40);
+
+    ctx.fillStyle = "white"; 
+    ctx.font = "bold 14px Arial";
+    ctx.textAlign = "left"; 
+
+    if (distanceToAI < 100) {
+        ctx.fillStyle = "yellow"; 
+        ctx.fillText("Status: SPACE TO TALK", 595, 86);
+    } else {
+        ctx.fillText("Status: AI Avatar", 595, 86);
+    }
+
+    // Double check instruction visibility states dynamically during gameplay loop changes
+    const inst = document.getElementById('instructions');
+    if (inst) {
+        const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
+        if (inst.style.display !== structuralVisibility) {
+            inst.style.display = structuralVisibility;
+        }
+    }
+
+    if (!isPaused) {
+        update(); 
+    }
+    requestAnimationFrame(draw);
+}
 
     loadImages();
 </script>
