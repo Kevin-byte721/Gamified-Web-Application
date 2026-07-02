@@ -271,7 +271,7 @@
         laptopEmail: 'Laptop-computer1.png',
         aiNPC: 'avatar_idle.png' 
     };
-    let skipTitleScreen = false;
+    let skipTitleScreen = true;
     let debugMode = false; // Starts off by default
     let showGuideControls = false;
     let imagesLoaded = 0;
@@ -303,7 +303,7 @@
     
     const avatar = { 
         x: 300, y: 380, width: 70, height: 70, 
-        speed: 5, moving: false, lastDir: 'right', angle: 0, 
+        speed: 4, moving: false, lastDir: 'right', angle: 0, 
         frame: 0, lastFrameSwap: 0    
     };
 
@@ -337,7 +337,7 @@
     // CRITICAL STATE CONFIGURATIONS (Unified Setup)
     var laptopLocked = true; 
     const papers = [
-        {x: 238, y: 90, id: 0, answered: false, userWasCorrect: false, scoreAwarded: false}
+        {x: 210, y: 480, id: 0, angle: 180, answered: false, userWasCorrect: false, scoreAwarded: false}
     ];
 
     window.addEventListener('keydown', e => {
@@ -776,7 +776,7 @@ function closePopup() {
         ctx.fillRect(0, 0, 800, 600);
     }
 
-    function draw() {
+ function draw() {
     // Force bypass if skipTitleScreen configuration is enabled
     if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
         gameState = 'game';
@@ -803,9 +803,21 @@ function closePopup() {
         ctx.drawImage(images.background, 0, 0, 800, 600);
     }
 
+    // --- UPDATED: LAPTOP RENDERING WITH ROTATION SUPPORT ---
     papers.forEach(p => {
         if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
-            ctx.drawImage(images.laptopEmail, p.x - 50, p.y - 35, 100, 70);
+            ctx.save();
+            // Move coordinate origin to the laptop's center point
+            ctx.translate(p.x, p.y);
+            
+            // Apply rotation if an angle property exists in your papers array
+            if (p.angle) {
+                ctx.rotate(p.angle * Math.PI / 180);
+            }
+            
+            // Draw relative to the newly translated and rotated origin
+            ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
+            ctx.restore();
         }
                 
         const dx = (avatar.x + 35) - p.x;
@@ -813,27 +825,42 @@ function closePopup() {
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist < interactionDist) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            if (p.angle) {
+                ctx.rotate(p.angle * Math.PI / 180);
+            }
             ctx.strokeStyle = "yellow"; 
             ctx.lineWidth = 3;
-            ctx.strokeRect(p.x - 55, p.y - 40, 110, 80);
+            // Draw the yellow selection box tilted at the exact same angle
+            ctx.strokeRect(-55, -40, 110, 80);
+            ctx.restore();
         }
     });
 
+    // --- DYNAMIC SPEED SHIFT ANIMATION LOGIC ---
     let now = Date.now();
+    let img;
+
     if (avatar.moving) {
-        if (now - avatar.lastFrameSwap > 150) {
-            avatar.frame = (avatar.frame === 0) ? 1 : 0;
+        let currentSpeed = avatar.speed || 4; 
+        let dynamicInterval = Math.max(60, 600 / currentSpeed); 
+
+        if (now - avatar.lastFrameSwap > dynamicInterval) {
+            if (typeof avatar.animStep === 'undefined') avatar.animStep = 0;
+            avatar.animStep = (avatar.animStep + 1) % 4;
             avatar.lastFrameSwap = now;
         }
-    } else {
-        avatar.frame = 0;
-    }
 
-    let img;
-    if (!avatar.moving || avatar.frame === 0) {
-        img = images.idle;
+        if (avatar.animStep === 0) {
+            img = images.walkLeft;
+        } else if (avatar.animStep === 2) {
+            img = images.walkRight;
+        } else {
+            img = images.idle; 
+        }
     } else {
-        img = (avatar.lastDir === 'left') ? images.walkLeft : images.walkRight;
+        img = images.idle;
     }
         
     if (img && img.naturalWidth > 0) {
@@ -914,7 +941,6 @@ function closePopup() {
         ctx.fillText("Status: AI Avatar", 595, 86);
     }
 
-    // Double check instruction visibility states dynamically during gameplay loop changes
     const inst = document.getElementById('instructions');
     if (inst) {
         const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
@@ -928,7 +954,6 @@ function closePopup() {
     }
     requestAnimationFrame(draw);
 }
-
     loadImages();
 </script>
 </body>
