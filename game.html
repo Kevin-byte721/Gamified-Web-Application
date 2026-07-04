@@ -16,10 +16,14 @@
         position: relative; 
         box-shadow: 0 0 50px rgba(0,0,0,0.5);
         border: 4px solid #34495e; 
-        background: #f5f0e6;
+        background: #0d0e15;
         width: 55vw;        
         max-width: 1000px;  
         aspect-ratio: 8 / 6; 
+        overflow: hidden;
+        /* Establishes a scaling container query scope for all internal elements */
+        container-type: size; 
+        box-sizing: border-box;
     }
 
     canvas { 
@@ -27,211 +31,202 @@
         width: 100%;        
         height: 100%; 
         image-rendering: auto; 
-        background: #0d0e15;   
     }
 
     #instructions {
-        position: absolute; bottom: 20px; left: 20px; color: #464646;
-        font-size: 1.2rem; pointer-events: none; background: rgba(255,255,255,0.7);
-        padding: 5px 15px; border-radius: 5px;
+        position: absolute; bottom: 3cqh; left: 3cqw; color: #464646;
+        font-size: 2.2cqw; pointer-events: none; background: rgba(255,255,255,0.7);
+        padding: 0.8cqh 2cqw; border-radius: 5px;
         z-index: 5;
         display: none; 
     }
 
     #menu-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 800px;
-    height: 600px;
-    background: transparent; /* Allows the semi-transparent canvas to shine completely through */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 10;
-}
-
-    .menu-title-container {
-        text-align: center;
-        margin-bottom: 40px;
-        animation: fadeInDown 1s ease-out;
-    }
-
-    .menu-subtitle {
-        font-size: 1.1rem;
-        text-transform: uppercase;
-        letter-spacing: 6px;
-        color: #00f2fe;
-        font-weight: 600;
-        margin-bottom: 8px;
-        text-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
-    }
-
-    .menu-main-title {
-        font-size: 3.5rem;
-        font-weight: 800;
-        margin: 0;
-        background: linear-gradient(45deg, #ffffff 30%, #a5b4fc 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        letter-spacing: 2px;
-    }
-
-    .menu-prompt {
-        font-size: 1.1rem;
-        color: #ffffff;
-        background: rgba(255, 255, 255, 0.05);
-        padding: 12px 30px;
-        border-radius: 50px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        letter-spacing: 1px;
-        animation: pulseGlow 2s infinite ease-in-out;
-    }
-
-    .menu-footer {
         position: absolute;
-        bottom: 25px;
-        font-size: 0.8rem;
-        color: rgba(255, 255, 255, 0.3);
-        letter-spacing: 0.5px;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: transparent; 
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        z-index: 10;
+        color: white;
+        box-sizing: border-box;
+        padding: 4cqw;
     }
 
+    /* --- RESPONSIVE INTERFACE AUTH PORTAL --- */
+    .portal-title {
+        color: #dcc23c; 
+        font-size: 4.8cqw; 
+        letter-spacing: 0.4cqw; 
+        margin-bottom: 1cqh; 
+        text-shadow: 0 0 10px rgba(220, 194, 60, 0.5);
+    }
+
+    .portal-subtitle {
+        color: #cbd5e1; 
+        font-size: 2cqw; 
+        margin-bottom: 4cqh; 
+        font-weight: bold;
+    }
+
+    #login-container {
+        background: rgba(10, 15, 30, 0.93); 
+        border: 2px solid #3a4759;
+        padding: 4cqh 4cqw;
+        border-radius: 8px;
+        width: 45cqw;
+        max-width: 360px;
+        text-align: center;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+        box-sizing: border-box;
+    }
+
+    .login-heading {
+        margin-top: 0; color: #fff; 
+        margin-bottom: 3cqh; letter-spacing: 1px;
+        font-size: 2.5cqw;
+    }
+
+    .input-group {
+        text-align: left; margin-bottom: 2.5cqh;
+    }
+
+    .input-label {
+        font-size: 1.8cqw; color: #a0aec0; 
+        display: block; margin-bottom: 1cqh; font-weight: bold;
+    }
+
+    #student-number-input {
+        width: 100%; padding: 1.8cqh 2cqw; 
+        background: #0f172a; border: 1px solid #4a5568; color: #fff; 
+        border-radius: 4px; box-sizing: border-box; 
+        font-size: 2.2cqw; outline: none;
+    }
+
+    #login-error-msg {
+        color: #ff4a4a; font-size: 1.8cqw; margin-bottom: 2cqh; 
+        display: none; text-align: left;
+    }
+
+    #login-submit-btn {
+        width: 100%; padding: 2cqh 2cqw; 
+        background: #dcc23c; border: none; color: #111; font-weight: bold; 
+        font-size: 2.2cqw; border-radius: 4px; cursor: pointer; 
+        transition: background 0.2s;
+    }
+
+    #login-submit-btn:hover { background: #c4ad35; }
+
+    #start-prompt {
+        background: rgba(10, 15, 30, 0.9); 
+        padding: 2.5cqh 5cqw; border-radius: 8px; border: 2px solid #22c55e;
+        text-align: center; margin-top: 3cqh; display: none; box-sizing: border-box;
+    }
+
+    .access-granted-title { color: #22c55e; margin: 0 0 1cqh 0; font-size: 2.6cqw; }
+    .access-prompt-text { font-size: 2.2cqw; margin: 0; color: #cbd5e1; }
+    .highlight-key { color: #dcc23c; font-weight: bold; }
+
+    /* --- DYNAMIC INTERACTION POPUPS (No Cutoff) --- */
     #popup-overlay {
-        display: none; 
-        position: absolute; 
-        top: 0; 
-        left: 0;
-        width: 100%; 
-        height: 100%; 
-        background: rgba(0, 0, 0, 0.65); 
-        z-index: 10;
+        display: none; position: absolute; 
+        top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0, 0, 0, 0.65); z-index: 10;
         box-sizing: border-box;
     }
     
+    /* --- DYNAMIC INTERACTION POPUPS (No Cutoff) --- */
     #popup-content {
         background: #f7f7f7; 
-        border-radius: 30px; 
-        width: 340px; 
-        min-height: 80px;
-        padding: 20px 25px;    
         color: #3a3a3a; 
         box-sizing: border-box; 
         position: absolute;
-        text-align: left;
-        display: flex;
-        flex-direction: column;
+        text-align: left; 
+        display: flex; 
+        flex-direction: column; 
         justify-content: center;
-        font-weight: bold;
-        font-size: 1.15rem; 
-        line-height: 1.4;
+        font-weight: bold; 
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        transition: transform 0.1s ease-out;
+        transition: transform 0.1s ease-out, left 0.2s, top 0.2s;
+        line-height: 1.4;
     }
 
-    #popup-content.dialogue-mode::after {
-        content: '';
-        position: absolute;
-        top: 100%; 
-        left: 50%;
-        transform: translateX(-50%);
-        border-width: 14px 14px 0;
-        border-style: solid;
-        border-color: #f7f7f7 transparent;
-        display: block;
-        width: 0;
+    /* Class for centered workstation laptop modals remains untouched */
+    .center-modal-mode {
+        width: 48cqw !important;
+        padding: 4cqh 4cqw !important;
+        left: 50% !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        border-radius: 20px;
+    }
+
+    /* CRITICAL FIX: Transforms the speech bubble into a clean, fixed bottom dialogue box */
+    .dialogue-bubble-mode {
+        width: 94cqw !important;             /* Spans across the view safely with side padding */
+        height: 22cqh !important;            /* Fixed vertical thickness for readable text lines */
+        padding: 2.5cqh 4cqw !important;
+        border-radius: 12px;                 /* Sleek geometric layout matching reference games */
+        border: 3px solid #3a4759;
+        background: rgba(247, 247, 247, 0.98); 
+        
+        /* Fixed structural anchoring to the bottom center of the container */
+        left: 50% !important;
+        top: auto !important;                /* Breaks inline tracking overrides */
+        bottom: 3cqh !important;             /* Sits cleanly just above the container floor */
+        transform: translateX(-50%) !important; 
+    }
+
+    /* CRITICAL FIX: Suppresses and eliminates the old floating triangle pointer completely */
+    .dialogue-bubble-mode::after {
+        display: none !important;
+        content: none !important;
     }
 
     #ai-attention-badge {
-    position: absolute;
-    background: #ffcc00;
-    color: #222;
-    font-family: 'Arial', sans-serif;
-    font-weight: bold;
-    font-size: 1.1rem;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    border: 2px solid #fff;
-    text-align: center;
-    line-height: 24px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    z-index: 5;
-    pointer-events: none;
-    display: none; /* Changed from block to none to hide it initially */
-    animation: floatUpDown 1.2s ease-in-out infinite alternate;
-}
-
-    .highlight-red {
-        color: #e74c3c;
-    }
-    .highlight-blue {
-        color: #3498db;
-    }
-    .highlight-green {
-        color: #2ecc71;
+        position: absolute; 
+        background: #ffcc00; 
+        color: #222;
+        font-weight: bold; 
+        font-size: 2cqw;
+        width: 3.5cqw; 
+        height: 3.5cqw;
+        border-radius: 50%; 
+        border: 2px solid #fff;
+        text-align: center; 
+        line-height: 3.2cqw;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3); 
+        z-index: 5;
+        pointer-events: none; 
+        display: none;
+        animation: floatUpDown 1.2s ease-in-out infinite alternate;
     }
 
+    .highlight-red { color: #e74c3c; font-weight: bold; }
+    .highlight-blue { color: #3498db; font-weight: bold; }
+    .highlight-green { color: #2ecc71; font-weight: bold; }
+
+    /* --- EMAIL SCENARIO ELEMENTS --- */
     .email-container {
-        background: #fff;
-        border: 1px solid #ccc;
-        text-align: left;
-        border-radius: 4px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        margin-bottom: 10px;
-        width: 100%;
-        font-size: 0.95rem; 
+        background: #fff; border: 1px solid #ccc; text-align: left;
+        border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 1.5cqh; width: 100%; font-size: 1.8cqw; box-sizing: border-box;
     }
 
-    .email-header {
-        background: #f2f2f2;
-        padding: 6px 12px; 
-        border-bottom: 1px solid #ddd;
-        font-weight: bold;
-    }
-
-    .email-body {
-        padding: 10px 12px; 
-        color: #333;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
+    .email-header { background: #f2f2f2; padding: 1cqh 2cqw; border-bottom: 1px solid #ddd; font-weight: bold; }
+    .email-body { padding: 1.5cqh 2cqw; color: #333; font-family: sans-serif; }
 
     .email-option {
-        padding: 8px 12px; 
-        margin: 4px 0; 
-        border: 2px solid #eee;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 0.95rem;
-        background: #fff;
-        color: #333;
+        padding: 1.5cqh 2cqw; margin: 0.8cqh 0; border: 2px solid #eee;
+        border-radius: 5px; cursor: pointer; font-size: 1.8cqw;
+        background: #fff; color: #333; box-sizing: border-box;
     }
 
-    .email-option.selected {
-        border-color: #4285f4; 
-        background: #e8f0fe;
-    }
-
-    .popup-layout-wrapper {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-    }
+    .email-option.selected { border-color: #4285f4; background: #e8f0fe; }
+    .popup-layout-wrapper { display: flex; flex-direction: column; width: 100%; }
 
     @keyframes floatUpDown {
         0% { transform: translate(-50%, 0); }
-        100% { transform: translate(-50%, -8px); }
-    }
-
-    @keyframes pulseGlow {
-        0%, 100% { transform: scale(1); opacity: 0.9; box-shadow: 0 0 0 rgba(0, 242, 254, 0); }
-        50% { transform: scale(1.03); opacity: 1; border-color: rgba(0, 242, 254, 0.4); box-shadow: 0 0 20px rgba(0, 242, 254, 0.15); }
-    }
-
-    @keyframes fadeInDown {
-        from { opacity: 0; transform: translateY(-20px); }
-        to { opacity: 1; transform: translateY(0); }
+        100% { transform: translate(-50%, -1cqh); }
     }
 </style>
 </head>
@@ -243,13 +238,31 @@
         <div id="instructions">Arrows = Move | Space = Interact | ESC = Main Menu</div>
         
         <div id="menu-overlay">
-            <div class="menu-title-container">
-                <div class="menu-subtitle">S3 Framework</div>
-                <h1 class="menu-main-title">CYBER ROOM</h1>
-            </div>
-            <div class="menu-prompt">Press SPACE to Begin</div>
-            <div class="menu-footer">© 2026 Digital Citizenship Project</div>
+    <h1 class="portal-title">CYBER DEFENSE SYSTEM</h1>
+    <p class="portal-subtitle">Authorized Access Portals Only</p>
+
+    <div id="login-container">
+        <h3 class="login-heading">Student Authentication</h3>
+        
+        <div class="input-group">
+            <label class="input-label">STUDENT ID / NUMBER</label>
+            <input type="text" id="student-number-input" placeholder="e.g., 2026-10492">
         </div>
+
+        <div id="login-error-msg">
+            ⚠ Please enter a valid Student Number.
+        </div>
+
+        <button id="login-submit-btn">
+            INITIALIZE SESSION
+        </button>
+    </div>
+
+    <div id="start-prompt">
+        <h2 class="access-granted-title">ACCESS GRANTED</h2>
+        <p class="access-prompt-text">Press <span class="highlight-key">SPACE</span> to Initialize Gameplay</p>
+    </div>
+</div>
 
         <div id="popup-overlay">
             <div id="popup-content">
@@ -264,20 +277,31 @@
         
     const images = {};
     const imageFiles = {
-        background: 'room_background.jpg',
-        idle: 'avatar_idle.png',
-        walkLeft: 'avatar_walk_left.png',
-        walkRight: 'avatar_walk_right.png',
-        laptopEmail: 'Laptop-computer1.png',
-        aiNPC: 'avatar_idle.png' 
-    };
-    let skipTitleScreen = true;
-    let debugMode = false; // Starts off by default
+    background: 'room_background.jpg',
+    idle: 'avatar_idle.png',
+    walkLeft: 'avatar_walk_left.png',
+    walkRight: 'avatar_walk_right.png',
+    laptopEmail: 'Laptop-computer1.png',
+    aiNPC: 'ai_helper_avatar.png' // <--- Use a distinct file name here!
+};
+    let currentRoomCode = ""; 
+var remotePlayers = {};
+    let skipTitleScreen = false;
+    let debugMode = true; // Starts off by default
     let showGuideControls = false;
     let imagesLoaded = 0;
     const totalImages = Object.keys(imageFiles).length;
+let gameState = 'title';
+    let isPaused = false;
+    let currentPaper = null;
+    let showingAIDialogue = false; 
+    const interactionDist = 80;
 
-    function loadImages() {
+// --- CUTSCENE / AUTOMATION FLAGS ---
+let isCutsceneActive = false;       // Managed dynamically on entry/bypass
+let cutsceneStartTime = 0;          // Marks when the entrance movement began
+const CUTSCENE_DURATION = 500;     // Run sequence continuously for exactly 1 second (1000ms)    function loadImages() {
+        function loadImages() {
         for (let key in imageFiles) {
             images[key] = new Image();
             images[key].src = imageFiles[key];
@@ -295,17 +319,20 @@
         }
     }
 
-    let gameState = 'title';
-    let isPaused = false;
-    let currentPaper = null;
-    let showingAIDialogue = false; 
-    const interactionDist = 80;
+    
     
     const avatar = { 
-        x: 300, y: 380, width: 70, height: 70, 
-        speed: 4, moving: false, lastDir: 'right', angle: 0, 
-        frame: 0, lastFrameSwap: 0    
-    };
+    x: 300, 
+    y: 380, 
+    width: 70, 
+    height: 70, 
+    speed: 4, 
+    moving: false, 
+    lastDir: 'right', 
+    angle: 0, 
+    frame: 0, 
+    lastFrameSwap: 0    
+};
 
     const aiAvatar = {
         x: 100,             
@@ -334,120 +361,234 @@
     let cyberknowledgeScore = 0;
     let selectedEmailOption = 0; 
 
-    // CRITICAL STATE CONFIGURATIONS (Unified Setup)
-    var laptopLocked = true; 
-    const papers = [
-        {x: 210, y: 480, id: 0, angle: 180, answered: false, userWasCorrect: false, scoreAwarded: false}
-    ];
+        // CRITICAL STATE CONFIGURATIONS (Unified Setup)
+        var laptopLocked = true; 
+        const papers = [
+            {x: 210, y: 480, id: 0, angle: 180, answered: false, userWasCorrect: false, scoreAwarded: false}
+        ];
 
-    window.addEventListener('keydown', e => {
-        if (gameState === 'title') {
-            if (e.code === 'Space') {
-                e.preventDefault();
-                gameState = 'game';
-                document.getElementById('menu-overlay').style.display = 'none';
-                document.getElementById('instructions').style.display = 'block';
-                
-                // REVEAL ATTENTION BADGE ONCE GAME OFFICIALLY STARTS
-                const badge = document.getElementById('ai-attention-badge');
-                if (badge) {
-                    badge.style.display = 'block';
-                }
-            }
-            return;
+    // --- Identity and Access State Management ---
+let currentStudentNumber = "";
+let isAuthenticated = false;
+
+document.addEventListener("DOMContentLoaded", () => {
+    const loginBtn = document.getElementById('login-submit-btn');
+    const inputField = document.getElementById('student-number-input');
+    const errorMsg = document.getElementById('login-error-msg');
+    const loginContainer = document.getElementById('login-container');
+    const startPrompt = document.getElementById('start-prompt');
+
+    loginBtn.addEventListener('click', () => {
+    const studentId = inputField.value.trim();
+
+    if (studentId === "") {
+        errorMsg.textContent = "⚠ Student number cannot be blank.";
+        errorMsg.style.display = 'block';
+        return;
+    }
+
+    // Ask for a room code to bind players together
+    const roomSelection = prompt("Enter a Room Code to join or create (e.g., ROOM1):", "ROOM1");
+    if (!roomSelection) {
+        alert("A room code is required for multiplayer mapping functionality.");
+        return;
+    }
+
+    // Trigger explicit spawn positions at the door entryway matrix
+    avatar.x = 630; // Re-enforced default x position coordinates target
+    avatar.y = 240;
+    avatar.angle = 180;
+    
+    // CRITICAL TIMED UPDATE: Start the 1-second clock tracking window
+    isCutsceneActive = true;
+    cutsceneStartTime = Date.now();
+
+    currentStudentNumber = studentId;
+    currentRoomCode = roomSelection.trim().toUpperCase();
+    isAuthenticated = true;
+    
+    errorMsg.style.display = 'none';
+    loginContainer.style.display = 'none';
+    startPrompt.style.display = 'block';
+
+    console.log(`Session authorized: ${currentStudentNumber} spawned at doorway area inside room ${currentRoomCode}`);
+    
+    // Notify server of room registration initialization
+    fetch('/api/multiplayer/join-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentNumber: currentStudentNumber, roomCode: currentRoomCode })
+    }).catch(err => console.error("Error setting up server room channel:", err));
+});
+
+    inputField.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') loginBtn.click();
+    });
+});
+
+window.addEventListener('keydown', e => {
+    // SECURITY FILTER: Suppress all character interactions if cutscene runs
+    // FIX: Allow Space/Enter to pass through ONLY if the user is still on the title screen to initialize gameplay
+    if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
+        if (gameState !== 'title' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyS', 'KeyA', 'KeyD', 'Space'].includes(e.code)) {
+            e.preventDefault();
+            return false;
         }
-        // Toggle Title Screen state with the 'T' key
-if (e.code === 'KeyT') {
+    }
+
     if (gameState === 'title') {
-        gameState = 'game';
-        document.getElementById('menu-overlay').style.display = 'none';
-        document.getElementById('instructions').style.display = 'block';
-        if (typeof sounds !== 'undefined' && sounds.bgm) {
-            sounds.bgm.play().catch(err => console.log("Audio playback blocked."));
-        }
-    } else if (gameState === 'game') {
-        // Drop back to title screen
-        gameState = 'title';
-        document.getElementById('menu-overlay').style.display = 'flex';
-        document.getElementById('instructions').style.display = 'none';
-    }
-    console.log("Game State toggled via T key. Current state:", gameState);
-    return;
-}
-// Toggle Guide Controls UI block with the 'G' key
-if (e.code === 'KeyG') {
-    showGuideControls = !showGuideControls;
-    const instructionsElement = document.getElementById('instructions');
-    if (instructionsElement) {
-        instructionsElement.style.display = (showGuideControls && gameState === 'game') ? 'block' : 'none';
-    }
-    console.log("Guide Controls:", showGuideControls ? "VISIBLE" : "HIDDEN");
-    return;
-}
+        if (e.code === 'Space' || e.code === 'Enter') {
+            e.preventDefault();
 
-        if (gameState === 'game') {
-            keys[e.code] = true;
-
-            if (isPaused) {
-                if (showingAIDialogue) {
-                    if (e.code === 'Space' || e.code === 'Escape') {
-                        e.preventDefault();
-                        closePopup();
-                    }
-                    return;
+            // BLOCK ENTRY IF NOT AUTHENTICATED VIA THE PORTAL FORM YET
+            if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
+                const inputField = document.getElementById('student-number-input');
+                if (inputField) {
+                    inputField.focus();
+                    inputField.style.borderColor = '#ff4a4a';
                 }
+                console.log("Access Denied: Complete student session initialization first.");
+                return;
+            }
 
-                if (currentPaper) {
+            // --- CRITICAL TIMED ENTRY INTEGRATION ---
+            gameState = 'game';
+            document.getElementById('menu-overlay').style.display = 'none';
+            
+            // Set up spawn point and arm the 1-second doorway automated path
+            avatar.x = 630;
+            avatar.y = 240;
+            avatar.angle = 180; // Turn avatar down facing front
+            
+            isCutsceneActive = true;
+            cutsceneStartTime = Date.now(); // Starts the continuous 1-second clock tracking window
+
+            // Respect the dynamic guide control setting on launch
+            const instElement = document.getElementById('instructions');
+            if (instElement) {
+                instElement.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
+            }
+            
+            // REVEAL ATTENTION BADGE ONCE GAME OFFICIALLY STARTS
+            const badge = document.getElementById('ai-attention-badge');
+            if (badge) {
+                badge.style.display = 'block';
+            }
+            
+            console.log("[Scene Transition]: Initialization verified. 1-second entrance path armed.");
+        }
+        return;
+    }
+
+    // Toggle Title Screen state with the 'T' key
+    if (e.code === 'KeyT') {
+        if (gameState === 'title') {
+            // Block direct shortcut toggles if unauthenticated
+            if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) return;
+
+            gameState = 'game';
+            document.getElementById('menu-overlay').style.display = 'none';
+            
+            // Arm transition counters on alternative shortcut bypass triggers as well
+            avatar.x = 630;
+            avatar.y = 240;
+            avatar.angle = 180;
+            isCutsceneActive = true;
+            cutsceneStartTime = Date.now();
+
+            const instElement = document.getElementById('instructions');
+            if (instElement) {
+                instElement.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
+            }
+            if (typeof sounds !== 'undefined' && sounds.bgm) {
+                sounds.bgm.play().catch(err => console.log("Audio playback blocked."));
+            }
+            const badge = document.getElementById('ai-attention-badge');
+            if (badge) badge.style.display = 'block';
+        } else if (gameState === 'game') {
+            // Drop back to title screen
+            gameState = 'title';
+            document.getElementById('menu-overlay').style.display = 'flex';
+            document.getElementById('instructions').style.display = 'none';
+            
+            const badge = document.getElementById('ai-attention-badge');
+            if (badge) badge.style.display = 'none';
+        }
+        console.log("Game State toggled via T key. Current state:", gameState);
+        return;
+    }
+
+    // Toggle Guide Controls UI block with the 'G' key
+    if (e.code === 'KeyG') {
+        showGuideControls = !showGuideControls;
+        const instructionsElement = document.getElementById('instructions');
+        if (instructionsElement) {
+            instructionsElement.style.display = (showGuideControls && gameState === 'game') ? 'block' : 'none';
+        }
+        console.log("Guide Controls:", showGuideControls ? "VISIBLE" : "HIDDEN");
+        return;
+    }
+
+    if (gameState === 'game') {
+        keys[e.code] = true;
+
+        if (isPaused) {
+            if (showingAIDialogue) {
+                if (e.code === 'Space' || e.code === 'Escape') {
+                    e.preventDefault();
+                    closePopup();
+                }
+                return;
+            }
+
+            if (currentPaper) {
+                if (!currentPaper.answered) {
+                    if (e.code === 'ArrowDown' || e.code === 'KeyS') { selectedEmailOption = 1; updateEmailUI(); }
+                    if (e.code === 'ArrowUp' || e.code === 'KeyW') { selectedEmailOption = 0; updateEmailUI(); }
+                }
+                if (e.code === 'Space') {
+                    e.preventDefault(); 
                     if (!currentPaper.answered) {
-                        // Support ArrowDown or KeyS for navigating downwards
-                        if (e.code === 'ArrowDown' || e.code === 'KeyS') { selectedEmailOption = 1; updateEmailUI(); }
-                        // Support ArrowUp or KeyW for navigating upwards
-                        if (e.code === 'ArrowUp' || e.code === 'KeyW') { selectedEmailOption = 0; updateEmailUI(); }
-                    }
-                    if (e.code === 'Space') {
-                        e.preventDefault(); 
-                        if (!currentPaper.answered) {
-                            confirmEmailChoice(); 
-                        } else {
-                            closePopup(); 
-                        }
-                    }
-                    if (e.code === 'Escape') { 
+                        confirmEmailChoice(); 
+                    } else {
                         closePopup(); 
                     }
-                    return;
                 }
-                
-                // Allows dismissing the Lockout Alert Modal using Space or Escape
-                if (!showingAIDialogue && !currentPaper) {
-                    if (e.code === 'Space' || e.code === 'Escape') {
-                        e.preventDefault();
-                        closePopup();
-                    }
-                    return;
+                if (e.code === 'Escape') { 
+                    closePopup(); 
                 }
+                return;
             }
-
-            if (e.code === 'Space' && !isPaused) {
-                checkInteraction();
-            }
-
-            if (e.code === 'Escape' && !isPaused) {
-                e.preventDefault();
-                Object.keys(keys).forEach(key => keys[key] = false);
-                avatar.moving = false;
-                gameState = 'title';
-                document.getElementById('menu-overlay').style.display = 'flex';
-                document.getElementById('instructions').style.display = 'none';
-                
-                // HIDE ATTENTION BADGE IF DROPPING BACK TO MAIN MENU SCREEN
-                const badge = document.getElementById('ai-attention-badge');
-                if (badge) {
-                    badge.style.display = 'none';
+            
+            if (!showingAIDialogue && !currentPaper) {
+                if (e.code === 'Space' || e.code === 'Escape') {
+                    e.preventDefault();
+                    closePopup();
                 }
+                return;
             }
         }
-    });
+
+        if (e.code === 'Space' && !isPaused) {
+            checkInteraction();
+        }
+
+        if (e.code === 'Escape' && !isPaused) {
+            e.preventDefault();
+            Object.keys(keys).forEach(key => keys[key] = false);
+            avatar.moving = false;
+            gameState = 'title';
+            document.getElementById('menu-overlay').style.display = 'flex';
+            document.getElementById('instructions').style.display = 'none';
+            
+            // HIDE ATTENTION BADGE IF DROPPING BACK TO MAIN MENU SCREEN
+            const badge = document.getElementById('ai-attention-badge');
+            if (badge) {
+                badge.style.display = 'none';
+            }
+        }
+    }
+});
 
     window.addEventListener('keyup', e => { 
         if (gameState === 'game') {
@@ -477,200 +618,228 @@ if (e.code === 'KeyG') {
     }
 
     function checkInteraction() {
+
         for (let p of papers) {
+
             const dx = (avatar.x + 35) - p.x;
+
             const dy = (avatar.y + 35) - p.y;
+
             const dist = Math.sqrt(dx * dx + dy * dy);
+
             if (dist < interactionDist) {
-                interactWithLaptop(p); 
-                return; 
+
+                interactWithLaptop(p);
+
+                return;
+
             }
+
         }
+
+
 
         const aiDx = (avatar.x + 35) - (aiAvatar.x + 35);
+
         const aiDy = (avatar.y + 35) - (aiAvatar.y + 35);
+
         const distanceToAI = Math.sqrt(aiDx * aiDx + aiDy * aiDy);
-        
-        if (distanceToAI < 100) { 
+
+       
+
+        if (distanceToAI < 100) {
+
             showAIDialoguePopup();
+
         }
+
     }
 
-    function interactWithLaptop(paper) {
-        if (laptopLocked) {
-            isPaused = true;
-            const content = document.getElementById('popup-content');
-            content.classList.remove('dialogue-mode');
-            
-            content.style.width = "400px";
-            content.style.padding = "30px 35px";
-            content.style.left = "50%";
-            content.style.top = "50%";
-            content.style.transform = "translate(-50%, -50%)";
+ function interactWithLaptop(paper) {
+    // If the terminal has been cleared/processed already
+    if (paper.scoreProcessed) {
+        isPaused = true;
+        const content = document.getElementById('popup-content');
+        
+        // Clean and apply proper layout classes
+        content.className = ''; 
+        content.classList.add('center-modal-mode');
 
+        if (paper.userWasCorrect) {
             content.innerHTML = `
-                <div style="font-size: 1.3rem; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
-                    🔒 Terminal Access Locked
-                    <div style="font-size: 0.95rem; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
-                        You must consult the floating attention marker at the <b>AI Avatar</b> first to clear incoming threat directives before logging in.
+                <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #333;">
+                    💻 Workstation Secure
+                    <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
+                        Inbox clean. There are <b>no emails yet</b> for this terminal.
                     </div>
                 </div>
             `;
-            document.getElementById('popup-overlay').style.display = 'block';
-            return; 
-        }
-
-        showEmailPopup(paper);
-    }
-
-    function confirmEmailChoice() {
-        currentPaper.answered = true;
-            
-        if (selectedEmailOption === 1) {
-            currentPaper.userWasCorrect = true;
         } else {
-            currentPaper.userWasCorrect = false;
+            content.innerHTML = `
+                <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
+                    🔒 Terminal Access Locked
+                    <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
+                        Access to this station remains revoked due to an unverified transaction check rule bypass.
+                    </div>
+                </div>
+            `;
         }
-
-        currentPaper.scoreAwarded = false;
-
-        // Immediately close the laptop view
-        document.getElementById('popup-overlay').style.display = 'none';
-        isPaused = false; 
-
-        // 1 Second Delay after processing laptop choices
-        setTimeout(() => {
-            showEmailPopup(currentPaper);
-        }, 1000);
+        document.getElementById('popup-overlay').style.display = 'block';
+        return; 
     }
 
-    function showEmailPopup(paper) {
+    if (laptopLocked) {
+        isPaused = true;
+        const content = document.getElementById('popup-content');
+        
+        content.className = ''; 
+        content.classList.add('center-modal-mode');
+
+        content.innerHTML = `
+            <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
+                🔒 Terminal Access Locked
+                <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
+                    You must consult the floating attention marker at the <b>AI Avatar</b> first to clear incoming threat directives before logging in.
+                </div>
+            </div>
+        `;
+        document.getElementById('popup-overlay').style.display = 'block';
+        return; 
+    }
+
+    showEmailPopup(paper);
+}
+
+function confirmEmailChoice() {
+    currentPaper.answered = true;
+    currentPaper.scoreProcessed = false; 
+    
+    if (selectedEmailOption === 1) {
+        currentPaper.userWasCorrect = true;
+    } else {
+        currentPaper.userWasCorrect = false;
+    }
+
+    document.getElementById('popup-overlay').style.display = 'none';
+    isPaused = false; 
+
+    const badge = document.getElementById('ai-attention-badge');
+    if (badge) {
+        badge.style.display = 'block';
+    }
+}
+
+function showEmailPopup(paper) {
     isPaused = true;
     currentPaper = paper;
     showingAIDialogue = false;
     
     const content = document.getElementById('popup-content');
-    content.classList.remove('dialogue-mode');
-        
-    if (!paper.answered) {
-        content.style.width = "340px";
-        content.style.padding = "20px 25px";
-        content.style.left = "50%";
-        content.style.top = "50%";
-        content.style.transform = "translate(-50%, -50%)";
+    
+    content.className = ''; 
+    content.classList.add('center-modal-mode');
 
-        content.innerHTML = `
-            <div class="popup-layout-wrapper" style="font-size: 0.95rem; font-weight: normal;">
-                <h3 style="margin: 0 0 8px 0; font-size: 1.1rem; color: #3a3a3a;">Workstation Terminal</h3>
-                <div class="email-container">
-                    <div class="email-header">From: HR Dept | Subject: Action Required</div>
-                    <div class="email-body">We detected an unusual login. Please <b>click here</b> to verify your account right away.</div>
-                </div>
-                <div id="email-options">
-                    <div class="email-option selected" id="opt-0">➤ RESPOND TO EMAIL</div>
-                    <div class="email-option" id="opt-1">➤ IGNORE / TRASH</div>
-                </div>
+    content.innerHTML = `
+        <div class="popup-layout-wrapper" style="font-size: 1.8cqw; font-weight: normal;">
+            <h3 style="margin: 0 0 1cqh 0; font-size: 2.2cqw; color: #3a3a3a;">Workstation Terminal</h3>
+            <div class="email-container">
+                <div class="email-header">From: HR Dept | Subject: Action Required</div>
+                <div class="email-body">We detected an unusual login. Please <b>click here</b> to verify your account right away.</div>
             </div>
-        `;
-    } else {
-        content.style.width = "500px"; 
-        content.style.padding = "40px 45px"; 
-        content.style.left = "50%";
-        content.style.top = "50%";
-        content.style.transform = "translate(-50%, -50%)";
-
-        content.innerHTML = `
-            <div style="font-size: 1.5rem; font-weight: bold; width: 100%; text-align: center; line-height: 1.5;">
-                Email processing complete!
-                <div style="font-size: 1.05rem; margin-top: 15px; font-weight: normal; color: #666; line-height: 1.4;">
-                    Walk over to the AI Avatar to check your network metrics and collect your score breakdown.
-                </div>
+            <div id="email-options">
+                <div class="email-option selected" id="opt-0">➤ RESPOND TO EMAIL</div>
+                <div class="email-option" id="opt-1">➤ IGNORE / TRASH</div>
             </div>
-        `;
-
-        // SHOW THE AI ATTENTION BADGE: Flags that a new prompt/alert is waiting at the AI Monitor
-        const badge = document.getElementById('ai-attention-badge');
-        if (badge) {
-            badge.style.display = 'block';
-        }
-    }
+        </div>
+    `;
 
     document.getElementById('popup-overlay').style.display = 'block';
 }
 
 function closePopup() {
-    isPaused = false;
-    
-    // Hide the badge when closing the dialogue box ONLY if they were actively talking to the AI
-    if (showingAIDialogue) {
-        const badge = document.getElementById('ai-attention-badge');
-        if (badge) {
-            badge.style.display = 'none';
+    if (showingAIDialogue && currentPaper && currentPaper.answered && !currentPaper.scoreProcessed) {
+        if (currentPaper.userWasCorrect) {
+            cyberknowledgeScore += 20;
+            
+            const currentUser = localStorage.getItem('cyberDashUser');
+            if (currentUser && currentUser !== "INSTRUCTOR") {
+                localStorage.setItem(`terminal_high_score_${currentUser}`, cyberknowledgeScore);
+            }
+        }
+        
+        currentPaper.scoreProcessed = true; 
+
+        if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+            let activeModule = currentPaper.module || 'safe';
+            let isModuleFinished = false;
+
+            fetch(`${SERVER_URL}/api/save-progress`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    studentNumber: currentStudentNumber,
+                    module: activeModule,
+                    score: cyberknowledgeScore,
+                    completed: isModuleFinished
+                })
+            })
+            .catch(err => console.error("Database sync failed:", err));
         }
     }
 
-    currentPaper = null;
+    document.getElementById('popup-content').className = ''; // Wipe classes on hide
+    document.getElementById('popup-overlay').style.display = 'none';
     showingAIDialogue = false;
-    popupOverlay.style.display = 'none';
+    isPaused = false;
+    currentPaper = null; 
 }
-    function showAIDialoguePopup() {
-        isPaused = true;
-        showingAIDialogue = true;
-        currentPaper = null;
-        
-        const content = document.getElementById('popup-content');
-        const terminalState = papers[0]; 
-        let textToShow = "";
-        
-        content.classList.add('dialogue-mode');
-        content.style.width = "340px";
-        content.style.padding = "20px 25px";
-        
-        const canvasWidth = 800;
-        const canvasHeight = 600;
-        
-        const elementLeft = (((aiAvatar.x + 35) / canvasWidth) * 100);
-        const elementTop = (((aiAvatar.y - 145) / canvasHeight) * 100);
-        
-        content.style.left = `${elementLeft}%`;
-        content.style.top = `${elementTop}%`;
-        content.style.transform = "translateX(-50%)";
 
-        if (!terminalState.answered) {
-            textToShow = `I'm standing guard! Please check the <span class="highlight-blue">Workstation Laptop</span> to inspect incoming network threats!`;
-            
-            // Unlocks access and dismisses tracking target indicator badge
-            laptopLocked = false; 
-            const badge = document.getElementById('ai-attention-badge');
-            if (badge) badge.style.display = 'none';
-            
-        } else {
-            if (!terminalState.scoreAwarded) {
-                if (terminalState.userWasCorrect) {
-                    cyberknowledgeScore += 20;
-                }
-                terminalState.scoreAwarded = true;
+function showAIDialoguePopup() {
+    isPaused = true;
+    showingAIDialogue = true;
+    
+    const content = document.getElementById('popup-content');
+    const terminalState = papers[0]; 
+    currentPaper = terminalState; 
+    let textToShow = "";
+    
+    // Clear styles from previous layout states and append the bottom dialogue theme
+    content.className = ''; 
+    content.removeAttribute('style'); // Strip old character tracking leftover variables
+    content.classList.add('dialogue-bubble-mode');
 
-                const currentUser = localStorage.getItem('cyberDashUser');
-                if (currentUser && currentUser !== "INSTRUCTOR") {
-                    localStorage.setItem(`terminal_high_score_${currentUser}`, cyberknowledgeScore);
-                }
-            }
-
-            if (terminalState.userWasCorrect) {
-                textToShow = `Excellent! You successfully avoided the link trap and earned <span class="highlight-green">20 Star Points</span> to secure the local database floor!`;
-            } else {
-                textToShow = `Oh no! That was an unverified redirect trick. We must curb these <span class="highlight-red">security pangs</span> together!`;
-            }
-        }
-
-        content.innerHTML = `
-            <div style="width: 100%; font-size: 1.1rem; margin: 0; padding: 0;">${textToShow}</div>
-        `;
-            
-        document.getElementById('popup-overlay').style.display = 'block';
+    const badge = document.getElementById('ai-attention-badge');
+    if (badge) {
+        badge.style.display = 'none';
     }
 
+    // Dialogue Scenario Matching Tree
+    if (!terminalState.answered) {
+        textToShow = `<b>AI Guard:</b><br>I'm standing guard! Please check the <span class="highlight-blue">Workstation Laptop</span> to inspect incoming network threats!`;
+        laptopLocked = false; 
+    } else if (terminalState.scoreProcessed) {
+        if (terminalState.userWasCorrect) {
+            textToShow = `<b>AI Avatar:</b><br>The network floor is stable for now, Agent! Keep an eye out for further workstation tasks.`;
+        } else {
+            textToShow = `<b>AI Avatar:</b><br>Oh no! That was an unverified redirect trick. Be careful next time when answering emails!`;
+        }
+    } else {
+        if (terminalState.userWasCorrect) {
+            textToShow = `<b>AI Avatar:</b><br>Excellent! You successfully avoided the link trap and earned <span class="highlight-green">20 Star Points</span> to secure the local database floor!`;
+        } else {
+            textToShow = `<b>AI Avatar:</b><br>Oh no! That was an unverified redirect trick. Be careful next time when answering emails!`;
+        }
+    }
+
+    // Render cleanly within the responsive bottom container
+    content.innerHTML = `
+        <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
+            ${textToShow}
+        </div>
+    `;
+        
+    document.getElementById('popup-overlay').style.display = 'block';
+}
 
     function updateAI() {
         if (isPaused || gameState !== 'game') return;
@@ -682,277 +851,799 @@ function closePopup() {
     }
 
     function update() {
-        if (isPaused || gameState !== 'game') return;
-        let moveX = 0, moveY = 0;
-            
-        // Map W, A, S, D alongside the standard Arrow Inputs
-        if (keys['ArrowLeft'] || keys['KeyA']) moveX = -1;
-        if (keys['ArrowRight'] || keys['KeyD']) moveX = 1;
-        if (keys['ArrowUp'] || keys['KeyW']) moveY = -1;
-        if (keys['ArrowDown'] || keys['KeyS']) moveY = 1;
+    if (isPaused || gameState !== 'game') return;
 
-        if (moveX !== 0 || moveY !== 0) {
-            if (moveX > 0 && moveY === 0) avatar.angle = 90;       
-            else if (moveX < 0 && moveY === 0) avatar.angle = 270;  
-            else if (moveY < 0 && moveX === 0) avatar.angle = 0;    
-            else if (moveY > 0 && moveX === 0) avatar.angle = 180;  
-            else if (moveX > 0 && moveY < 0) avatar.angle = 45;     
-            else if (moveX < 0 && moveY < 0) avatar.angle = 315;    
-            else if (moveX > 0 && moveY > 0) avatar.angle = 135;    
-            else if (moveX < 0 && moveY > 0) avatar.angle = 225;    
-                    
-            let dx = moveX * avatar.speed;
-            let dy = moveY * avatar.speed;
-                    
-            let potentialX = avatar.x + dx;
-            let potentialY = avatar.y + dy;
+    // --- TIMED INTERCEPT ROUTINE: Programmatic ArrowDown / S Emulation (1 Second) ---
+    if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
+        let now = Date.now();
 
-            const finalDx = (potentialX + 35) - (aiAvatar.x + 35);
-            const finalDy = (potentialY + 35) - (aiAvatar.y + 35);
-            const distanceToAI = Math.sqrt(finalDx * finalDx + finalDy * finalDy);
-
-            if (distanceToAI > aiAvatar.radius) {
-                if (!checkCollisionAt(potentialX, avatar.y)) avatar.x = potentialX;
-                if (!checkCollisionAt(avatar.x, potentialY)) avatar.y = potentialY;
-            }
-                    
+        if (now - cutsceneStartTime < CUTSCENE_DURATION) {
             avatar.moving = true;
-            if (moveX < 0) avatar.lastDir = 'left';
-            if (moveX > 0) avatar.lastDir = 'right';
-        } else { 
-            avatar.moving = false; 
+            avatar.angle = 180; // Secure look angle down (facing front)
+
+            // Calculate movement delta using the avatar's native standard speed property
+            let currentSpeed = avatar.speed || 4;
+            let potentialY = avatar.y + currentSpeed;
+
+            // NEW BOUNDARY FILTER INTEGRATION (CUTSCENE PHASE)
+            if (checkAvatarBoundaries(avatar.x, potentialY)) {
+                // Check map collisions and remote peer positioning loops 
+                if (!checkCollisionAt(avatar.x, potentialY) && 
+                    (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(avatar.x, potentialY))) {
+                    avatar.y = potentialY;
+                }
+            }
+        } else {
+            // 1 full second has ticked past! Tear down the automation intercept locks
+            isCutsceneActive = false;
+            avatar.moving = false;
+            console.log("[Cutscene Complete]: 1 second elapsed. Player manual inputs unlocked.");
+        }
+
+        // Keep remote network peers updated on positioning changes during the cutscene
+        if (typeof socket !== 'undefined' && socket) {
+            socket.emit('updateMovement', { 
+                x: avatar.x, 
+                y: avatar.y, 
+                roomCode: currentRoomCode, 
+                angle: avatar.angle, 
+                moving: avatar.moving 
+            });
         }
 
         updateAI();
-        updateAttentionBadgePosition(); 
+        updateAttentionBadgePosition();
+        return; // HALT EXECUTION: Do not read manual input event states down below
     }
 
-    function checkCollisionAt(tx, ty) {
-    // Treat the player's physical core boundary as a circle centered on their 70x70 sprite
-    const playerCenterX = tx + 35;
-    const playerCenterY = ty + 35;
-    const playerRadius = 25; // Change this value to make the player's slide footprint tight or loose
+    // --- STANDARD PLAYER MANUAL CONTROLS ---
+    let moveX = 0, moveY = 0;
+        
+    // Map W, A, S, D alongside the standard Arrow Inputs
+    if (keys['ArrowLeft'] || keys['KeyA']) moveX = -1;
+    if (keys['ArrowRight'] || keys['KeyD']) moveX = 1;
+    if (keys['ArrowUp'] || keys['KeyW']) moveY = -1;
+    if (keys['ArrowDown'] || keys['KeyS']) moveY = 1;
 
-    return collisionZones.some(z => {
-        if (z.type === 'circle') {
-            // Circle-to-Circle distance comparison
-            const dx = playerCenterX - z.x;
-            const dy = playerCenterY - z.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+    if (moveX !== 0 || moveY !== 0) {
+        if (moveX > 0 && moveY === 0) avatar.angle = 90;      
+        else if (moveX < 0 && moveY === 0) avatar.angle = 270;  
+        else if (moveY < 0 && moveX === 0) avatar.angle = 0;    
+        else if (moveY > 0 && moveX === 0) avatar.angle = 180;  
+        else if (moveX > 0 && moveY < 0) avatar.angle = 45;     
+        else if (moveX < 0 && moveY < 0) avatar.angle = 315;    
+        else if (moveX > 0 && moveY > 0) avatar.angle = 135;    
+        else if (moveX < 0 && moveY > 0) avatar.angle = 225;    
+                
+        let dx = moveX * avatar.speed;
+        let dy = moveY * avatar.speed;
+                
+        let potentialX = avatar.x + dx;
+        let potentialY = avatar.y + dy;
+
+        // --- NEW RECTANGULAR INTERACTION BOUNDARIES FILTER ---
+        // Ensure character boxes do not overlap before looking into map/environment collisions
+        if (checkAvatarBoundaries(potentialX, potentialY)) {
             
-            return distance < (playerRadius + z.radius);
-        } else {
-            // Standard bounding rectangle check
-            return tx + 50 > z.x && tx < z.x + z.w && ty + 50 > z.y && ty < z.y + z.h;
+            // Check X-axis: Verify no wall collisions AND no structural peer player overlays
+            if (!checkCollisionAt(potentialX, avatar.y) && 
+                (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(potentialX, avatar.y))) {
+                avatar.x = potentialX;
+            }
+            
+            // Check Y-axis: Verify no wall collisions AND no structural peer player overlays
+            if (!checkCollisionAt(avatar.x, potentialY) && 
+                (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(avatar.x, potentialY))) {
+                avatar.y = potentialY;
+            }
         }
-    });
+                
+        avatar.moving = true;
+        if (moveX < 0) avatar.lastDir = 'left';
+        if (moveX > 0) avatar.lastDir = 'right';
+    } else { 
+        avatar.moving = false; 
+    }
+
+    updateAI();
+    updateAttentionBadgePosition(); 
 }
+/**
+ * Verifies that a target movement coordinate does not violate the physical 
+ * boundary boxes of other players or the AI NPC.
+ * Returns true if the path is clear.
+ */
+function checkAvatarBoundaries(targetX, targetY) {
+    const HALF_SIZE = 35; // Avatar center offset
+    const PADDING = 18;   // Minimum distance inside boundaries before collision triggers
+
+    // Local player center coordinates
+    const localCenterX = targetX + HALF_SIZE;
+    const localCenterY = targetY + HALF_SIZE;
+
+    // 1. Check against the AI Avatar Bounding Box
+    if (typeof aiAvatar !== 'undefined' && aiAvatar) {
+        const aiCenterX = aiAvatar.x + HALF_SIZE;
+        const aiCenterY = aiAvatar.y + HALF_SIZE;
+
+        // Check AABB Overlap between local player and AI boundaries
+        if (Math.abs(localCenterX - aiCenterX) < (HALF_SIZE + PADDING) &&
+            Math.abs(localCenterY - aiCenterY) < (HALF_SIZE + PADDING)) {
+            return false; // Collision detected: Too close to AI Avatar
+        }
+    }
+
+    // 2. Check against all active Remote Multiplayer Players
+    if (typeof remotePlayers !== 'undefined' && remotePlayers) {
+        for (let id in remotePlayers) {
+            const p = remotePlayers[id];
+            // Skip checking players that are logged into different room sessions
+            if (typeof currentRoomCode !== 'undefined' && p.roomCode !== currentRoomCode) continue;
+
+            const peerCenterX = p.x + HALF_SIZE;
+            const peerCenterY = p.y + HALF_SIZE;
+
+            // Check AABB Overlap between local player and remote peer boundaries
+            if (Math.abs(localCenterX - peerCenterX) < (HALF_SIZE + PADDING) &&
+                Math.abs(localCenterY - peerCenterY) < (HALF_SIZE + PADDING)) {
+                return false; // Collision detected: Too close to another User Avatar
+            }
+        }
+    }
+
+    return true; // All clear!
+}
+    function checkCollisionAt(tx, ty) {
+        const playerCenterX = tx + 35;
+        const playerCenterY = ty + 35;
+        const playerRadius = 25; 
+
+        return collisionZones.some(z => {
+            if (z.type === 'circle') {
+                const dx = playerCenterX - z.x;
+                const dy = playerCenterY - z.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                return distance < (playerRadius + z.radius);
+            } else {
+                return tx + 50 > z.x && tx < z.x + z.w && ty + 50 > z.y && ty < z.y + z.h;
+            }
+        });
+    }
 
     function drawTitleScreen() {
-        // Clear anything from previous frames
         ctx.clearRect(0, 0, 800, 600);
         
-        // 1. Draw the game map room layer beneath at 50% opacity
         ctx.save();
-        ctx.globalAlpha = 0.50; // Sets rendering opacity to 50%
+        ctx.globalAlpha = 0.50; 
         if (images.background && images.background.naturalWidth > 0) {
             ctx.drawImage(images.background, 0, 0, 800, 600);
         }
         
-        // Draw the laptop terminal sprite so players can spot it behind the dim overlay
-        papers.forEach(p => {
-            if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
-                ctx.drawImage(images.laptopEmail, p.x - 50, p.y - 35, 100, 70);
-            }
-        });
+        ctx.restore(); 
 
-        // REMOVED: The AI NPC drawing block has been taken out from here 
-        // so it won't appear until the game officially starts.
-
-        ctx.restore(); // Restores opacity back to 100% for anything drawn next
-
-        // 2. Apply a sleek dark tint overlay to make the menu HTML text stand out sharply
         ctx.fillStyle = 'rgba(13, 14, 21, 0.4)'; 
         ctx.fillRect(0, 0, 800, 600);
     }
 
- function draw() {
-    // Force bypass if skipTitleScreen configuration is enabled
-    if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
-        gameState = 'game';
-        document.getElementById('menu-overlay').style.display = 'none';
-        
-        // Respect the guide controls flag when transitioning states
-        const inst = document.getElementById('instructions');
-        if (inst) {
-            inst.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
-        }
+    function draw() {
+
+    // Inside your draw() function, find the skipTitleScreen block and update these lines:
+
+if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
+
+    // Automatically inject placeholder credentials if undefined
+
+    if (typeof currentStudentNumber === 'undefined' || !currentStudentNumber) {
+
+        currentStudentNumber = "DEBUG_USER_001";
+
     }
 
-    // If the player is on the title screen, render the dimmed preview frame
-    if (gameState === 'title') {
-        drawTitleScreen();
-        requestAnimationFrame(draw);
-        return;
+    if (typeof currentRoomCode === 'undefined' || !currentRoomCode) {
+
+        currentRoomCode = "DEBUG_ROOM";
+
     }
 
-    // --- ACTIVE GAMEPLAY RENDERING (100% Opacity) ---
-    ctx.clearRect(0, 0, 800, 600);
-        
-    if (images.background && images.background.naturalWidth > 0) {
-        ctx.drawImage(images.background, 0, 0, 800, 600);
-    }
 
-    // --- UPDATED: LAPTOP RENDERING WITH ROTATION SUPPORT ---
-    papers.forEach(p => {
-        if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
-            ctx.save();
-            // Move coordinate origin to the laptop's center point
-            ctx.translate(p.x, p.y);
-            
-            // Apply rotation if an angle property exists in your papers array
-            if (p.angle) {
-                ctx.rotate(p.angle * Math.PI / 180);
-            }
-            
-            // Draw relative to the newly translated and rotated origin
-            ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
-            ctx.restore();
-        }
-                
-        const dx = (avatar.x + 35) - p.x;
-        const dy = (avatar.y + 35) - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < interactionDist) {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            if (p.angle) {
-                ctx.rotate(p.angle * Math.PI / 180);
-            }
-            ctx.strokeStyle = "yellow"; 
-            ctx.lineWidth = 3;
-            // Draw the yellow selection box tilted at the exact same angle
-            ctx.strokeRect(-55, -40, 110, 80);
-            ctx.restore();
-        }
-    });
+    // Force system clearance elevation flags
 
-    // --- DYNAMIC SPEED SHIFT ANIMATION LOGIC ---
-    let now = Date.now();
-    let img;
+    isAuthenticated = true;
 
-    if (avatar.moving) {
-        let currentSpeed = avatar.speed || 4; 
-        let dynamicInterval = Math.max(60, 600 / currentSpeed); 
+    gameState = 'game';
 
-        if (now - avatar.lastFrameSwap > dynamicInterval) {
-            if (typeof avatar.animStep === 'undefined') avatar.animStep = 0;
-            avatar.animStep = (avatar.animStep + 1) % 4;
-            avatar.lastFrameSwap = now;
-        }
+    isPaused = false;
 
-        if (avatar.animStep === 0) {
-            img = images.walkLeft;
-        } else if (avatar.animStep === 2) {
-            img = images.walkRight;
-        } else {
-            img = images.idle; 
-        }
-    } else {
-        img = images.idle;
-    }
-        
-    if (img && img.naturalWidth > 0) {
-        ctx.save();                 
-        ctx.translate(avatar.x + 35, avatar.y + 35);                 
-        ctx.rotate(avatar.angle * Math.PI / 180); 
-        ctx.drawImage(img, -35, -35, 70, 70); 
-        ctx.restore(); 
-    }
 
-    if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
-        ctx.save();
-        ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
-        let correctedAngle = aiAvatar.angle + 180; 
-        ctx.rotate(correctedAngle * Math.PI / 180);
-        ctx.drawImage(images.aiNPC, -35, -35, 70, 70);
-        ctx.restore();
-    }
 
-    // --- DEBUG: DRAW COLLISION ZONES IN RED (Supports Rectangles, Rotation, and Circles) ---
-    if (typeof debugMode !== 'undefined' && debugMode) {
-        ctx.lineWidth = 2;
-        collisionZones.forEach(z => {
-            ctx.save();
-            
-            if (z.type === 'circle') {
-                ctx.beginPath();
-                ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2);
-                ctx.strokeStyle = "red";
-                ctx.stroke();
-                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
-                ctx.fill();
-            } else {
-                ctx.translate(z.x, z.y);
-                if (z.deg) {
-                    ctx.rotate(z.deg * Math.PI / 180);
-                }
-                ctx.strokeStyle = "red";
-                ctx.strokeRect(0, 0, z.w, z.h);
-                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
-                ctx.fillRect(0, 0, z.w, z.h);
-            }
-            
-            ctx.restore();
-        });
-    }
+    // Instantly shut down title interface graphics overlays
 
-    // --- UI OVERLAY LAYER ---
-    ctx.fillStyle = "rgba(0,0,0,0.7)"; 
-    ctx.fillRect(580, 10, 210, 40);
-    ctx.strokeStyle = "#dcc23c";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(580, 10, 210, 40);
+    const menuOverlay = document.getElementById('menu-overlay');
 
-    ctx.fillStyle = "white"; 
-    ctx.font = "bold 14px Arial";
-    ctx.textAlign = "left"; 
-    ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
+    if (menuOverlay) menuOverlay.style.display = 'none';
 
-    const aiDx = (avatar.x + 35) - (aiAvatar.x + 35);
-    const aiDy = (avatar.y + 35) - (aiAvatar.y + 35);
-    const distanceToAI = Math.sqrt(aiDx * aiDx + aiDy * aiDy);
+   
 
-    ctx.fillStyle = "rgba(0,0,0,0.7)"; 
-    ctx.fillRect(580, 60, 210, 40); 
-    ctx.strokeStyle = "#dcc23c";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(580, 60, 210, 40);
+    // Force precise cutscene spawning point at door entry
 
-    ctx.fillStyle = "white"; 
-    ctx.font = "bold 14px Arial";
-    ctx.textAlign = "left"; 
+    avatar.x = 630;
 
-    if (distanceToAI < 100) {
-        ctx.fillStyle = "yellow"; 
-        ctx.fillText("Status: SPACE TO TALK", 595, 86);
-    } else {
-        ctx.fillText("Status: AI Avatar", 595, 86);
-    }
+    avatar.y = 240;
+
+    avatar.angle = 180; // Turn avatar down facing front
+
+   
+
+    // CRITICAL UPDATE: Arm the time-duration cutscene track state
+
+    isCutsceneActive = true;
+
+    cutsceneStartTime = Date.now();
+
+   
+
+    // Handle side control guide UI panel visibility setup
 
     const inst = document.getElementById('instructions');
+
     if (inst) {
-        const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
-        if (inst.style.display !== structuralVisibility) {
-            inst.style.display = structuralVisibility;
-        }
+
+        inst.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
+
     }
 
-    if (!isPaused) {
-        update(); 
+   
+
+    const badge = document.getElementById('ai-attention-badge');
+
+    if (badge) badge.style.display = 'block';
+
+}
+
+
+
+    if (gameState === 'title') {
+
+        drawTitleScreen();
+
+        requestAnimationFrame(draw);
+
+        return;
+
     }
+
+
+
+    // --- ACTIVE GAMEPLAY RENDERING ---
+
+    ctx.clearRect(0, 0, 800, 600);
+
+       
+
+    if (images.background && images.background.naturalWidth > 0) {
+
+        ctx.drawImage(images.background, 0, 0, 800, 600);
+
+    }
+
+
+
+    // --- LAPTOP RENDERING WITH ROTATION SUPPORT ---
+
+    papers.forEach(p => {
+
+        if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
+
+            ctx.save();
+
+            ctx.translate(p.x, p.y);
+
+            if (p.angle) {
+
+                ctx.rotate(p.angle * Math.PI / 180);
+
+            }
+
+            ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
+
+            ctx.restore();
+
+        }
+
+               
+
+        const dx = (avatar.x + 35) - p.x;
+
+        const dy = (avatar.y + 35) - p.y;
+
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+
+
+        if (dist < interactionDist) {
+
+            ctx.save();
+
+            ctx.translate(p.x, p.y);
+
+            if (p.angle) {
+
+                ctx.rotate(p.angle * Math.PI / 180);
+
+            }
+
+            ctx.strokeStyle = "yellow";
+
+            ctx.lineWidth = 3;
+
+            ctx.strokeRect(-55, -40, 110, 80);
+
+            ctx.restore();
+
+        }
+
+    });
+
+
+
+    // --- LAYER 1: DRAW OTHER STUDENTS' AVATAR IMAGES ONLY ---
+
+    if (typeof remotePlayers !== 'undefined' && remotePlayers) {
+
+        Object.keys(remotePlayers).forEach((id) => {
+
+            const p = remotePlayers[id];
+
+            if (typeof currentRoomCode !== 'undefined' && p.roomCode !== currentRoomCode) return;
+
+
+
+            let remoteImg = images.idle;
+
+            if (p.moving) {
+
+                if (p.animStep === 0) remoteImg = images.walkLeft;
+
+                else if (p.animStep === 2) remoteImg = images.walkRight;
+
+            }
+
+
+
+            if (remoteImg && remoteImg.naturalWidth > 0) {
+
+                ctx.save();
+
+                ctx.translate(p.x + 35, p.y + 35);
+
+                ctx.rotate((p.angle * Math.PI) / 180);
+
+                ctx.drawImage(remoteImg, -35, -35, 70, 70);
+
+                ctx.restore();
+
+            }
+
+        });
+
+    }
+
+
+
+    // --- LAYER 2: DRAW LOCAL AVATAR IMAGE ---
+
+    let now = Date.now();
+
+    let img;
+
+
+
+    if (avatar.moving) {
+
+        let currentSpeed = avatar.speed || 4;
+
+        let dynamicInterval = Math.max(60, 600 / currentSpeed);
+
+
+
+        if (now - avatar.lastFrameSwap > dynamicInterval) {
+
+            if (typeof avatar.animStep === 'undefined') avatar.animStep = 0;
+
+            avatar.animStep = (avatar.animStep + 1) % 4;
+
+            avatar.lastFrameSwap = now;
+
+        }
+
+
+
+        if (avatar.animStep === 0) {
+
+            img = images.walkLeft;
+
+        } else if (avatar.animStep === 2) {
+
+            img = images.walkRight;
+
+        } else {
+
+            img = images.idle;
+
+        }
+
+    } else {
+
+        img = images.idle;
+
+    }
+
+       
+
+    if (img && img.naturalWidth > 0) {
+
+        ctx.save();                
+
+        ctx.translate(avatar.x + 35, avatar.y + 35);                
+
+        ctx.rotate(avatar.angle * Math.PI / 180);
+
+        ctx.drawImage(img, -35, -35, 70, 70);
+
+        ctx.restore();
+
+    }
+
+
+
+    // --- LAYER 3: DRAW AI NPC IMAGE ---
+
+    if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
+
+        ctx.save();
+
+        ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
+
+        let correctedAngle = aiAvatar.angle + 180;
+
+        ctx.rotate(correctedAngle * Math.PI / 180);
+
+        ctx.drawImage(images.aiNPC, -35, -35, 70, 70);
+
+        ctx.restore();
+
+    }
+
+
+
+    // --- LAYER 4: OVERHEAD TEXT LABELS ---
+
+    if (typeof remotePlayers !== 'undefined' && remotePlayers) {
+
+        Object.keys(remotePlayers).forEach((id) => {
+
+            const p = remotePlayers[id];
+
+            if (typeof currentRoomCode !== 'undefined' && p.roomCode !== currentRoomCode) return;
+
+
+
+            ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+
+            ctx.fillRect(p.x + 5, p.y - 18, 60, 14);
+
+           
+
+            ctx.fillStyle = "#ffffff";
+
+            ctx.font = "bold 9px Arial";
+
+            ctx.textAlign = "center";
+
+            ctx.fillText(p.studentNumber, p.x + 35, p.y - 8);
+
+        });
+
+    }
+
+
+
+    // Render local player overhead nametag
+
+    if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber) {
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+
+        ctx.fillRect(avatar.x + 5, avatar.y - 18, 60, 14);
+
+       
+
+        ctx.fillStyle = "#52b788"; // Distinct local identifier color
+
+        ctx.font = "bold 9px Arial";
+
+        ctx.textAlign = "center";
+
+        ctx.fillText(currentStudentNumber, avatar.x + 35, avatar.y - 8);
+
+    }
+
+
+
+    // --- DEBUG: DRAW COLLISION ZONES IN RED ---
+
+    if (typeof debugMode !== 'undefined' && debugMode) {
+
+        ctx.lineWidth = 2;
+
+        collisionZones.forEach(z => {
+
+            ctx.save();
+
+            if (z.type === 'circle') {
+
+                ctx.beginPath();
+
+                ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2);
+
+                ctx.strokeStyle = "red";
+
+                ctx.stroke();
+
+                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
+
+                ctx.fill();
+
+            } else {
+
+                ctx.translate(z.x, z.y);
+
+                if (z.deg) {
+
+                    ctx.rotate(z.deg * Math.PI / 180);
+
+                }
+
+                ctx.strokeStyle = "red";
+
+                ctx.strokeRect(0, 0, z.w, z.h);
+
+                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
+
+                ctx.fillRect(0, 0, z.w, z.h);
+
+            }
+
+            ctx.restore();
+
+        });
+
+    }
+
+
+
+    // --- UI OVERLAY LAYER ---
+
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+
+    ctx.fillRect(580, 10, 210, 40);
+
+    ctx.strokeStyle = "#dcc23c";
+
+    ctx.lineWidth = 2;
+
+    ctx.strokeRect(580, 10, 210, 40);
+
+
+
+    ctx.fillStyle = "white";
+
+    ctx.font = "bold 14px Arial";
+
+    ctx.textAlign = "left";
+
+    ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
+
+
+
+    const aiDx = (avatar.x + 35) - (aiAvatar.x + 35);
+
+    const aiDy = (avatar.y + 35) - (aiAvatar.y + 35);
+
+    const distanceToAI = Math.sqrt(aiDx * aiDx + aiDy * aiDy);
+
+
+
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+
+    ctx.fillRect(580, 60, 210, 40);
+
+    ctx.strokeStyle = "#dcc23c";
+
+    ctx.lineWidth = 2;
+
+    ctx.strokeRect(580, 60, 210, 40);
+
+
+
+    ctx.fillStyle = "white";
+
+    ctx.font = "bold 14px Arial";
+
+    ctx.textAlign = "left";
+
+
+
+    if (distanceToAI < 100) {
+
+        ctx.fillStyle = "yellow";
+
+        ctx.fillText("Status: SPACE TO TALK", 595, 86);
+
+    } else {
+
+        ctx.fillText("Status: AI Avatar", 595, 86);
+
+    }
+
+
+
+    // Dynamic verification sync loop for the Guide Controls block interface panels
+
+    const inst = document.getElementById('instructions');
+
+    if (inst) {
+
+        const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
+
+        if (inst.style.display !== structuralVisibility) {
+
+            inst.style.display = structuralVisibility;
+
+        }
+
+    }
+
+
+
+    if (!isPaused) {
+
+        update();
+
+    }
+
     requestAnimationFrame(draw);
+
+} 
+
+
+// Dedicated network synchronization loop to process telemetry independent of tab focus
+function syncPlayerCoordinates() {
+    if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber && currentRoomCode) {
+        fetch('/api/multiplayer/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                studentNumber: currentStudentNumber,
+                roomCode: currentRoomCode,
+                x: avatar.x,
+                y: avatar.y,
+                angle: avatar.angle,
+                moving: avatar.moving,
+                animStep: avatar.animStep || 0
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.players) {
+                // Keep the active registry alive in memory for the draw loop
+                remotePlayers = data.players;
+            }
+        })
+        .catch(err => console.error("Multiplayer heartbeat failed:", err));
+    }
+}
+
+// Keep syncing state calculations every 50ms for smooth position extraction
+setInterval(syncPlayerCoordinates, 50);
+// Helper to check if a point hits any defined collision box or circle
+function isInsideCollisionZone(x, y, radius = 25) {
+    if (typeof collisionZones === 'undefined' || !collisionZones) return false;
+    for (let z of collisionZones) {
+        if (z.type === 'circle') {
+            const dx = x - z.x;
+            const dy = y - z.y;
+            if (Math.sqrt(dx * dx + dy * dy) < (z.radius + radius)) return true;
+        } else {
+            if (x + radius > z.x && x - radius < z.x + z.w &&
+                y + radius > z.y && y - radius < z.y + z.h) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function getRandomSpawnPosition() {
+    const baseSpawnX = 300; 
+    const baseSpawnY = 380;
+    const horizontalStep = 45; // Shifts players past the 40px collision threshold
+    
+    let currentX = baseSpawnX;
+    let stepCount = 1;
+    let direction = 1; // 1 = shift right, -1 = shift left
+    let attempts = 0;
+
+    // Keep checking positions until an open, non-colliding spot is found
+    while (attempts < 50) {
+        // 1. Check if the current position collides with map bounds or static zone items
+        let environmentCollision = isInsideCollisionZone(currentX + 35, baseSpawnY + 35, 20);
+        
+        // 2. Check if this position overlaps with another peer student already in the room
+        let peerCollision = false;
+        if (typeof remotePlayers !== 'undefined' && remotePlayers) {
+            for (let id of Object.keys(remotePlayers)) {
+                if (id === currentStudentNumber) continue;
+                
+                const p = remotePlayers[id];
+                if (p.roomCode === currentRoomCode) {
+                    const dx = currentX - p.x;
+                    const dy = baseSpawnY - p.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 40) { // Matches your 40px bounding threshold
+                        peerCollision = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // If the spot is clear of environmental obstacles and peer players, use it!
+        if (!environmentCollision && !peerCollision) {
+            return { x: currentX, y: baseSpawnY };
+        }
+
+        // Alternate shifting sides outward: (300 + 45), (300 - 45), (300 + 90), (300 - 90)...
+        currentX = baseSpawnX + (direction * stepCount * horizontalStep);
+        
+        if (direction === 1) {
+            direction = -1; // Flip to left side next loop
+        } else {
+            direction = 1;  // Flip to right side next loop
+            stepCount++;    // Increase distance threshold for subsequent step pairs
+        }
+        
+        attempts++;
+    }
+
+    // Safe fall-back value if the entire row line is tightly packed
+    return { x: baseSpawnX, y: baseSpawnY };
+}
+// Prevent local avatar from stepping inside another student's perimeter
+function checkPeerPlayerCollisions(nextX, nextY) {
+    if (typeof remotePlayers === 'undefined' || !remotePlayers) return false;
+
+    for (let id of Object.keys(remotePlayers)) {
+        // Skip comparing against yourself if your ID slips into the loop mapping
+        if (id === currentStudentNumber) continue;
+
+        const p = remotePlayers[id];
+        
+        // Only check collisions with peers in the exact same room mapping matrix
+        if (p.roomCode === currentRoomCode) {
+            const dx = nextX - p.x;
+            const dy = nextY - p.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // 40px boundary threshold (adjust based on sprite thickness layouts)
+            if (distance < 40) {
+                return true; // Collision detected
+            }
+        }
+    }
+    return false;
 }
     loadImages();
 </script>
