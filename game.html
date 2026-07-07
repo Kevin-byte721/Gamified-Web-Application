@@ -655,7 +655,7 @@ window.addEventListener('keydown', e => {
 
     }
 
- function interactWithLaptop(paper) {
+function interactWithLaptop(paper) {
     // If the terminal has been cleared/processed already
     if (paper.scoreProcessed) {
         isPaused = true;
@@ -668,7 +668,7 @@ window.addEventListener('keydown', e => {
         if (paper.userWasCorrect) {
             content.innerHTML = `
                 <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #333;">
-                    💻 Workstation Secure
+                    Workstation Secure
                     <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
                         Inbox clean. There are <b>no emails yet</b> for this terminal.
                     </div>
@@ -677,7 +677,7 @@ window.addEventListener('keydown', e => {
         } else {
             content.innerHTML = `
                 <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
-                    🔒 Terminal Access Locked
+                     Terminal Access Locked
                     <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
                         Access to this station remains revoked due to an unverified transaction check rule bypass.
                     </div>
@@ -688,6 +688,28 @@ window.addEventListener('keydown', e => {
         return; 
     }
 
+    // --- NEW CONDITION: Attempted opening after submitting a choice without speaking to AI ---
+    if (paper.locked && paper.answered && !paper.scoreProcessed) {
+        isPaused = true;
+        const content = document.getElementById('popup-content');
+        
+        content.className = ''; 
+        content.classList.add('center-modal-mode');
+
+        content.innerHTML = `
+            <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
+                 Terminal Locked
+                <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
+                    This workstation terminal is currently locked.<br><br>
+                    <b>Please proceed to the AI Avatar to finish your evaluation first.</b>
+                </div>
+            </div>
+        `;
+        document.getElementById('popup-overlay').style.display = 'block';
+        return;
+    }
+
+    // Initial state check when first starting the scene
     if (laptopLocked) {
         isPaused = true;
         const content = document.getElementById('popup-content');
@@ -709,26 +731,28 @@ window.addEventListener('keydown', e => {
 
     showEmailPopup(paper);
 }
-
 function confirmEmailChoice() {
-    currentPaper.answered = true;
-    currentPaper.scoreProcessed = false; 
-    
-    if (selectedEmailOption === 1) {
+    if (!currentPaper) return;
+
+    // 1. Evaluate choice mechanics
+    if (selectedEmailOption === 1) { // IGNORE / TRASH
         currentPaper.userWasCorrect = true;
-    } else {
+    } else { // RESPOND TO EMAIL
         currentPaper.userWasCorrect = false;
     }
 
-    document.getElementById('popup-overlay').style.display = 'none';
-    isPaused = false; 
+    currentPaper.answered = true;
+    currentPaper.locked = true; // Secure the laptop lock immediately
 
+    // 2. Reveal the floating AI attention badge on the game floor
     const badge = document.getElementById('ai-attention-badge');
     if (badge) {
         badge.style.display = 'block';
     }
-}
 
+    // 3. Immediately close the window overlay
+    closePopup();
+}
 function showEmailPopup(paper) {
     isPaused = true;
     currentPaper = paper;
@@ -740,22 +764,70 @@ function showEmailPopup(paper) {
     content.classList.add('center-modal-mode');
 
     content.innerHTML = `
-        <div class="popup-layout-wrapper" style="font-size: 1.8cqw; font-weight: normal;">
-            <h3 style="margin: 0 0 1cqh 0; font-size: 2.2cqw; color: #3a3a3a;">Workstation Terminal</h3>
-            <div class="email-container">
-                <div class="email-header">From: HR Dept | Subject: Action Required</div>
-                <div class="email-body">We detected an unusual login. Please <b>click here</b> to verify your account right away.</div>
+    <div class="popup-layout-wrapper" style="font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 1.6cqw; font-weight: normal; background-color: #ffffff; color: #202124; box-sizing: border-box; width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column;">
+        
+        <div class="email-action-bar" style="display: flex; gap: 2.5cqw; align-items: center; border-bottom: 1px solid #f1f3f4; padding: 1.5cqh 3cqw; color: #5f6368; font-size: 1.8cqw;">
+            <span style="cursor: pointer; font-weight: bold;">←</span>
+            <span style="cursor: pointer;">📥</span>
+            <span style="cursor: pointer;">⚠️</span>
+            <span style="cursor: pointer;">🗑️</span>
+            <span style="cursor: pointer; margin-left: auto;">✉️</span>
+            <span style="cursor: pointer;">🕒</span>
+            <span style="cursor: pointer;">✅</span>
+            <span style="cursor: pointer; margin-left: 1cqw;">⋮</span>
+        </div>
+
+        <div style="padding: 3cqh 4cqw; flex-grow: 1;">
+            <div style="display: flex; align-items: center; gap: 1cqw; margin-bottom: 3cqh;">
+                <h2 style="margin: 0; font-size: 2.4cqw; font-weight: 400; color: #202124;">
+                    Action Required
+                </h2>
+                <span style="background-color: #e8eaed; color: #5f6368; font-size: 1.2cqw; padding: 2px 6px; border-radius: 4px; font-weight: 500;">
+                    Inbox
+                </span>
             </div>
-            <div id="email-options">
-                <div class="email-option selected" id="opt-0">➤ RESPOND TO EMAIL</div>
-                <div class="email-option" id="opt-1">➤ IGNORE / TRASH</div>
+
+            <div class="email-meta-row" style="display: flex; align-items: flex-start; margin-bottom: 4cqh; position: relative;">
+                <div style="width: 5cqw; height: 5cqw; border-radius: 50%; background-color: #007791; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 2cqw; margin-right: 2cqw; flex-shrink: 0;">
+                    HR
+                </div>
+                
+                <div style="flex-grow: 1; min-width: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%;">
+                        <div>
+                            <span style="font-weight: bold; color: #202124; font-size: 1.6cqw; margin-right: 0.5cqw;">HR Dept</span>
+                            <span style="color: #5f6368; font-size: 1.4cqw;">&lt;hr@internal-security-system.local&gt;</span>
+                        </div>
+                        <div style="color: #5f6368; font-size: 1.3cqw; white-space: nowrap; margin-left: 2cqw;">
+                            Just now
+                        </div>
+                    </div>
+                    
+                    <div style="color: #5f6368; font-size: 1.4cqw; margin-top: 0.5cqh; display: flex; align-items: center; gap: 0.5cqw;">
+                        to me 
+                        <span style="font-size: 1cqw; color: #5f6368; cursor: pointer;">▼</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="email-body" style="font-size: 1.6cqw; line-height: 1.5; color: #202124; padding-left: 7cqw; margin-bottom: 6cqh; min-height: 12cqh;">
+                Your network access password is scheduled to expire within the next 24 hours. To ensure uninterrupted access to internal company servers and workstations, please choose an option below to proceed with your credential update.
+            </div>
+
+            <div id="email-options" style="display: flex; gap: 1.5cqw; padding-left: 7cqw; border-top: 1px solid #f1f3f4; padding-top: 3cqh;">
+                <div class="email-option selected" id="opt-0" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;">
+                    ↩️ RESPOND TO EMAIL
+                </div>
+                <div class="email-option" id="opt-1" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;">
+                    ➡️ IGNORE / TRASH
+                </div>
             </div>
         </div>
-    `;
+    </div>
+`;
 
     document.getElementById('popup-overlay').style.display = 'block';
 }
-
 function closePopup() {
     if (showingAIDialogue && currentPaper && currentPaper.answered && !currentPaper.scoreProcessed) {
         if (currentPaper.userWasCorrect) {
@@ -840,7 +912,6 @@ function showAIDialoguePopup() {
         
     document.getElementById('popup-overlay').style.display = 'block';
 }
-
     function updateAI() {
         if (isPaused || gameState !== 'game') return;
 
@@ -1025,498 +1096,231 @@ function checkAvatarBoundaries(targetX, targetY) {
         ctx.fillRect(0, 0, 800, 600);
     }
 
-    function draw() {
-
+function draw() {
     // Inside your draw() function, find the skipTitleScreen block and update these lines:
+    if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
+        // Automatically inject placeholder credentials if undefined
+        if (typeof currentStudentNumber === 'undefined' || !currentStudentNumber) {
+            currentStudentNumber = "DEBUG_USER_001";
+        }
+        if (typeof currentRoomCode === 'undefined' || !currentRoomCode) {
+            currentRoomCode = "DEBUG_ROOM";
+        }
 
-if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
+        // Force system clearance elevation flags
+        isAuthenticated = true;
+        gameState = 'game';
+        isPaused = false;
 
-    // Automatically inject placeholder credentials if undefined
-
-    if (typeof currentStudentNumber === 'undefined' || !currentStudentNumber) {
-
-        currentStudentNumber = "DEBUG_USER_001";
-
+        // Instantly shut down title interface graphics overlays
+        const menuOverlay = document.getElementById('menu-overlay');
+        if (menuOverlay) menuOverlay.style.display = 'none';
+        
+        // Force precise cutscene spawning point at door entry
+        avatar.x = 630;
+        avatar.y = 240;
+        avatar.angle = 180; // Turn avatar down facing front
+        
+        // CRITICAL UPDATE: Arm the time-duration cutscene track state
+        isCutsceneActive = true;
+        cutsceneStartTime = Date.now();
+        
+        // Handle side control guide UI panel visibility setup
+        const inst = document.getElementById('instructions');
+        if (inst) {
+            inst.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
+        }
+        
+        const badge = document.getElementById('ai-attention-badge');
+        if (badge) badge.style.display = 'block';
     }
-
-    if (typeof currentRoomCode === 'undefined' || !currentRoomCode) {
-
-        currentRoomCode = "DEBUG_ROOM";
-
-    }
-
-
-
-    // Force system clearance elevation flags
-
-    isAuthenticated = true;
-
-    gameState = 'game';
-
-    isPaused = false;
-
-
-
-    // Instantly shut down title interface graphics overlays
-
-    const menuOverlay = document.getElementById('menu-overlay');
-
-    if (menuOverlay) menuOverlay.style.display = 'none';
-
-   
-
-    // Force precise cutscene spawning point at door entry
-
-    avatar.x = 630;
-
-    avatar.y = 240;
-
-    avatar.angle = 180; // Turn avatar down facing front
-
-   
-
-    // CRITICAL UPDATE: Arm the time-duration cutscene track state
-
-    isCutsceneActive = true;
-
-    cutsceneStartTime = Date.now();
-
-   
-
-    // Handle side control guide UI panel visibility setup
-
-    const inst = document.getElementById('instructions');
-
-    if (inst) {
-
-        inst.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
-
-    }
-
-   
-
-    const badge = document.getElementById('ai-attention-badge');
-
-    if (badge) badge.style.display = 'block';
-
-}
-
-
 
     if (gameState === 'title') {
-
         drawTitleScreen();
-
         requestAnimationFrame(draw);
-
         return;
-
     }
-
-
 
     // --- ACTIVE GAMEPLAY RENDERING ---
-
     ctx.clearRect(0, 0, 800, 600);
-
-       
-
+        
     if (images.background && images.background.naturalWidth > 0) {
-
         ctx.drawImage(images.background, 0, 0, 800, 600);
-
     }
-
-
 
     // --- LAPTOP RENDERING WITH ROTATION SUPPORT ---
-
     papers.forEach(p => {
-
         if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
-
             ctx.save();
-
             ctx.translate(p.x, p.y);
-
             if (p.angle) {
-
                 ctx.rotate(p.angle * Math.PI / 180);
-
             }
-
             ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
-
             ctx.restore();
-
         }
-
-               
-
+                
         const dx = (avatar.x + 35) - p.x;
-
         const dy = (avatar.y + 35) - p.y;
-
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-
-
         if (dist < interactionDist) {
-
             ctx.save();
-
             ctx.translate(p.x, p.y);
-
             if (p.angle) {
-
                 ctx.rotate(p.angle * Math.PI / 180);
-
             }
-
             ctx.strokeStyle = "yellow";
-
             ctx.lineWidth = 3;
-
             ctx.strokeRect(-55, -40, 110, 80);
-
             ctx.restore();
-
         }
-
     });
 
-
-
     // --- LAYER 1: DRAW OTHER STUDENTS' AVATAR IMAGES ONLY ---
-
     if (typeof remotePlayers !== 'undefined' && remotePlayers) {
-
         Object.keys(remotePlayers).forEach((id) => {
-
             const p = remotePlayers[id];
-
             if (typeof currentRoomCode !== 'undefined' && p.roomCode !== currentRoomCode) return;
-
-
 
             let remoteImg = images.idle;
-
             if (p.moving) {
-
                 if (p.animStep === 0) remoteImg = images.walkLeft;
-
                 else if (p.animStep === 2) remoteImg = images.walkRight;
-
             }
-
-
 
             if (remoteImg && remoteImg.naturalWidth > 0) {
-
                 ctx.save();
-
                 ctx.translate(p.x + 35, p.y + 35);
-
                 ctx.rotate((p.angle * Math.PI) / 180);
-
                 ctx.drawImage(remoteImg, -35, -35, 70, 70);
-
                 ctx.restore();
-
             }
-
         });
-
     }
-
-
 
     // --- LAYER 2: DRAW LOCAL AVATAR IMAGE ---
-
     let now = Date.now();
-
     let img;
 
-
-
     if (avatar.moving) {
-
         let currentSpeed = avatar.speed || 4;
-
         let dynamicInterval = Math.max(60, 600 / currentSpeed);
 
-
-
         if (now - avatar.lastFrameSwap > dynamicInterval) {
-
             if (typeof avatar.animStep === 'undefined') avatar.animStep = 0;
-
             avatar.animStep = (avatar.animStep + 1) % 4;
-
             avatar.lastFrameSwap = now;
-
         }
-
-
 
         if (avatar.animStep === 0) {
-
             img = images.walkLeft;
-
         } else if (avatar.animStep === 2) {
-
             img = images.walkRight;
-
         } else {
-
             img = images.idle;
-
         }
-
     } else {
-
         img = images.idle;
-
     }
-
-       
-
+        
     if (img && img.naturalWidth > 0) {
-
         ctx.save();                
-
         ctx.translate(avatar.x + 35, avatar.y + 35);                
-
         ctx.rotate(avatar.angle * Math.PI / 180);
-
         ctx.drawImage(img, -35, -35, 70, 70);
-
         ctx.restore();
-
     }
-
-
 
     // --- LAYER 3: DRAW AI NPC IMAGE ---
-
     if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
-
         ctx.save();
-
         ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
-
         let correctedAngle = aiAvatar.angle + 180;
-
         ctx.rotate(correctedAngle * Math.PI / 180);
-
         ctx.drawImage(images.aiNPC, -35, -35, 70, 70);
-
         ctx.restore();
-
     }
-
-
 
     // --- LAYER 4: OVERHEAD TEXT LABELS ---
-
     if (typeof remotePlayers !== 'undefined' && remotePlayers) {
-
         Object.keys(remotePlayers).forEach((id) => {
-
             const p = remotePlayers[id];
-
             if (typeof currentRoomCode !== 'undefined' && p.roomCode !== currentRoomCode) return;
 
-
-
             ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-
             ctx.fillRect(p.x + 5, p.y - 18, 60, 14);
-
-           
-
+            
             ctx.fillStyle = "#ffffff";
-
             ctx.font = "bold 9px Arial";
-
             ctx.textAlign = "center";
-
             ctx.fillText(p.studentNumber, p.x + 35, p.y - 8);
-
         });
-
     }
-
-
 
     // Render local player overhead nametag
-
     if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber) {
-
         ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-
         ctx.fillRect(avatar.x + 5, avatar.y - 18, 60, 14);
-
-       
-
+        
         ctx.fillStyle = "#52b788"; // Distinct local identifier color
-
         ctx.font = "bold 9px Arial";
-
         ctx.textAlign = "center";
-
         ctx.fillText(currentStudentNumber, avatar.x + 35, avatar.y - 8);
-
     }
-
-
 
     // --- DEBUG: DRAW COLLISION ZONES IN RED ---
-
     if (typeof debugMode !== 'undefined' && debugMode) {
-
         ctx.lineWidth = 2;
-
         collisionZones.forEach(z => {
-
             ctx.save();
-
             if (z.type === 'circle') {
-
                 ctx.beginPath();
-
                 ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2);
-
                 ctx.strokeStyle = "red";
-
                 ctx.stroke();
-
                 ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
-
                 ctx.fill();
-
             } else {
-
                 ctx.translate(z.x, z.y);
-
                 if (z.deg) {
-
                     ctx.rotate(z.deg * Math.PI / 180);
-
                 }
-
                 ctx.strokeStyle = "red";
-
                 ctx.strokeRect(0, 0, z.w, z.h);
-
                 ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
-
                 ctx.fillRect(0, 0, z.w, z.h);
-
             }
-
             ctx.restore();
-
         });
-
     }
-
-
 
     // --- UI OVERLAY LAYER ---
-
     ctx.fillStyle = "rgba(0,0,0,0.7)";
-
     ctx.fillRect(580, 10, 210, 40);
-
     ctx.strokeStyle = "#dcc23c";
-
     ctx.lineWidth = 2;
-
     ctx.strokeRect(580, 10, 210, 40);
 
-
-
     ctx.fillStyle = "white";
-
     ctx.font = "bold 14px Arial";
-
     ctx.textAlign = "left";
-
     ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
 
-
-
-    const aiDx = (avatar.x + 35) - (aiAvatar.x + 35);
-
-    const aiDy = (avatar.y + 35) - (aiAvatar.y + 35);
-
-    const distanceToAI = Math.sqrt(aiDx * aiDx + aiDy * aiDy);
-
-
-
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-
-    ctx.fillRect(580, 60, 210, 40);
-
-    ctx.strokeStyle = "#dcc23c";
-
-    ctx.lineWidth = 2;
-
-    ctx.strokeRect(580, 60, 210, 40);
-
-
-
-    ctx.fillStyle = "white";
-
-    ctx.font = "bold 14px Arial";
-
-    ctx.textAlign = "left";
-
-
-
-    if (distanceToAI < 100) {
-
-        ctx.fillStyle = "yellow";
-
-        ctx.fillText("Status: SPACE TO TALK", 595, 86);
-
-    } else {
-
-        ctx.fillText("Status: AI Avatar", 595, 86);
-
-    }
-
-
-
     // Dynamic verification sync loop for the Guide Controls block interface panels
-
     const inst = document.getElementById('instructions');
-
     if (inst) {
-
         const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
-
         if (inst.style.display !== structuralVisibility) {
-
             inst.style.display = structuralVisibility;
-
         }
-
     }
-
-
 
     if (!isPaused) {
-
         update();
-
     }
-
     requestAnimationFrame(draw);
-
-} 
-
+}
 
 // Dedicated network synchronization loop to process telemetry independent of tab focus
 function syncPlayerCoordinates() {
