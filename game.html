@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -223,7 +224,21 @@
 
     .email-option.selected { border-color: #4285f4; background: #e8f0fe; }
     .popup-layout-wrapper { display: flex; flex-direction: column; width: 100%; }
-
+    #fade-overlay {
+    position: fixed;
+    top: 0; 
+    left: 0;
+    width: 100vw; 
+    height: 100vh;
+    background: black;
+    opacity: 0;
+    pointer-events: none; /* Allows user to click underneath when hidden */
+    z-index: 10000;       /* Stays securely on top of everything */
+    
+    /* Pre-bind transition rules so they apply to both fading IN and OUT */
+    transition: opacity 0.8s ease-in-out;
+    will-change: opacity;
+}
     @keyframes floatUpDown {
         0% { transform: translate(-50%, 0); }
         100% { transform: translate(-50%, -1cqh); }
@@ -238,8 +253,8 @@
         <div id="instructions">Arrows = Move | Space = Interact | ESC = Main Menu</div>
         
         <div id="menu-overlay">
-    <h1 class="portal-title">CYBER DEFENSE SYSTEM</h1>
-    <p class="portal-subtitle">Authorized Access Portals Only</p>
+    <h1 class="portal-title">S3 Cyber Room</h1>
+    <p class="portal-subtitle"></p>
 
     <div id="login-container">
         <h3 class="login-heading">Student Authentication</h3>
@@ -263,7 +278,7 @@
         <p class="access-prompt-text">Press <span class="highlight-key">SPACE</span> to Initialize Gameplay</p>
     </div>
 </div>
-
+<div id="fade-overlay"></div>
         <div id="popup-overlay">
             <div id="popup-content">
                 <!-- Injected dynamically -->
@@ -271,6 +286,7 @@
         </div>
     </div>
 <script>
+ 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const popupOverlay = document.getElementById('popup-overlay');
@@ -278,50 +294,95 @@
     const images = {};
     const imageFiles = {
     background: 'room_background.jpg',
+    livingRoom: 'room_living.png', // <--- Added this line
     idle: 'avatar_idle.png',
     walkLeft: 'avatar_walk_left.png',
     walkRight: 'avatar_walk_right.png',
     laptopEmail: 'Laptop-computer1.png',
-    aiNPC: 'ai_helper_avatar.png' // <--- Use a distinct file name here!
+    aiNPC: 'ai_helper_avatar.png'
 };
-    let currentRoomCode = ""; 
+    // =========================================================================
+// 1. GLOBAL ENGINE STATE TRACKING VARIABLES (Explicitly Bound Globally)
+// =========================================================================
+window.currentRoomCode = "room_background"; 
+
 var remotePlayers = {};
-    let skipTitleScreen = false;
-    let debugMode = false; // Starts off by default
-    let showGuideControls = false;
-    let imagesLoaded = 0;
-    const totalImages = Object.keys(imageFiles).length;
+let skipTitleScreen = false;
+let debugMode = true; 
+let showGuideControls = false;
+let imagesLoaded = 0;
+const totalImages = Object.keys(imageFiles).length;
 let gameState = 'title';
-    let isPaused = false;
-    let currentPaper = null;
-    let showingAIDialogue = false; 
-    const interactionDist = 80;
+let isPaused = false;
+let currentPaper = null;
+let showingAIDialogue = false; 
+const interactionDist = 80;
 
 // --- CUTSCENE / AUTOMATION FLAGS ---
-let isCutsceneActive = false;       // Managed dynamically on entry/bypass
-let cutsceneStartTime = 0;          // Marks when the entrance movement began
-const CUTSCENE_DURATION = 500;     // Run sequence continuously for exactly 1 second (1000ms)    function loadImages() {
-        function loadImages() {
-        for (let key in imageFiles) {
-            images[key] = new Image();
-            images[key].src = imageFiles[key];
-                    
-            images[key].onload = () => { 
-                 if (++imagesLoaded === totalImages) {
-                    draw(); 
-                } 
-             };
-            images[key].onerror = () => {
-                if (++imagesLoaded === totalImages) {
-                    draw(); 
-                }
-            };
-        }
-    }
+let isCutsceneActive = false;       
+let cutsceneStartTime = 0;          
+const CUTSCENE_DURATION = 500;     
 
+// =========================================================================
+// 2. RUNTIME IMAGE LOADER
+// =========================================================================
+function loadImages() {
+    for (let key in imageFiles) {
+        images[key] = new Image();
+        images[key].src = imageFiles[key];
+                    
+        images[key].onload = () => { 
+            if (++imagesLoaded === totalImages) {
+                // Ensure room arrays have a default baseline before the loop fires
+                if (roomConfigs[window.currentRoomCode]) {
+                    window.collisionZones = roomConfigs[window.currentRoomCode].collisionZones;
+                    window.papers = roomConfigs[window.currentRoomCode].papers;
+                }
+                draw(); 
+            } 
+        };
+        images[key].onerror = () => {
+            if (++imagesLoaded === totalImages) {
+                if (roomConfigs[window.currentRoomCode]) {
+                    window.collisionZones = roomConfigs[window.currentRoomCode].collisionZones;
+                    window.papers = roomConfigs[window.currentRoomCode].papers;
+                }
+                draw(); 
+            }
+        };
+    }
+}
+
+// =========================================================================
+// 3. CORE MAP LEVEL CONFIGURATIONS
+// =========================================================================
+const roomConfigs = {
+    'room_background': {
+        collisionZones: [
+            { x: 0, y: 75, w: 800, h: 45 },    
+            { x: 0, y: 520, w: 800, h: 80 },  
+            { x: 0, y: 0, w: 60, h: 600 },    
+            { x: 700, y: 0, w: 60, h: 600 },  
+            { x: 280, y: 0, w: 250, h: 340 },
+            { x: 25, y: 450, w: 295, h: 50 },
+            { type: 'circle', x: 200, y: 410, radius: 40 },
+            { type: 'circle', x: 130, y: 160, radius: 40 },
+            { type: 'circle', x: 385, y: 499, radius: 35 }
+        ], 
+        papers: [{ x: 210, y: 480, id: 0, angle: 180, answered: false, userWasCorrect: false, scoreAwarded: false }]          
+    },
+    'room_living': {
+        collisionZones: [
+            { x: 0, y: 0, w: 800, h: 80 },
+            { x: 70, y: 475, w: 160, h: 80 } 
+        ],
+        papers: [
+            { x: 300, y: 300, angle: 15, answered: false, userWasCorrect: false, scoreProcessed: false } 
+        ]
+    }
+};
     
-    
-    const avatar = { 
+const avatar = { 
     x: 300, 
     y: 380, 
     width: 70, 
@@ -334,98 +395,184 @@ const CUTSCENE_DURATION = 500;     // Run sequence continuously for exactly 1 se
     lastFrameSwap: 0    
 };
 
-    const aiAvatar = {
-        x: 100,             
-        y: 240,             
-        width: 70,
-        height: 70,
-        angle: 180,         
-        radius: 45          
-    };
+const aiAvatar = {
+    x: 100,             
+    y: 240,             
+    width: 70,
+    height: 70,
+    angle: 180,         
+    radius: 45          
+};
 
-    const keys = {};
+const keys = {};
 
-    const collisionZones = [
-        { x: 0, y: 75, w: 800, h: 45 },    
-        { x: 0, y: 520, w: 800, h: 80 },  
-        { x: 0, y: 0, w: 60, h: 600 },    
-        { x: 700, y: 0, w: 60, h: 600 },  
-        { x: 280, y: 0, w: 250, h: 340 },
-        { x: 25, y: 450, w: 295, h: 50 },
-        { type: 'circle', x: 200, y: 410, radius: 40 },
-        { type: 'circle', x: 130, y: 160, radius: 40 },
-        { type: 'circle', x: 385, y: 499, radius: 35 },
-           
-    ];
+let cyberknowledgeScore = 0;
+let selectedEmailOption = 0; 
+var laptopLocked = true; 
 
-    let cyberknowledgeScore = 0;
-    let selectedEmailOption = 0; 
+// --- Identity and Access State Management ---
+let currentStudentNumber = localStorage.getItem('activeStudentId') || "";
+let isAuthenticated = currentStudentNumber !== "";
+let currentRoomInstance = localStorage.getItem('activeRoomCode') || ""; 
 
-        // CRITICAL STATE CONFIGURATIONS (Unified Setup)
-        var laptopLocked = true; 
-        const papers = [
-            {x: 210, y: 480, id: 0, angle: 180, answered: false, userWasCorrect: false, scoreAwarded: false}
-        ];
-
-    // --- Identity and Access State Management ---
-let currentStudentNumber = "";
-let isAuthenticated = false;
-
-document.addEventListener("DOMContentLoaded", () => {
-    const loginBtn = document.getElementById('login-submit-btn');
-    const inputField = document.getElementById('student-number-input');
-    const errorMsg = document.getElementById('login-error-msg');
-    const loginContainer = document.getElementById('login-container');
+// =========================================================================
+// 4. CLIENT SYSTEM DOM AUTHENTICATION LOOKUPS
+// =========================================================================
+document.addEventListener("DOMContentLoaded", () => {    
+    const loginBtn = document.getElementById('login-submit-btn');    
+    const inputField = document.getElementById('student-number-input');    
+    const errorMsg = document.getElementById('login-error-msg');    
+    const loginContainer = document.getElementById('login-container');    
     const startPrompt = document.getElementById('start-prompt');
 
-    loginBtn.addEventListener('click', () => {
-    const studentId = inputField.value.trim();
+    // --- ADMINISTRATIVE UTILITY HOOK ---
+    // Clears the backend database array/object, wipes local browser cookies/storage, and reboots.
+    window.performFullReset = () => {
+        fetch('/api/admin/clear-all-students', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("Network response error during purge.");
+            return res.json();
+        })
+        .then(data => {
+            console.log("Server Purge Success:", data.message);
+            localStorage.clear();
+            sessionStorage.clear();
+            console.log("Local browser storage cleared.");
+            window.location.reload(); 
+        })
+        .catch(err => {
+            console.error("Critical error performing full system reset:", err);
+            // Fallback: Clear local anyways if server fails/drops connection
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.reload();
+        });
+    };
 
-    if (studentId === "") {
-        errorMsg.textContent = "⚠ Student number cannot be blank.";
-        errorMsg.style.display = 'block';
-        return;
+    // --- SESSION ROUTING CONTROL BLOCK ---
+    // Only verify and auto-authenticate the session if skipTitleScreen is true.
+    // If false, bypass optimization hooks and force visibility back to the login panel.
+    if (isAuthenticated && (typeof skipTitleScreen !== 'undefined' && skipTitleScreen)) {
+        fetch('/api/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentNumber: currentStudentNumber })
+        })
+        .then(res => res.json())
+        .then(result => {
+            if (!result.authenticated || result.data.safe_score === undefined) {
+                // If data-purge or cache mismatches exist, run dynamic local cleanups
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.reload(); 
+            } else {
+                if (loginContainer) loginContainer.style.display = 'none';
+                if (startPrompt) startPrompt.style.display = 'block';
+                
+                cyberknowledgeScore = result.data.safe_score || 0;
+                if (cyberknowledgeScore >= 20) {
+                    window.currentRoomCode = 'room_living';
+                    avatar.x = 100; avatar.y = 300;
+                    window.collisionZones = roomConfigs['room_living'].collisionZones;
+                    window.papers = roomConfigs['room_living'].papers;
+                } else {
+                    window.currentRoomCode = 'room_background';
+                    avatar.x = 630; avatar.y = 240;
+                    window.collisionZones = roomConfigs['room_background'].collisionZones;
+                    window.papers = roomConfigs['room_background'].papers;
+                }
+            }
+        })
+        .catch(() => {
+            if (loginContainer) loginContainer.style.display = 'none';
+            if (startPrompt) startPrompt.style.display = 'block';
+        });
+    } else {
+        // FORCE LOGIN PRESENTATION PANEL: Clear interactive fields and preserve title scene state
+        if (loginContainer) loginContainer.style.display = 'block';
+        if (startPrompt) startPrompt.style.display = 'none';
+        gameState = 'title';
     }
 
-    // Ask for a room code to bind players together
-    const roomSelection = prompt("Enter a Room Code to join or create (e.g., ROOM1):", "ROOM1");
-    if (!roomSelection) {
-        alert("A room code is required for multiplayer mapping functionality.");
-        return;
-    }
+    // --- MANUAL SESSION LOGIN SUBMISSION HANDLING ---
+    loginBtn.addEventListener('click', () => {    
+        const studentId = inputField.value.trim();
 
-    // Trigger explicit spawn positions at the door entryway matrix
-    avatar.x = 630; // Re-enforced default x position coordinates target
-    avatar.y = 240;
-    avatar.angle = 180;
-    
-    // CRITICAL TIMED UPDATE: Start the 1-second clock tracking window
-    isCutsceneActive = true;
-    cutsceneStartTime = Date.now();
+        if (studentId === "") {        
+            errorMsg.textContent = "⚠ Student number cannot be blank.";        
+            errorMsg.style.display = 'block';        
+            return;    
+        }
 
-    currentStudentNumber = studentId;
-    currentRoomCode = roomSelection.trim().toUpperCase();
-    isAuthenticated = true;
-    
-    errorMsg.style.display = 'none';
-    loginContainer.style.display = 'none';
-    startPrompt.style.display = 'block';
+        const roomSelection = prompt("Enter a Room Code to join or create (e.g., ROOM1):", "ROOM1");    
+        if (!roomSelection) {        
+            alert("A room code is required for multiplayer mapping functionality.");        
+            return;    
+        }
+        
+        const baseRoom = roomSelection.trim().toUpperCase();
 
-    console.log(`Session authorized: ${currentStudentNumber} spawned at doorway area inside room ${currentRoomCode}`);
-    
-    // Notify server of room registration initialization
-    fetch('/api/multiplayer/join-room', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentNumber: currentStudentNumber, roomCode: currentRoomCode })
-    }).catch(err => console.error("Error setting up server room channel:", err));
-});
+        fetch('/api/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentNumber: studentId })
+        })
+        .then(res => res.json())
+        .then(result => {
+            if (result.authenticated && result.data) {
+                currentStudentNumber = studentId;
+                isAuthenticated = true;
+                currentRoomInstance = baseRoom;
 
-    inputField.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') loginBtn.click();
+                cyberknowledgeScore = result.data.safe_score || 0;
+                if (cyberknowledgeScore >= 20) {
+                    window.currentRoomCode = 'room_living';
+                    avatar.x = 100; avatar.y = 300;
+                    avatar.angle = 90;
+                    window.collisionZones = roomConfigs['room_living'].collisionZones;
+                    window.papers = roomConfigs['room_living'].papers;
+                    isCutsceneActive = false;
+                } else {
+                    window.currentRoomCode = 'room_background';
+                    avatar.x = 630; avatar.y = 240;
+                    avatar.angle = 180;
+                    window.collisionZones = roomConfigs['room_background'].collisionZones;
+                    window.papers = roomConfigs['room_background'].papers;
+                    isCutsceneActive = true;
+                    cutsceneStartTime = Date.now();
+                }
+
+                errorMsg.style.display = 'none';
+                loginContainer.style.display = 'none';
+                startPrompt.style.display = 'block';
+
+                localStorage.setItem('activeStudentId', currentStudentNumber);
+                localStorage.setItem('activeRoomCode', currentRoomInstance);
+
+                return fetch('/api/multiplayer/join-room', {        
+                    method: 'POST',        
+                    headers: { 'Content-Type': 'application/json' },        
+                    body: JSON.stringify({ studentNumber: currentStudentNumber, roomCode: currentRoomInstance })    
+                });
+            } else {
+                errorMsg.textContent = "⚠ Authentication record missing.";
+                errorMsg.style.display = 'block';
+            }
+        })
+        .catch(err => {
+            console.error("Critical error mapping session initialization:", err);
+            errorMsg.textContent = "⚠ Network failure.";
+            errorMsg.style.display = 'block';
+        });
+    });
+
+    inputField.addEventListener('keydown', (e) => {        
+        if (e.key === 'Enter') loginBtn.click();    
     });
 });
-
 window.addEventListener('keydown', e => {
     // SECURITY FILTER: Suppress all character interactions if cutscene runs
     // FIX: Allow Space/Enter to pass through ONLY if the user is still on the title screen to initialize gameplay
@@ -616,7 +763,37 @@ window.addEventListener('keydown', e => {
             badge.style.top = `${topPercent}%`;
         }
     }
+   function transitionToRoom(targetRoom) {
+    const overlay = document.getElementById('fade-overlay');
+    
+    // Step 1: Trigger the fade to pure black
+    if (overlay) {
+        overlay.style.opacity = "1";
+    }
 
+    // Step 2: Notify backend and prepare local cache for a clean bypass boot
+    // Send the API room change request first
+    fetch('/api/change-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentNumber: currentStudentNumber, newRoom: targetRoom })
+    })
+    .catch(err => console.error("Room migration log failed:", err))
+    .finally(() => {
+        // Wait 800ms for the visual fade to finish completely before executing the refresh
+        setTimeout(() => {
+            // Save settings to local storage so the game remembers where to boot into
+            localStorage.setItem('activeRoomCode', currentRoomInstance);
+            localStorage.setItem('activeStudentId', currentStudentNumber);
+            
+            // Forces the game engine initialization block to load your target room immediately on refresh
+            // Make sure your script sets `skipTitleScreen = true;` or handles this targetRoom check on boot
+            
+            // Step 3: Hard refresh the game page to reset all memory matrices
+            window.location.reload();
+        }, 800); // Matches the 0.8s fade overlay duration
+    });
+}
     function checkInteraction() {
 
         for (let p of papers) {
@@ -845,7 +1022,8 @@ function closePopup() {
             let activeModule = currentPaper.module || 'safe';
             let isModuleFinished = false;
 
-            fetch(`${SERVER_URL}/api/save-progress`, {
+            // FIXED: Removed ${SERVER_URL} to use a stable relative endpoint path
+            fetch('/api/save-progress', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -854,6 +1032,10 @@ function closePopup() {
                     score: cyberknowledgeScore,
                     completed: isModuleFinished
                 })
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log("[Database Sync Successful]: Score saved to backend.", data);
             })
             .catch(err => console.error("Database sync failed:", err));
         }
@@ -865,7 +1047,6 @@ function closePopup() {
     isPaused = false;
     currentPaper = null; 
 }
-
 function showAIDialoguePopup() {
     isPaused = true;
     showingAIDialogue = true;
@@ -922,11 +1103,43 @@ function showAIDialoguePopup() {
     }
 
     function update() {
+    // --- STATE ENFORCEMENT GUARD RAIL ---
+    // CRITICAL: Ensure room status string stays perfectly bound to your exact score milestone 
+    // to prevent background bleed states during asynchronous intervals
+    if (typeof cyberknowledgeScore !== 'undefined') {
+        if (cyberknowledgeScore >= 20) {
+            currentRoomCode = 'room_living';
+        } else {
+            currentRoomCode = 'room_background';
+        }
+    }
+
     if (isPaused || gameState !== 'game') return;
+
+    // --- ROOM PROGRESSION ROOM TRIGGER ---
+    // Detects when the user earns 20 points in the default starting room
+    // FIXED: Uses structural state logic check to safely run transition logic exactly once
+    if (cyberknowledgeScore >= 20 && typeof currentRoomCode !== 'undefined' && currentRoomCode === 'room_background') {
+        isPaused = true; // Freeze update loops temporarily during transition
+        
+        // Force state updates prior to firing transition macros to stop ghost broadcasts
+        currentRoomCode = 'room_living'; 
+        avatar.x = 100;
+        avatar.y = 300;
+        avatar.moving = false;
+
+        if (typeof transitionToRoom === 'function') {
+            transitionToRoom('room_living');
+        } else {
+            // Fallback if transitionToRoom hasn't been instantiated yet
+            isPaused = false;
+        }
+        return; // Halt this tick immediately to trigger room change cleanly
+    }
 
     // --- TIMED INTERCEPT ROUTINE: Programmatic ArrowDown / S Emulation (1 Second) ---
     if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
-        let now = Date.now();
+        let now = Date.now();   
 
         if (now - cutsceneStartTime < CUTSCENE_DURATION) {
             avatar.moving = true;
@@ -951,12 +1164,12 @@ function showAIDialoguePopup() {
             console.log("[Cutscene Complete]: 1 second elapsed. Player manual inputs unlocked.");
         }
 
-        // Keep remote network peers updated on positioning changes during the cutscene
+        // Send ongoing coordinate modifications up to your multiplayer synchronization stream
         if (typeof socket !== 'undefined' && socket) {
             socket.emit('updateMovement', { 
                 x: avatar.x, 
                 y: avatar.y, 
-                roomCode: currentRoomCode, 
+                roomCode: currentRoomCode, // Correctly sends 'room_living' if score >= 20
                 angle: avatar.angle, 
                 moving: avatar.moving 
             });
@@ -1008,12 +1221,23 @@ function showAIDialoguePopup() {
                 avatar.y = potentialY;
             }
         }
-                
+            
         avatar.moving = true;
         if (moveX < 0) avatar.lastDir = 'left';
         if (moveX > 0) avatar.lastDir = 'right';
     } else { 
         avatar.moving = false; 
+    }
+
+    // Send ongoing coordinate modifications up to your multiplayer synchronization stream
+    if (typeof socket !== 'undefined' && socket) {
+        socket.emit('updateMovement', { 
+            x: avatar.x, 
+            y: avatar.y, 
+            roomCode: currentRoomCode, // Correctly sends 'room_living' if score >= 20
+            angle: avatar.angle, 
+            moving: avatar.moving 
+        });
     }
 
     updateAI();
@@ -1048,8 +1272,12 @@ function checkAvatarBoundaries(targetX, targetY) {
     if (typeof remotePlayers !== 'undefined' && remotePlayers) {
         for (let id in remotePlayers) {
             const p = remotePlayers[id];
-            // Skip checking players that are logged into different room sessions
-            if (typeof currentRoomCode !== 'undefined' && p.roomCode !== currentRoomCode) continue;
+            
+            // FIXED: Sync boundary filter logic to use the shared network instance token ("ROOM1")
+            if (typeof currentRoomInstance !== 'undefined' && p.roomCode !== currentRoomInstance) continue;
+            
+            // FIXED: Only block movement if they share the exact same room phase level map
+            if (p.currentRoomCode && p.currentRoomCode !== currentRoomCode) continue;
 
             const peerCenterX = p.x + HALF_SIZE;
             const peerCenterY = p.y + HALF_SIZE;
@@ -1097,35 +1325,38 @@ function checkAvatarBoundaries(targetX, targetY) {
     }
 
 function draw() {
-    // Inside your draw() function, find the skipTitleScreen block and update these lines:
+    // 1. --- TITLE & HARD DEBUGS BYPASS MONITOR ---
     if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
-        // Automatically inject placeholder credentials if undefined
         if (typeof currentStudentNumber === 'undefined' || !currentStudentNumber) {
             currentStudentNumber = "DEBUG_USER_001";
         }
-        if (typeof currentRoomCode === 'undefined' || !currentRoomCode) {
-            currentRoomCode = "DEBUG_ROOM";
+        if (typeof currentRoomInstance === 'undefined' || !currentRoomInstance) {
+            currentRoomInstance = "DEBUG_ROOM";
+        }
+        if (typeof window.currentRoomCode === 'undefined' || !window.currentRoomCode) {
+            window.currentRoomCode = "room_background";
         }
 
-        // Force system clearance elevation flags
         isAuthenticated = true;
         gameState = 'game';
         isPaused = false;
 
-        // Instantly shut down title interface graphics overlays
         const menuOverlay = document.getElementById('menu-overlay');
         if (menuOverlay) menuOverlay.style.display = 'none';
         
-        // Force precise cutscene spawning point at door entry
         avatar.x = 630;
         avatar.y = 240;
-        avatar.angle = 180; // Turn avatar down facing front
+        avatar.angle = 180; 
         
-        // CRITICAL UPDATE: Arm the time-duration cutscene track state
         isCutsceneActive = true;
         cutsceneStartTime = Date.now();
         
-        // Handle side control guide UI panel visibility setup
+        // Sync map references instantly for bypass routines
+        if (roomConfigs[window.currentRoomCode]) {
+            window.collisionZones = roomConfigs[window.currentRoomCode].collisionZones;
+            window.papers = roomConfigs[window.currentRoomCode].papers;
+        }
+        
         const inst = document.getElementById('instructions');
         if (inst) {
             inst.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
@@ -1141,47 +1372,58 @@ function draw() {
         return;
     }
 
-    // --- ACTIVE GAMEPLAY RENDERING ---
+    // 2. --- ACTIVE CANVAS LEVEL RENDERING ---
     ctx.clearRect(0, 0, 800, 600);
         
-    if (images.background && images.background.naturalWidth > 0) {
-        ctx.drawImage(images.background, 0, 0, 800, 600);
+    let activeBgImg = images.background;
+    if (typeof window.currentRoomCode !== 'undefined' && window.currentRoomCode === 'room_living') {
+        activeBgImg = images.livingRoom; 
     }
 
-    // --- LAPTOP RENDERING WITH ROTATION SUPPORT ---
-    papers.forEach(p => {
-        if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            if (p.angle) {
-                ctx.rotate(p.angle * Math.PI / 180);
-            }
-            ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
-            ctx.restore();
-        }
-                
-        const dx = (avatar.x + 35) - p.x;
-        const dy = (avatar.y + 35) - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+    if (activeBgImg && activeBgImg.naturalWidth > 0) {
+        ctx.drawImage(activeBgImg, 0, 0, 800, 600);
+    }
 
-        if (dist < interactionDist) {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            if (p.angle) {
-                ctx.rotate(p.angle * Math.PI / 180);
+    // 3. --- POPUP/OBJECT INTERACTION LAPTOPS RENDERING ---
+    if (window.papers && Array.isArray(window.papers)) {
+        window.papers.forEach(p => {
+            if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                if (p.angle) {
+                    ctx.rotate(p.angle * Math.PI / 180);
+                }
+                ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
+                ctx.restore();
             }
-            ctx.strokeStyle = "yellow";
-            ctx.lineWidth = 3;
-            ctx.strokeRect(-55, -40, 110, 80);
-            ctx.restore();
-        }
-    });
+                    
+            const dx = (avatar.x + 35) - p.x;
+            const dy = (avatar.y + 35) - p.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
 
-    // --- LAYER 1: DRAW OTHER STUDENTS' AVATAR IMAGES ONLY ---
+            if (dist < interactionDist) {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                if (p.angle) {
+                    ctx.rotate(p.angle * Math.PI / 180);
+                }
+                ctx.strokeStyle = "yellow";
+                ctx.lineWidth = 3;
+                ctx.strokeRect(-55, -40, 110, 80);
+                ctx.restore();
+            }
+        });
+    }
+
+    // 4. --- MULTIPLAYER ROOM MATES RENDERING ---
     if (typeof remotePlayers !== 'undefined' && remotePlayers) {
         Object.keys(remotePlayers).forEach((id) => {
             const p = remotePlayers[id];
-            if (typeof currentRoomCode !== 'undefined' && p.roomCode !== currentRoomCode) return;
+            
+            if (typeof currentRoomInstance !== 'undefined' && p.roomCode !== currentRoomInstance) return;
+
+            const peerRoom = p.currentRoomCode || 'room_background';
+            if (peerRoom !== window.currentRoomCode) return;
 
             let remoteImg = images.idle;
             if (p.moving) {
@@ -1199,7 +1441,7 @@ function draw() {
         });
     }
 
-    // --- LAYER 2: DRAW LOCAL AVATAR IMAGE ---
+    // 5. --- LOCAL PLAYER RENDERING ---
     let now = Date.now();
     let img;
 
@@ -1232,7 +1474,7 @@ function draw() {
         ctx.restore();
     }
 
-    // --- LAYER 3: DRAW AI NPC IMAGE ---
+    // 6. --- AI COMPANION NPC RENDERING ---
     if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
         ctx.save();
         ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
@@ -1242,11 +1484,15 @@ function draw() {
         ctx.restore();
     }
 
-    // --- LAYER 4: OVERHEAD TEXT LABELS ---
+    // 7. --- STUDENT OVERHEAD NAMEPLATE LABELS ---
     if (typeof remotePlayers !== 'undefined' && remotePlayers) {
         Object.keys(remotePlayers).forEach((id) => {
             const p = remotePlayers[id];
-            if (typeof currentRoomCode !== 'undefined' && p.roomCode !== currentRoomCode) return;
+            
+            if (typeof currentRoomInstance !== 'undefined' && p.roomCode !== currentRoomInstance) return;
+            
+            const peerRoom = p.currentRoomCode || 'room_background';
+            if (peerRoom !== window.currentRoomCode) return;
 
             ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
             ctx.fillRect(p.x + 5, p.y - 18, 60, 14);
@@ -1258,21 +1504,20 @@ function draw() {
         });
     }
 
-    // Render local player overhead nametag
     if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber) {
         ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
         ctx.fillRect(avatar.x + 5, avatar.y - 18, 60, 14);
         
-        ctx.fillStyle = "#52b788"; // Distinct local identifier color
+        ctx.fillStyle = "#52b788"; 
         ctx.font = "bold 9px Arial";
         ctx.textAlign = "center";
         ctx.fillText(currentStudentNumber, avatar.x + 35, avatar.y - 8);
     }
 
-    // --- DEBUG: DRAW COLLISION ZONES IN RED ---
-    if (typeof debugMode !== 'undefined' && debugMode) {
+    // 8. --- DEBUG BOUNDARY OUTLINES (RED) ---
+    if (typeof debugMode !== 'undefined' && debugMode && window.collisionZones) {
         ctx.lineWidth = 2;
-        collisionZones.forEach(z => {
+        window.collisionZones.forEach(z => {
             ctx.save();
             if (z.type === 'circle') {
                 ctx.beginPath();
@@ -1295,7 +1540,7 @@ function draw() {
         });
     }
 
-    // --- UI OVERLAY LAYER ---
+    // 9. --- PERSISTENT HUD/UI LAYER ---
     ctx.fillStyle = "rgba(0,0,0,0.7)";
     ctx.fillRect(580, 10, 210, 40);
     ctx.strokeStyle = "#dcc23c";
@@ -1307,7 +1552,6 @@ function draw() {
     ctx.textAlign = "left";
     ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
 
-    // Dynamic verification sync loop for the Guide Controls block interface panels
     const inst = document.getElementById('instructions');
     if (inst) {
         const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
@@ -1316,21 +1560,31 @@ function draw() {
         }
     }
 
+    // 10. --- GAME TICK PROGRESSION RUNNER ---
     if (!isPaused) {
         update();
     }
     requestAnimationFrame(draw);
 }
 
-// Dedicated network synchronization loop to process telemetry independent of tab focus
 function syncPlayerCoordinates() {
-    if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber && currentRoomCode) {
+    // SECURITY GUARD: Automatically pull the most up-to-date room layout state right before compiling the network body payload
+    if (typeof cyberknowledgeScore !== 'undefined') {
+        if (cyberknowledgeScore >= 20) {
+            currentRoomCode = 'room_living';
+        } else {
+            currentRoomCode = 'room_background';
+        }
+    }
+
+    if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber && currentRoomInstance) {
         fetch('/api/multiplayer/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 studentNumber: currentStudentNumber,
-                roomCode: currentRoomCode,
+                roomCode: currentRoomInstance,      // Shared Matchmaking Lobby Token (e.g., "ROOM1")
+                currentRoomCode: currentRoomCode,   // FIXED: Guaranteed up-to-date visual state layout ('room_background' vs 'room_living')
                 x: avatar.x,
                 y: avatar.y,
                 angle: avatar.angle,
@@ -1341,7 +1595,6 @@ function syncPlayerCoordinates() {
         .then(res => res.json())
         .then(data => {
             if (data && data.players) {
-                // Keep the active registry alive in memory for the draw loop
                 remotePlayers = data.players;
             }
         })
@@ -1350,8 +1603,7 @@ function syncPlayerCoordinates() {
 }
 
 // Keep syncing state calculations every 50ms for smooth position extraction
-setInterval(syncPlayerCoordinates, 50);
-// Helper to check if a point hits any defined collision box or circle
+setInterval(syncPlayerCoordinates, 50);// Helper to check if a point hits any defined collision box or circle
 function isInsideCollisionZone(x, y, radius = 25) {
     if (typeof collisionZones === 'undefined' || !collisionZones) return false;
     for (let z of collisionZones) {
@@ -1426,17 +1678,20 @@ function getRandomSpawnPosition() {
     return { x: baseSpawnX, y: baseSpawnY };
 }
 // Prevent local avatar from stepping inside another student's perimeter
+// Prevent local avatar from stepping inside another student's perimeter
 function checkPeerPlayerCollisions(nextX, nextY) {
     if (typeof remotePlayers === 'undefined' || !remotePlayers) return false;
 
     for (let id of Object.keys(remotePlayers)) {
-        // Skip comparing against yourself if your ID slips into the loop mapping
         if (id === currentStudentNumber) continue;
 
         const p = remotePlayers[id];
         
-        // Only check collisions with peers in the exact same room mapping matrix
-        if (p.roomCode === currentRoomCode) {
+        // FIXED: Match peer players sharing the same multiplayer network session match
+        if (p.roomCode === currentRoomInstance) {
+            // CRITICAL FIX: Only physically collide if they are in the exact same room section map layout context
+            if (p.currentRoomCode && p.currentRoomCode !== currentRoomCode) continue;
+
             const dx = nextX - p.x;
             const dy = nextY - p.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
