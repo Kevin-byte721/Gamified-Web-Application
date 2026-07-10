@@ -223,7 +223,78 @@
 
     .email-option.selected { border-color: #4285f4; background: #e8f0fe; }
     .popup-layout-wrapper { display: flex; flex-direction: column; width: 100%; }
+/* Background Dim Mask */
+#settings-overlay {
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0, 0, 0, 0.5); 
+    z-index: 1000; 
+    justify-content: center; 
+    align-items: center;
+}
 
+/* The Settings Window Card - Solid and distinct from the game viewport */
+.settings-modal {
+    background: #ffffff; 
+    padding: 2.5rem; 
+    border-radius: 14px; 
+    width: 420px; 
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); 
+    text-align: center; 
+    font-family: 'Google Sans', Roboto, Arial, sans-serif;
+}
+
+.settings-modal h2 {
+    font-size: 26px;
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 25px;
+    color: #1a1a1a;
+}
+
+.settings-group {
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    margin: 20px 0;
+    font-size: 16px;
+    color: #2e2e2e;
+    font-weight: 500;
+}
+
+#debug-toggle {
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+}
+
+#volume-slider {
+    width: 45%;
+    cursor: pointer;
+    accent-color: #52b788;
+}
+
+.settings-modal button {
+    margin-top: 25px; 
+    padding: 12px 28px; 
+    background: #52b788; 
+    color: white; 
+    border: none; 
+    border-radius: 8px; 
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    width: 100%;
+}
+
+.settings-modal button:hover {
+    background-color: #40916c;
+}
     @keyframes floatUpDown {
         0% { transform: translate(-50%, 0); }
         100% { transform: translate(-50%, -1cqh); }
@@ -263,7 +334,23 @@
         <p class="access-prompt-text">Press <span class="highlight-key">SPACE</span> to Initialize Gameplay</p>
     </div>
 </div>
+<div id="settings-overlay">
+    <div class="settings-modal" id="settings-card">
+        <h2>Game Settings</h2>
+        
+        <div class="settings-group">
+            <label for="debug-toggle">Enable Debug Mode</label>
+            <input type="checkbox" id="debug-toggle" onchange="toggleDebugMode(this.checked)">
+        </div>
 
+        <div class="settings-group">
+            <label for="volume-slider">Game Volume: <span id="volume-val">80%</span></label>
+            <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="updateGameVolume(this.value)">
+        </div>
+
+        <button onclick="showSettingsMenu()">Close Settings</button>
+    </div>
+</div>
         <div id="popup-overlay">
             <div id="popup-content">
                 <!-- Injected dynamically -->
@@ -299,64 +386,87 @@ const canvas = document.getElementById('gameCanvas');
     let currentPaper = null;
     let showingAIDialogue = false; 
     const interactionDist = 80;
-
-    // --- CUTSCENE / AUTOMATION FLAGS ---
     let isCutsceneActive = false;       
-    let cutsceneStartTime = 0;          
-    const CUTSCENE_DURATION = 500;     
+let cutsceneStartTime = 0;          
 
-    // --- MULTI-ROOM CONFIGURATION ARCHITECTURE ---
-    const roomConfigurations = {
-        room1: {
-            bgKey: 'background', 
-            spawnX: 630,
-            spawnY: 240,
-            aiNPC: { x: 100, y: 240, messageType: 'room1_state' },
-            papers: [
-                { x: 210, y: 480, id: 0, angle: 180, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false }
-            ],
-            collisionZones: [
-                { x: 0, y: 75, w: 800, h: 45 },    
-                { x: 0, y: 520, w: 800, h: 80 },  
-                { x: 0, y: 0, w: 60, h: 600 },    
-                { x: 700, y: 0, w: 60, h: 600 },  
-                { x: 280, y: 0, w: 250, h: 340 },
-                { x: 25, y: 450, w: 295, h: 50 },
-                { type: 'circle', x: 200, y: 410, radius: 40 },
-                { type: 'circle', x: 130, y: 160, radius: 40 },
-                { type: 'circle', x: 385, y: 499, radius: 35 }
-            ]
-        },
-        room2: {
-            bgKey: 'living', 
-            spawnX: 100,
-            spawnY: 400,
-            aiNPC: { x: 650, y: 150, messageType: 'room2_state' },
-            papers: [
-                { x: 400, y: 300, id: 10, angle: 0, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false }
-            ],
-            collisionZones: [
-                { x: 0, y: 0, w: 800, h: 100 },
-                { x: 0, y: 540, w: 800, h: 60 },
-                { x: 0, y: 0, w: 40, h: 600 },
-                { x: 760, y: 0, w: 40, h: 600 }
-            ]
-        },
-        room3: {
-            bgKey: 'kitchen', 
-            spawnX: 400,
-            spawnY: 450,
-            aiNPC: { x: 350, y: 120, messageType: 'room3_state' },
-            papers: [
-                { x: 150, y: 200, id: 20, angle: 90, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false }
-            ],
-            collisionZones: [
-                { x: 0, y: 0, w: 800, h: 120 },
-                { x: 0, y: 550, w: 800, h: 50 }
-            ]
-        }
-    };
+const roomConfigurations = {
+    room1: {
+        bgKey: 'background', 
+        spawnX: 630,
+        spawnY: 240,
+        aiNPC: { x: 100, y: 240, messageType: 'room1_state' },
+        cutscene: { duration: 500, directionAngle: 180 }, 
+        papers: [
+            { x: 210, y: 480, id: 0, angle: 180, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false }
+        ],
+        collisionZones: [
+            { x: 0, y: 75, w: 800, h: 45 },    
+            { x: 0, y: 520, w: 800, h: 80 },  
+            { x: 0, y: 0, w: 60, h: 600 },    
+            { x: 700, y: 0, w: 60, h: 600 },  
+            { x: 280, y: 0, w: 250, h: 340 },
+            { x: 25, y: 450, w: 295, h: 50 },
+            { type: 'circle', x: 200, y: 410, radius: 40 },
+            { type: 'circle', x: 130, y: 160, radius: 40 },
+            { type: 'circle', x: 385, y: 499, radius: 35 }
+        ]
+    },
+    room2: {
+        bgKey: 'living', 
+        spawnX: 100,
+        spawnY: 315,
+        aiNPC: { x: 440, y: 400, messageType: 'room2_state' },
+        cutscene: { duration: 500, directionAngle: 90 }, // Moving to the right (90 deg)
+        papers: [
+            { x: 480, y: 273, id: 10, angle: 270, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false }
+        ],
+        collisionZones: [
+            { x: 146, y: 170, w: 390, h: 10 },
+            { x: 145, y: 10, w: 140, h: 260 },
+            { x: 90, y: 60, w: 50, h: 20 },
+            { x: 90, y: 455, w: 235, h: 20 },
+            { x: 325, y: 236, w: 180, h: 80 },
+            { x: 0, y: 530, w: 800, h: 60 },
+            { x: 0, y: 0, w: 86, h: 600 },
+            { x: 480, y: 60, w: 60, h: 100 },
+            { x: 500, y: 100, w: 200, h: 40 },
+            { x: 640, y: 180, w: 50, h: 225 },
+            { x: 700, y: 0, w: 40, h: 600 },
+            { type: 'circle', x: 385, y: 495, radius: 30 },
 
+        ]
+    },
+    room3: {
+        bgKey: 'kitchen', 
+        spawnX: 640,
+        spawnY: 210,
+        aiNPC: { x: 330, y: 430, messageType: 'room3_state' },
+        cutscene: { duration: 500, directionAngle: 270 }, 
+        papers: [
+            { x: 320, y: 320, id: 20, angle: 0, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false }
+        ],
+        collisionZones: [
+            { x: 0, y: 0, w: 800, h: 150 },
+            { x: 700, y: 100, w: 20, h: 460 },
+            { x: 180, y: 150, w: 20, h: 400 },
+            { x: 645, y: 350, w: 80, h: 200 },
+            { x: 275, y: 240, w: 260, h: 110 },
+            { x: 200, y: 430, w: 125, h: 100},
+            { x: 490, y: 480, w: 200, h: 120 },
+            { x: 0, y: 500, w: 800, h: 50 }
+        ]
+    }
+};
+// Global Audio Configuration Engine
+const sounds = {
+    walking: new Audio('walking.mp3')   // Your Walking Sound Effect file
+};
+
+// Configure audio loop rules immediately upon loading
+sounds.walking.loop = true;
+
+// Set default fallback volumes (80% matching our slider defaults)
+sounds.walking.volume = 1;
     // Global room identifiers
     let currentRoomId = 'room1';
 
@@ -416,85 +526,169 @@ const canvas = document.getElementById('gameCanvas');
     let isAuthenticated = false;
 
     document.addEventListener("DOMContentLoaded", () => {
-        const loginBtn = document.getElementById('login-submit-btn');
-        const inputField = document.getElementById('student-number-input');
-        const errorMsg = document.getElementById('login-error-msg');
-        const loginContainer = document.getElementById('login-container');
-        const startPrompt = document.getElementById('start-prompt');
+    const loginBtn = document.getElementById('login-submit-btn');
+    const inputField = document.getElementById('student-number-input');
+    const errorMsg = document.getElementById('login-error-msg');
+    const loginContainer = document.getElementById('login-container');
+    const startPrompt = document.getElementById('start-prompt');
 
-        loginBtn.addEventListener('click', () => {
-            const studentId = inputField.value.trim();
+    loginBtn.addEventListener('click', () => {
+        const studentId = inputField.value.trim();
 
-            if (studentId === "") {
-                errorMsg.textContent = "⚠ Student number cannot be blank.";
-                errorMsg.style.display = 'block';
-                return;
-            }
+        if (studentId === "") {
+            errorMsg.textContent = "⚠ Student number cannot be blank.";
+            errorMsg.style.display = 'block';
+            return;
+        }
 
-            const roomSelection = prompt("Enter a Room Code to join or create (e.g., ROOM1):", "ROOM1");
-            if (!roomSelection) {
-                alert("A room code is required for multiplayer mapping functionality.");
-                return;
-            }
+        const roomSelection = prompt("Enter a Room Code to join or create (e.g., ROOM1):", "ROOM1");
+        if (!roomSelection) {
+            alert("A room code is required for multiplayer mapping functionality.");
+            return;
+        }
 
-            // Assign baseline positioning variables mapping from Room 1 config rules
-            avatar.x = roomConfigurations.room1.spawnX; 
-            avatar.y = roomConfigurations.room1.spawnY;
-            avatar.angle = 180;
-            
-            isCutsceneActive = true;
-            cutsceneStartTime = Date.now();
+        currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
+        const activeConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
 
-            currentStudentNumber = studentId;
-            currentRoomCode = roomSelection.trim().toUpperCase();
-            isAuthenticated = true;
-            
-            errorMsg.style.display = 'none';
-            loginContainer.style.display = 'none';
-            startPrompt.style.display = 'block';
+        avatar.x = activeConfig.spawnX; 
+        avatar.y = activeConfig.spawnY;
+        
+        isCutsceneActive = true;
+        cutsceneStartTime = Date.now();
 
-            console.log(`Session authorized: ${currentStudentNumber} spawned inside ${currentRoomId} within room channel ${currentRoomCode}`);
-            
-            fetch('/api/multiplayer/join-room', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ studentNumber: currentStudentNumber, roomCode: currentRoomCode })
-            }).catch(err => console.error("Error setting up server room channel:", err));
-        });
+        currentStudentNumber = studentId;
+        currentRoomCode = roomSelection.trim().toUpperCase();
+        isAuthenticated = true;
+        
+        errorMsg.style.display = 'none';
+        loginContainer.style.display = 'none';
+        startPrompt.style.display = 'block';
 
-        inputField.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') loginBtn.click();
-        });
+        console.log(`Session authorized: ${currentStudentNumber} spawned inside ${currentRoomId} within room channel ${currentRoomCode}`);
+        
+        fetch('/api/multiplayer/join-room', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentNumber: currentStudentNumber, roomCode: currentRoomCode })
+        }).catch(err => console.error("Error setting up server room channel:", err));
     });
 
-    // --- TRANSITION MANAGER ---
-    function transitionToRoom(roomId) {
-        if (fadeState !== 'idle') return;
+    inputField.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') loginBtn.click();
+    });
+});
+// --- DYNAMIC PROGRESSION ROUTING ---
+function getSpawnRoomByScore(score) {
+    if (score >= 40) return 'room3';
+    if (score >= 20) return 'room2';
+    return 'room1';
+}
+// --- TRANSITION MANAGER ---
+function transitionToRoom(roomId) {
+    if (fadeState !== 'idle') return;
+
+    // BRANCHING ROUTE LOGIC: Intercept progression if leaving Room 1
+    if (currentRoomId === 'room1' && roomId === 'room2') {
+        // Evaluate score to determine path threshold
+        if (cyberknowledgeScore >= 40) {
+            console.log(`[Branching Route]: Score is ${cyberknowledgeScore}. High proficiency path unlocked to Room 3.`);
+            targetRoomId = 'room3';
+        } else {
+            console.log(`[Branching Route]: Score is ${cyberknowledgeScore}. Baseline path routing to Room 2.`);
+            targetRoomId = 'room2';
+        }
+    } else {
+        // Standard non-branching progression
         targetRoomId = roomId;
-        fadeState = 'out';
     }
 
-    // Inside executeRoomSwitch(roomId)
+    fadeState = 'out';
+}
+
+// --- EXECUTE ROOM SWITCH ---
 function executeRoomSwitch(roomId) {
     currentRoomId = roomId;
     const config = roomConfigurations[roomId];
 
-    // Move the local positions of the interactable instances
+    // Move the local positions of the interactable instances from room configs
     aiAvatar.x = config.aiNPC.x;
     aiAvatar.y = config.aiNPC.y;
+    
+    // Explicitly update the AI avatar orientation angle if provided, defaulting to 0
+    aiAvatar.angle = config.aiNPC.angle || 0; 
+    
     laptopLocked = true;
 
     // Position avatar at the unique entrance parameters of the new environment
     avatar.x = config.spawnX;
     avatar.y = config.spawnY;
-    avatar.angle = 180;
+    
+    // Set dynamic look angle based on the room config if available, fallback to 180
+    avatar.angle = config.cutscene?.directionAngle || 180;
 
     isCutsceneActive = true;
     cutsceneStartTime = Date.now();
+
+    // REVEAL ATTENTION BADGE IMMEDIATELY UPON CHANGING ROOMS
+    const badge = document.getElementById('ai-attention-badge');
+    if (badge) {
+        badge.style.display = 'block';
+    }
+
+    // Force an immediate recalculation so the badge alignment snaps over the new AI coordinates
+    if (typeof updateAttentionBadgePosition === 'function') {
+        updateAttentionBadgePosition();
+    }
+}
+
+// --- POPUP WINDOW CLEANUP & PROGRESSION MANAGEMENT ---
+function closePopup() {
+    if (showingAIDialogue && currentPaper && currentPaper.answered && !currentPaper.scoreProcessed) {
+        if (currentPaper.userWasCorrect) {
+            cyberknowledgeScore += 20;
+            
+            const currentUser = localStorage.getItem('cyberDashUser');
+            if (currentUser && currentUser !== "INSTRUCTOR") {
+                localStorage.setItem(`terminal_high_score_${currentUser}`, cyberknowledgeScore);
+            }
+        }
+        
+        currentPaper.scoreProcessed = true; 
+
+        if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+            let activeModule = currentPaper.module || 'safe';
+            let isModuleFinished = false;
+
+            fetch(`/api/save-progress`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    studentNumber: currentStudentNumber,
+                    module: activeModule,
+                    score: cyberknowledgeScore,
+                    completed: isModuleFinished
+                })
+            })
+            .catch(err => console.error("Database sync failed:", err));
+        }
+
+        // --- ROOM PROGRESSION CHECKS ---
+        // Keeps the baseline triggers clean, transitionToRoom will safely route the user
+        if (cyberknowledgeScore >= 40 && currentRoomId === 'room2') {
+            setTimeout(() => transitionToRoom('room3'), 600);
+        } else if (cyberknowledgeScore >= 20 && currentRoomId === 'room1') {
+            setTimeout(() => transitionToRoom('room2'), 600);
+        }
+    }
+
+    document.getElementById('popup-content').className = ''; 
+    document.getElementById('popup-overlay').style.display = 'none';
+    showingAIDialogue = false;
+    isPaused = false;
+    currentPaper = null; 
 }
 window.addEventListener('keydown', e => {
     // SECURITY FILTER: Suppress all character interactions if cutscene runs
-    // FIX: Allow Space/Enter to pass through ONLY if the user is still on the title screen to initialize gameplay
     if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
         if (gameState !== 'title' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyS', 'KeyA', 'KeyD', 'Space'].includes(e.code)) {
             e.preventDefault();
@@ -521,13 +715,16 @@ window.addEventListener('keydown', e => {
             gameState = 'game';
             document.getElementById('menu-overlay').style.display = 'none';
             
-            // Set up spawn point and arm the 1-second doorway automated path
-            avatar.x = 630;
-            avatar.y = 240;
-            avatar.angle = 180; // Turn avatar down facing front
+            // --- DYNAMIC ENTRY PROGRESSION DETERMINATION ---
+            currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
+            const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+
+            avatar.x = currentConfig.spawnX;
+            avatar.y = currentConfig.spawnY;
+            avatar.angle = currentConfig.cutscene?.directionAngle || 180; 
             
             isCutsceneActive = true;
-            cutsceneStartTime = Date.now(); // Starts the continuous 1-second clock tracking window
+            cutsceneStartTime = Date.now(); 
 
             // Respect the dynamic guide control setting on launch
             const instElement = document.getElementById('instructions');
@@ -541,7 +738,7 @@ window.addEventListener('keydown', e => {
                 badge.style.display = 'block';
             }
             
-            console.log("[Scene Transition]: Initialization verified. 1-second entrance path armed.");
+            console.log(`[Scene Transition]: Initialization verified. Spawning into environment ${currentRoomId} based on scoring profile.`);
         }
         return;
     }
@@ -549,16 +746,18 @@ window.addEventListener('keydown', e => {
     // Toggle Title Screen state with the 'T' key
     if (e.code === 'KeyT') {
         if (gameState === 'title') {
-            // Block direct shortcut toggles if unauthenticated
             if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) return;
 
             gameState = 'game';
             document.getElementById('menu-overlay').style.display = 'none';
             
-            // Arm transition counters on alternative shortcut bypass triggers as well
-            avatar.x = 630;
-            avatar.y = 240;
-            avatar.angle = 180;
+            // --- DYNAMIC ENTRY PROGRESSION DETERMINATION ---
+            currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
+            const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+
+            avatar.x = currentConfig.spawnX;
+            avatar.y = currentConfig.spawnY;
+            avatar.angle = currentConfig.cutscene?.directionAngle || 180;
             isCutsceneActive = true;
             cutsceneStartTime = Date.now();
 
@@ -572,7 +771,6 @@ window.addEventListener('keydown', e => {
             const badge = document.getElementById('ai-attention-badge');
             if (badge) badge.style.display = 'block';
         } else if (gameState === 'game') {
-            // Drop back to title screen
             gameState = 'title';
             document.getElementById('menu-overlay').style.display = 'flex';
             document.getElementById('instructions').style.display = 'none';
@@ -609,18 +807,31 @@ window.addEventListener('keydown', e => {
 
             if (currentPaper) {
                 if (!currentPaper.answered) {
-                    if (e.code === 'ArrowDown' || e.code === 'KeyS') { selectedEmailOption = 1; updateEmailUI(); }
-                    if (e.code === 'ArrowUp' || e.code === 'KeyW') { selectedEmailOption = 0; updateEmailUI(); }
-                }
-                if (e.code === 'Space') {
-                    e.preventDefault(); 
-                    if (!currentPaper.answered) {
-                        confirmEmailChoice(); 
-                    } else {
-                        closePopup(); 
+                    if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
+                        e.preventDefault();
+                        selectedEmailOption = 1; 
+                        updateEmailUI(); 
+                    }
+                    if (e.code === 'ArrowUp' || e.code === 'KeyW') { 
+                        e.preventDefault();
+                        selectedEmailOption = 0; 
+                        updateEmailUI(); 
+                    }
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        if (typeof window.handleEmailSubmission === 'function') {
+                            window.handleEmailSubmission(selectedEmailOption);
+                        }
+                    }
+                } else {
+                    if (e.code === 'Space' || e.code === 'Escape') {
+                        e.preventDefault();
+                        closePopup();
                     }
                 }
+                
                 if (e.code === 'Escape') { 
+                    e.preventDefault();
                     closePopup(); 
                 }
                 return;
@@ -639,51 +850,51 @@ window.addEventListener('keydown', e => {
             checkInteraction();
         }
 
+        // UPDATED: Escape now triggers the Settings Menu instead of returning to Title
         if (e.code === 'Escape' && !isPaused) {
             e.preventDefault();
+            
+            // Still stop movement and clear input keys
             Object.keys(keys).forEach(key => keys[key] = false);
             avatar.moving = false;
-            gameState = 'title';
-            document.getElementById('menu-overlay').style.display = 'flex';
-            document.getElementById('instructions').style.display = 'none';
             
-            // HIDE ATTENTION BADGE IF DROPPING BACK TO MAIN MENU SCREEN
-            const badge = document.getElementById('ai-attention-badge');
-            if (badge) {
-                badge.style.display = 'none';
-            }
+            // Show the settings menu overlay
+            showSettingsMenu();
         }
     }
 });
 
-    window.addEventListener('keyup', e => { 
-        if (gameState === 'game') {
-            keys[e.code] = false; 
-        }
-    });
-
-    function updateEmailUI() {
-        const opt0 = document.getElementById('opt-0');
-        const opt1 = document.getElementById('opt-1');
-        if (opt0) opt0.className = 'email-option' + (selectedEmailOption === 0 ? ' selected' : '');
-        if (opt1) opt1.className = 'email-option' + (selectedEmailOption === 1 ? ' selected' : '');
+window.addEventListener('keyup', e => { 
+    if (gameState === 'game') {
+        keys[e.code] = false; 
     }
-
-    function updateAttentionBadgePosition() {
-        const badge = document.getElementById('ai-attention-badge');
-        if (badge && badge.style.display !== 'none') {
-            const canvasWidth = 800;
-            const canvasHeight = 550;
-            
-            const leftPercent = (((aiAvatar.x + 35) / canvasWidth) * 100);
-            const topPercent = (((aiAvatar.y - 45) / canvasHeight) * 100); 
-            
-            badge.style.left = `${leftPercent}%`;
-            badge.style.top = `${topPercent}%`;
+});
+function updateEmailUI() {
+    const opt0 = document.getElementById('opt-0');
+    const opt1 = document.getElementById('opt-1');
+    if (opt0) {
+        if (selectedEmailOption === 0) {
+            opt0.style.backgroundColor = '#f1f3f4';
+            opt0.style.borderColor = '#007791';
+        } else {
+            opt0.style.backgroundColor = 'transparent';
+            opt0.style.borderColor = '#747775';
         }
     }
+    if (opt1) {
+        if (selectedEmailOption === 1) {
+            opt1.style.backgroundColor = '#f1f3f4';
+            opt1.style.borderColor = '#007791';
+        } else {
+            opt1.style.backgroundColor = 'transparent';
+            opt1.style.borderColor = '#747775';
+        }
+    }
+}
 
-    function checkInteraction() {
+
+
+function checkInteraction() {
     // FIX: Get papers array from the active room configuration
     const activePapers = roomConfigurations[currentRoomId]?.papers || [];
 
@@ -708,6 +919,9 @@ window.addEventListener('keydown', e => {
 }
 
 function interactWithLaptop(paper) {
+    // Reset standard default selection index index context when launching laptop interface modal
+    selectedEmailOption = 0;
+
     // If the terminal has been cleared/processed already
     if (paper.scoreProcessed) {
         isPaused = true;
@@ -782,28 +996,8 @@ function interactWithLaptop(paper) {
     }
 
     showEmailPopup(paper);
-}
-function confirmEmailChoice() {
-    if (!currentPaper) return;
-
-    // 1. Evaluate choice mechanics
-    if (selectedEmailOption === 1) { // IGNORE / TRASH
-        currentPaper.userWasCorrect = true;
-    } else { // RESPOND TO EMAIL
-        currentPaper.userWasCorrect = false;
-    }
-
-    currentPaper.answered = true;
-    currentPaper.locked = true; // Secure the laptop lock immediately
-
-    // 2. Reveal the floating AI attention badge on the game floor
-    const badge = document.getElementById('ai-attention-badge');
-    if (badge) {
-        badge.style.display = 'block';
-    }
-
-    // 3. Immediately close the window overlay
-    closePopup();
+    // Initialize standard outline CSS elements instantly on load
+    updateEmailUI();
 }
 function showEmailPopup(paper) {
     isPaused = true;
@@ -811,28 +1005,73 @@ function showEmailPopup(paper) {
     showingAIDialogue = false;
     
     const content = document.getElementById('popup-content');
-    
     content.className = ''; 
     content.classList.add('center-modal-mode');
 
+    // 1. Establish room-specific phishing scenarios dynamically
+    let emailSender = "HR Dept";
+    let emailAddress = "hr@internal-security-system.local";
+    let emailSubject = "Action Required: Update Your Credentials Immediately";
+    let emailBody = "Your network access password is scheduled to expire within the next 24 hours. To ensure uninterrupted access to internal company servers and workstations, please choose an option below to proceed with your credential update.";
+    let correctOption = 1; // Default correct option is IGNORE / TRASH (1)
+
+    if (currentRoomId === 'room2') {
+        emailSender = "IT Support Desk";
+        emailAddress = "support@urgent-security-update.com";
+        emailSubject = "CRITICAL: Urgent Security Firewall Patch Required";
+        emailBody = "We have detected unauthorized bypass attempts on your workstation segment. Click 'RESPOND TO EMAIL' to download and install the critical network repair utility package immediately.";
+        correctOption = 1; 
+    } else if (currentRoomId === 'room3') {
+        emailsender = "Office Manager";
+        emailAddress = "Admin@company.corp";
+        emailSubject = "Building Maintenance Notice";
+        emailBody = "Please be advised that the main office elevator will be under maintenance on Tuesday. Please use the north side stairs.";
+        correctOption = 0;
+    }   
+
+    // 2. Inline answer processor helper executed right inside the click events
+    window.handleEmailSubmission = function(chosenOption) {
+        if (!currentPaper) return;
+
+        // Evaluate validation logic
+        if (chosenOption === correctOption) {
+            currentPaper.userWasCorrect = true;
+        } else {
+            currentPaper.userWasCorrect = false;
+        }
+
+        currentPaper.answered = true;
+        currentPaper.locked = true; // Engage local station lock
+
+        // Reveal the floating AI attention badge icon on the environment floor map
+        const badge = document.getElementById('ai-attention-badge');
+        if (badge) {
+            badge.style.display = 'block';
+        }
+
+        // Instantly shut down the active interface modal window
+        closePopup();
+    };
+
+    // 3. Inject rendering UI markup with operational click triggers
     content.innerHTML = `
     <div class="popup-layout-wrapper" style="font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 1.6cqw; font-weight: normal; background-color: #ffffff; color: #202124; box-sizing: border-box; width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column;">
         
         <div class="email-action-bar" style="display: flex; gap: 2.5cqw; align-items: center; border-bottom: 1px solid #f1f3f4; padding: 1.5cqh 3cqw; color: #5f6368; font-size: 1.8cqw;">
-            <span style="cursor: pointer; font-weight: bold;">←</span>
+            <span style="cursor: pointer; font-weight: bold;" onclick="closePopup()">←</span>
             <span style="cursor: pointer;">📥</span>
             <span style="cursor: pointer;">⚠️</span>
-            <span style="cursor: pointer;">🗑️</span>
+            <span style="cursor: pointer;" onclick="window.handleEmailSubmission(1)">🗑️</span>
             <span style="cursor: pointer; margin-left: auto;">✉️</span>
             <span style="cursor: pointer;">🕒</span>
-            <span style="cursor: pointer;">✅</span>
+            <span style="cursor: pointer;" onclick="window.handleEmailSubmission(1)"></span>
             <span style="cursor: pointer; margin-left: 1cqw;">⋮</span>
         </div>
 
         <div style="padding: 3cqh 4cqw; flex-grow: 1;">
             <div style="display: flex; align-items: center; gap: 1cqw; margin-bottom: 3cqh;">
                 <h2 style="margin: 0; font-size: 2.4cqw; font-weight: 400; color: #202124;">
-                    Action Required
+                    ${emailSubject}
                 </h2>
                 <span style="background-color: #e8eaed; color: #5f6368; font-size: 1.2cqw; padding: 2px 6px; border-radius: 4px; font-weight: 500;">
                     Inbox
@@ -841,14 +1080,14 @@ function showEmailPopup(paper) {
 
             <div class="email-meta-row" style="display: flex; align-items: flex-start; margin-bottom: 4cqh; position: relative;">
                 <div style="width: 5cqw; height: 5cqw; border-radius: 50%; background-color: #007791; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 2cqw; margin-right: 2cqw; flex-shrink: 0;">
-                    HR
+                    ${emailSender.substring(0, 2).toUpperCase()}
                 </div>
                 
                 <div style="flex-grow: 1; min-width: 0;">
                     <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%;">
                         <div>
-                            <span style="font-weight: bold; color: #202124; font-size: 1.6cqw; margin-right: 0.5cqw;">HR Dept</span>
-                            <span style="color: #5f6368; font-size: 1.4cqw;">&lt;hr@internal-security-system.local&gt;</span>
+                            <span style="font-weight: bold; color: #202124; font-size: 1.6cqw; margin-right: 0.5cqw;">${emailSender}</span>
+                            <span style="color: #5f6368; font-size: 1.4cqw;">&lt;${emailAddress}&gt;</span>
                         </div>
                         <div style="color: #5f6368; font-size: 1.3cqw; white-space: nowrap; margin-left: 2cqw;">
                             Just now
@@ -863,74 +1102,31 @@ function showEmailPopup(paper) {
             </div>
 
             <div class="email-body" style="font-size: 1.6cqw; line-height: 1.5; color: #202124; padding-left: 7cqw; margin-bottom: 6cqh; min-height: 12cqh;">
-                Your network access password is scheduled to expire within the next 24 hours. To ensure uninterrupted access to internal company servers and workstations, please choose an option below to proceed with your credential update.
+                ${emailBody}
             </div>
 
             <div id="email-options" style="display: flex; gap: 1.5cqw; padding-left: 7cqw; border-top: 1px solid #f1f3f4; padding-top: 3cqh;">
-                <div class="email-option selected" id="opt-0" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;">
+                <div class="email-option" id="opt-0" onclick="window.handleEmailSubmission(0)" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f7f8f9'" onmouseout="this.style.backgroundColor='transparent'">
                     ↩️ RESPOND TO EMAIL
                 </div>
-                <div class="email-option" id="opt-1" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;">
+                <div class="email-option" id="opt-1" onclick="window.handleEmailSubmission(1)" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f7f8f9'" onmouseout="this.style.backgroundColor='transparent'">
                     ➡️ IGNORE / TRASH
                 </div>
             </div>
         </div>
     </div>
-`;
+    `;
 
     document.getElementById('popup-overlay').style.display = 'block';
 }
-function closePopup() {
-    if (showingAIDialogue && currentPaper && currentPaper.answered && !currentPaper.scoreProcessed) {
-        if (currentPaper.userWasCorrect) {
-            cyberknowledgeScore += 20;
-            
-            const currentUser = localStorage.getItem('cyberDashUser');
-            if (currentUser && currentUser !== "INSTRUCTOR") {
-                localStorage.setItem(`terminal_high_score_${currentUser}`, cyberknowledgeScore);
-            }
-        }
-        
-        currentPaper.scoreProcessed = true; 
 
-        if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
-            let activeModule = currentPaper.module || 'safe';
-            let isModuleFinished = false;
-
-            fetch(`/api/save-progress`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    studentNumber: currentStudentNumber,
-                    module: activeModule,
-                    score: cyberknowledgeScore,
-                    completed: isModuleFinished
-                })
-            })
-            .catch(err => console.error("Database sync failed:", err));
-        }
-
-        // --- ROOM PROGRESSION CHECKS ---
-        if (cyberknowledgeScore >= 40 && currentRoomId === 'room2') {
-            setTimeout(() => transitionToRoom('room3'), 600);
-        } else if (cyberknowledgeScore >= 20 && currentRoomId === 'room1') {
-            setTimeout(() => transitionToRoom('room2'), 600);
-        }
-    }
-
-    document.getElementById('popup-content').className = ''; 
-    document.getElementById('popup-overlay').style.display = 'none';
-    showingAIDialogue = false;
-    isPaused = false;
-    currentPaper = null; 
-}
 function showAIDialoguePopup() {
     isPaused = true;
     showingAIDialogue = true;
     
     const content = document.getElementById('popup-content');
     
-    // FIX: Reference the active room papers instead of a global array
+    // Reference the active room papers instead of a global array
     const activePapers = roomConfigurations[currentRoomId]?.papers || [];
     const terminalState = activePapers[0]; 
     currentPaper = terminalState; 
@@ -950,25 +1146,43 @@ function showAIDialoguePopup() {
     // Process context strings depending on the target room matching keys
     if (currentConfig.aiNPC.messageType === 'room1_state') {
         if (!terminalState || !terminalState.answered) {
-            textToShow = `<b>AI Guard [Foyer]:</b><br>Welcome to the Entry Foyer! Please check the <span class="highlight-blue">Workstation Laptop</span> to inspect incoming network threats!`;
+            // UNANSWERED STATE
+            textToShow = `<b>AI Guard [Bedroom]:</b><br>Hey there! Welcome to the Entry Foyer. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
             laptopLocked = false; 
+        } else if (terminalState.answered && !terminalState.userWasCorrect) {
+            // FAILURE STATE
+            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #e63946; font-weight: bold;"> OOPS! WATCH OUT:</span> You chose to interact with that email! This is a classic "credential harvesting" trick where a fake page steals your login details. Real targets use fake urgency to panic you. Review your basic safety hints and try again!`;
         } else {
-            textToShow = `<b>AI Guard [Foyer]:</b><br>Excellent work protecting the terminal network. Secure 20 points to advance into the Living Room area!`;
+            // SUCCESS STATE
+            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;"> FANTASTIC JOB:</span> Spot on! You saw right through that fake threat and threw it in the trash. That's how you keep your personal profiles safe. Grab your 20 points and let's check out the Living Room area!`;
         }
     } 
     else if (currentConfig.aiNPC.messageType === 'room2_state') {
         if (!terminalState || !terminalState.answered) {
-            textToShow = `<b>AI Security Companion [Living Room]:</b><br>Alert! Intruders are bypassing home configurations. Interact with the floor database terminal right away!`;
+            // UNANSWERED STATE
+            textToShow = `<b>AI Guard [Living Room]:</b><br>Alert! Someone is attempting to trick users on our local network segment. Head over to the floor terminal right away to verify what's coming in!`;
             laptopLocked = false;
+        } else if (terminalState.answered && !terminalState.userWasCorrect) {
+            // FAILURE STATE
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #e63946; font-weight: bold;"> SECURITY RISK DETECTED:</span> That file download was actually a hidden piece of malware! Interacting with unverified "support" setups can give bad actors control over system setups. Let's trace the domain closely and give it another shot!`;
         } else {
-            textToShow = `<b>AI Security Companion [Living Room]:</b><br>Fantastic analysis. Keep scoring! Once you reach 40 points, the main Kitchen Core door unlocks.`;
+            // SUCCESS STATE
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;"> EXCELLENT INSTINCTS:</span> Awesome defense! You noticed that the urgent program update was completely fake. Avoiding random link downloads protects the whole household network.`;
         }
     } 
     else if (currentConfig.aiNPC.messageType === 'room3_state') {
-        textToShow = `<b>AI Operational Chef [Kitchen Core]:</b><br>You have reached the server core. System stability is now sitting inside maximum baseline parameters!`;
-        laptopLocked = false;
+        if (!terminalState || !terminalState.answered) {
+            // UNANSWERED STATE
+            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to the Kitchen!  We've got a suspicious request for admin credentials sitting in the inbox. Stay sharp—this is your final test!`;
+            laptopLocked = false;
+        } else if (terminalState.answered && !terminalState.userWasCorrect) {
+            // FAILURE STATE
+            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;"> Close one!</span> That email was a "spear-phishing" attack trying to trick you into giving away your admin access. Never share your password, no matter how official the email looks. Refresh your strategy and give it another go!`;
+        } else {
+            // SUCCESS STATE
+            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;"> Security Mastered!</span> You saw right through that attack. You’ve successfully protected the system integrity. You've officially proven you've got the skills to navigate the digital world safely!`;
+        }
     }
-
     content.innerHTML = `
         <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
             ${textToShow}
@@ -985,93 +1199,7 @@ function showAIDialoguePopup() {
         
         aiAvatar.angle = Math.atan2(dy, dx) * (180 / Math.PI) - 90;
     }
-function update() {
-    if (isPaused || gameState !== 'game') return;
 
-    // --- TIMED INTERCEPT ROUTINE: Programmatic ArrowDown / S Emulation (1 Second) ---
-    if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
-        let now = Date.now();
-
-        if (now - cutsceneStartTime < CUTSCENE_DURATION) {
-            avatar.moving = true;
-            avatar.angle = 180; // Secure look angle down (facing front)
-
-            // Calculate movement delta using the avatar's native standard speed property
-            let currentSpeed = avatar.speed || 4;
-            let potentialY = avatar.y + currentSpeed;
-
-            // NEW BOUNDARY FILTER INTEGRATION (CUTSCENE PHASE)
-            if (checkAvatarBoundaries(avatar.x, potentialY)) {
-                // Check map collisions and remote peer positioning loops 
-                if (!checkCollisionAt(avatar.x, potentialY) && 
-                    (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(avatar.x, potentialY))) {
-                    avatar.y = potentialY;
-                }
-            }
-        } else {
-            // 1 full second has ticked past! Tear down the automation intercept locks
-            isCutsceneActive = false;
-            avatar.moving = false;
-            console.log("[Cutscene Complete]: 1 second elapsed. Player manual inputs unlocked.");
-        }
-
-        updateAI();
-        updateAttentionBadgePosition();
-        return; // HALT EXECUTION: Do not read manual input event states down below
-    }
-
-    // --- STANDARD PLAYER MANUAL CONTROLS ---
-    let moveX = 0, moveY = 0;
-        
-    // Map W, A, S, D alongside the standard Arrow Inputs
-    if (keys['ArrowLeft'] || keys['KeyA'] || keys['a'] || keys['A']) moveX = -1;
-    if (keys['ArrowRight'] || keys['KeyD'] || keys['d'] || keys['D']) moveX = 1;
-    if (keys['ArrowUp'] || keys['KeyW'] || keys['w'] || keys['W']) moveY = -1;
-    if (keys['ArrowDown'] || keys['KeyS'] || keys['s'] || keys['S']) moveY = 1;
-
-    if (moveX !== 0 || moveY !== 0) {
-        if (moveX > 0 && moveY === 0) avatar.angle = 90;      
-        else if (moveX < 0 && moveY === 0) avatar.angle = 270;  
-        else if (moveY < 0 && moveX === 0) avatar.angle = 0;    
-        else if (moveY > 0 && moveX === 0) avatar.angle = 180;  
-        else if (moveX > 0 && moveY < 0) avatar.angle = 45;     
-        else if (moveX < 0 && moveY < 0) avatar.angle = 315;    
-        else if (moveX > 0 && moveY > 0) avatar.angle = 135;    
-        else if (moveX < 0 && moveY > 0) avatar.angle = 225;    
-                
-        let dx = moveX * avatar.speed;
-        let dy = moveY * avatar.speed;
-                
-        let potentialX = avatar.x + dx;
-        let potentialY = avatar.y + dy;
-
-        // --- NEW RECTANGULAR INTERACTION BOUNDARIES FILTER ---
-        // Ensure character boxes do not overlap before looking into map/environment collisions
-        if (checkAvatarBoundaries(potentialX, potentialY)) {
-            
-            // Check X-axis: Verify no wall collisions AND no structural peer player overlays
-            if (!checkCollisionAt(potentialX, avatar.y) && 
-                (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(potentialX, avatar.y))) {
-                avatar.x = potentialX;
-            }
-            
-            // Check Y-axis: Verify no wall collisions AND no structural peer player overlays
-            if (!checkCollisionAt(avatar.x, potentialY) && 
-                (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(avatar.x, potentialY))) {
-                avatar.y = potentialY;
-            }
-        }
-                
-        avatar.moving = true;
-        if (moveX < 0) avatar.lastDir = 'left';
-        if (moveX > 0) avatar.lastDir = 'right';
-    } else { 
-        avatar.moving = false; 
-    }
-
-    updateAI();
-    updateAttentionBadgePosition(); 
-}
 /**
  * Verifies that a target movement coordinate does not violate the physical 
  * boundary boxes of other players or the AI NPC.
@@ -1148,9 +1276,7 @@ function checkAvatarBoundaries(targetX, targetY) {
         ctx.fillRect(0, 0, 800, 600);
     }
 function draw() {
-    // Inside your draw() function, find the skipTitleScreen block and update these lines:
     if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
-        // Automatically inject placeholder credentials if undefined
         if (typeof currentStudentNumber === 'undefined' || !currentStudentNumber) {
             currentStudentNumber = "DEBUG_USER_001";
         }
@@ -1158,25 +1284,35 @@ function draw() {
             currentRoomCode = "DEBUG_ROOM";
         }
 
-        // Force system clearance elevation flags
         isAuthenticated = true;
         gameState = 'game';
         isPaused = false;
 
-        // Instantly shut down title interface graphics overlays
         const menuOverlay = document.getElementById('menu-overlay');
         if (menuOverlay) menuOverlay.style.display = 'none';
         
-        // Force precise cutscene spawning point at door entry
-        avatar.x = roomConfigurations.room1.spawnX;
-        avatar.y = roomConfigurations.room1.spawnY;
-        avatar.angle = 180; // Turn avatar down facing front
+        // --- DYNAMIC ENTRY PROGRESSION DETERMINATION ---
+        currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
+        const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+
+        // UPDATED: Dynamically positions the AI Avatar properties based on configuration profile on skip
+        if (currentConfig.aiNPC) {
+            aiAvatar.x = currentConfig.aiNPC.x;
+            aiAvatar.y = currentConfig.aiNPC.y;
+            aiAvatar.angle = currentConfig.aiNPC.angle || 0;
+        }
+
+        avatar.x = currentConfig.spawnX;
+        avatar.y = currentConfig.spawnY;
         
-        // CRITICAL UPDATE: Arm the time-duration cutscene track state
+        // Directly references the roomConfigurations schema to grab the context angle
+        avatar.angle = (roomConfigurations[currentRoomId]?.cutscene?.directionAngle !== undefined) 
+            ? roomConfigurations[currentRoomId].cutscene.directionAngle 
+            : 90;
+        
         isCutsceneActive = true;
         cutsceneStartTime = Date.now();
         
-        // Handle side control guide UI panel visibility setup
         const inst = document.getElementById('instructions');
         if (inst) {
             inst.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
@@ -1184,6 +1320,11 @@ function draw() {
         
         const badge = document.getElementById('ai-attention-badge');
         if (badge) badge.style.display = 'block';
+
+        // Force position updates for the overlay element immediately over new coordinates
+        if (typeof updateAttentionBadgePosition === 'function') {
+            updateAttentionBadgePosition();
+        }
     }
 
     if (gameState === 'title') {
@@ -1192,10 +1333,8 @@ function draw() {
         return;
     }
 
-    // --- ACTIVE GAMEPLAY RENDERING ---
     ctx.clearRect(0, 0, 800, 600);
         
-    // Look up the preloaded image cache tracking references using the current configuration metadata
     const activeRoomConfig = roomConfigurations[currentRoomId];
     const activeBgImage = images[activeRoomConfig.bgKey];
 
@@ -1203,7 +1342,6 @@ function draw() {
         ctx.drawImage(activeBgImage, 0, 0, 800, 600);
     }
 
-    // --- LAPTOP RENDERING WITH ROTATION SUPPORT ---
     const activePapers = activeRoomConfig?.papers || [];
     activePapers.forEach(p => {
         if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
@@ -1233,19 +1371,16 @@ function draw() {
         }
     });
 
-    // --- LAYER 1: DRAW OTHER STUDENTS' AVATAR IMAGES ONLY IF THEY ARE IN THE SAME ROOM ---
     if (typeof remotePlayers !== 'undefined' && remotePlayers) {
         Object.keys(remotePlayers).forEach(id => {
-            if (id === currentStudentNumber) return; // Skip drawing self twice
+            if (id === currentStudentNumber) return; 
             const peer = remotePlayers[id];
             
-            // --- FIX: Verify matching roomCode AND specific currentRoomId screen matching matrices ---
             if (peer.roomCode === currentRoomCode && peer.roomId === currentRoomId) {
                 ctx.save();
                 ctx.translate(peer.x + 35, peer.y + 35);
                 ctx.rotate((peer.angle || 0) * Math.PI / 180);
                 
-                // Choose step sprite animations depending on remote movement flags
                 let peerSprite = images.idle;
                 if (peer.moving) {
                     peerSprite = (Math.floor(Date.now() / 150) % 2 === 0) ? images.walkLeft : images.walkRight;
@@ -1254,16 +1389,15 @@ function draw() {
                 if (peerSprite && peerSprite.complete) {
                     ctx.drawImage(peerSprite, -35, -35, 70, 70);
                 } else {
-                    ctx.fillStyle = '#9b59b6'; // Purple fallback block if texture drops out
+                    ctx.fillStyle = '#9b59b6'; 
                     ctx.fillRect(-25, -25, 50, 50);
                 }
                 ctx.restore();
 
-                // Render Peer Student Username label tag above their avatar bounds (MATCHED STYLE)
                 ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
                 ctx.fillRect(peer.x + 5, peer.y - 18, 60, 14);
                 
-                ctx.fillStyle = "#52b788"; // Matched green text identifier
+                ctx.fillStyle = "#52b788"; 
                 ctx.font = "bold 9px Arial";
                 ctx.textAlign = 'center';
                 ctx.fillText(peer.studentNumber, peer.x + 35, peer.y - 8);
@@ -1271,7 +1405,6 @@ function draw() {
         });
     }
 
-    // --- LAYER 2: DRAW LOCAL AVATAR IMAGE ---
     let localNow = Date.now();
     let img;
 
@@ -1304,29 +1437,25 @@ function draw() {
         ctx.restore();
     }
 
-    // --- LAYER 3: DRAW AI NPC IMAGE ---
     if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
         ctx.save();
         ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
-        let correctedAngle = aiAvatar.angle + 180;
+        let correctedAngle = (aiAvatar.angle || 0) + 180;
         ctx.rotate(correctedAngle * Math.PI / 180);
         ctx.drawImage(images.aiNPC, -35, -35, 70, 70);
         ctx.restore();
     }
 
-    // --- LAYER 4: OVERHEAD TEXT LABELS ---
-    // Render local player overhead nametag
     if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber) {
         ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
         ctx.fillRect(avatar.x + 5, avatar.y - 18, 60, 14);
         
-        ctx.fillStyle = "#52b788"; // Distinct local identifier color
+        ctx.fillStyle = "#52b788"; 
         ctx.font = "bold 9px Arial";
         ctx.textAlign = "center";
         ctx.fillText(currentStudentNumber, avatar.x + 35, avatar.y - 8);
     }
 
-    // --- DEBUG: DRAW COLLISION ZONES IN RED ---
     if (typeof debugMode !== 'undefined' && debugMode) {
         ctx.lineWidth = 2;
         const currentZones = activeRoomConfig?.collisionZones || [];
@@ -1353,7 +1482,6 @@ function draw() {
         });
     }
 
-    // --- UI OVERLAY LAYER ---
     ctx.fillStyle = "rgba(0,0,0,0.7)";
     ctx.fillRect(580, 10, 210, 40);
     ctx.strokeStyle = "#dcc23c";
@@ -1365,7 +1493,6 @@ function draw() {
     ctx.textAlign = "left";
     ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
 
-    // Dynamic verification sync loop for the Guide Controls block interface panels
     const inst = document.getElementById('instructions');
     if (inst) {
         const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
@@ -1378,7 +1505,6 @@ function draw() {
         update();
     }
 
-    // --- SCREEN FADE TIMELINE PROCESSOR TRACK ---
     if (fadeState === 'out') {
         fadeAlpha += 0.05;
         if (fadeAlpha >= 1) {
@@ -1402,6 +1528,22 @@ function draw() {
 
     requestAnimationFrame(draw);
 }
+function updateAttentionBadgePosition() {
+    const badge = document.getElementById('ai-attention-badge');
+    if (badge && badge.style.display !== 'none') {
+        const canvasWidth = 800;
+        const canvasHeight = 550;
+        
+        // Horizontal anchoring remains centered over the AI NPC width
+        const leftPercent = (((aiAvatar.x + 35) / canvasWidth) * 100);
+        
+        // CHANGED: Shifted from -45 to -75 to allocate clear vertical headroom above the sprite head
+        const topPercent = (((aiAvatar.y - 60) / canvasHeight) * 100); 
+        
+        badge.style.left = `${leftPercent}%`;
+        badge.style.top = `${topPercent}%`;
+    }
+}
 function syncPlayerCoordinates() {
     if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber && currentRoomCode) {
         fetch(`${API_BASE}/api/multiplayer/sync`, {
@@ -1410,7 +1552,7 @@ function syncPlayerCoordinates() {
             body: JSON.stringify({
                 studentNumber: currentStudentNumber,
                 roomCode: currentRoomCode,
-                roomId: currentRoomId, // <-- CRITICAL: Sends 'room1', 'room2', or 'room3' to the backend
+                roomId: currentRoomId, 
                 x: avatar.x,
                 y: avatar.y,
                 angle: avatar.angle,
@@ -1424,7 +1566,6 @@ function syncPlayerCoordinates() {
         })
         .then(data => {
             if (data && data.players) {
-                // Stores the filtered peer array returned from port 3000
                 remotePlayers = data.players;
             }
         })
@@ -1432,8 +1573,6 @@ function syncPlayerCoordinates() {
     }
 }
 
-// --- FOCUS-PROOF BACKGROUND HEARTBEAT LOOP ---
-// Fires consistently every 150ms even if the browser tab is inactive or minimized
 setInterval(() => {
     if (gameState === 'game' && typeof isAuthenticated !== 'undefined' && isAuthenticated) {
         if (typeof syncPlayerCoordinates === 'function') {
@@ -1441,6 +1580,164 @@ setInterval(() => {
         }
     }
 }, 150);
+
+function update() {
+    // --- EMBEDDED WALKING AUDIO MANAGER ENGINE ---
+    function updateAvatarMovementAudio() {
+        const cutsceneActive = (typeof isCutsceneActive !== 'undefined' && isCutsceneActive);
+        
+        // Pass validation if the core game state matches OR if a walking cutscene block is active
+        if ((gameState === 'game' || cutsceneActive) && !isPaused && avatar.moving) {
+            if (sounds.walking.paused) {
+                // Catches browser security blocks if player hasn't interacted with screen yet
+                sounds.walking.play().catch(err => console.log("Audio waiting for first input interaction."));
+            }
+        } else {
+            // If they stop, pause, or go to menu, halt and reset instantly
+            if (!sounds.walking.paused) {
+                sounds.walking.pause();
+                sounds.walking.currentTime = 0; // Rewinds to ensure no awkward audio dragging
+            }
+        }
+    }
+
+    // CRITICAL: Call here so it instantly stops the walking sound if the game is paused or exited
+    updateAvatarMovementAudio();
+
+    if (isPaused || gameState !== 'game') return;
+
+    // --- TIMED INTERCEPT ROUTINE ---
+    if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
+        let now = Date.now();
+        const activeConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+        const activeDuration = activeConfig.cutscene?.duration || 500; 
+
+        if (now - cutsceneStartTime < activeDuration) {
+            avatar.moving = true;
+            
+            // Extract direction angle from configuration schema
+            avatar.angle = activeConfig.cutscene?.directionAngle || 180; 
+
+            let currentSpeed = avatar.speed || 4;
+            
+            // Convert angle orientation to radians (Subtracting 90 aligns 0°=Up, 90°=Right, 180°=Down, 270°=Left)
+            let angleRad = (avatar.angle - 90) * Math.PI / 180;
+            
+            // Calculate vector trajectory adjustments
+            let potentialX = avatar.x + Math.cos(angleRad) * currentSpeed;
+            let potentialY = avatar.y + Math.sin(angleRad) * currentSpeed;
+
+            // Enforce safety boundary filters dynamically
+            if (checkAvatarBoundaries(potentialX, potentialY)) {
+                if (!checkCollisionAt(potentialX, potentialY) && 
+                    (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(potentialX, potentialY))) {
+                    avatar.x = potentialX;
+                    avatar.y = potentialY;
+                }
+            }
+        } else {
+            isCutsceneActive = false;
+            avatar.moving = false;
+            console.log(`[Cutscene Complete]: Room-specific structural automation sequence over. Controls unlocked.`);
+        }
+
+        updateAI();
+        updateAttentionBadgePosition();
+        
+        // Ensure cutscene walking steps trigger audio changes before stopping execution
+        updateAvatarMovementAudio();
+        return; 
+    }
+
+    // --- STANDARD PLAYER MANUAL CONTROLS ---
+    let moveX = 0, moveY = 0;
+        
+    if (keys['ArrowLeft'] || keys['KeyA'] || keys['a'] || keys['A']) moveX = -1;
+    if (keys['ArrowRight'] || keys['KeyD'] || keys['d'] || keys['D']) moveX = 1;
+    if (keys['ArrowUp'] || keys['KeyW'] || keys['w'] || keys['W']) moveY = -1;
+    if (keys['ArrowDown'] || keys['KeyS'] || keys['s'] || keys['S']) moveY = 1;
+
+    if (moveX !== 0 || moveY !== 0) {
+        if (moveX > 0 && moveY === 0) avatar.angle = 90;      
+        else if (moveX < 0 && moveY === 0) avatar.angle = 270;  
+        else if (moveY < 0 && moveX === 0) avatar.angle = 0;    
+        else if (moveY > 0 && moveX === 0) avatar.angle = 180;  
+        else if (moveX > 0 && moveY < 0) avatar.angle = 45;     
+        else if (moveX < 0 && moveY < 0) avatar.angle = 315;    
+        else if (moveX > 0 && moveY > 0) avatar.angle = 135;    
+        else if (moveX < 0 && moveY > 0) avatar.angle = 225;    
+                
+        let dx = moveX * avatar.speed;
+        let dy = moveY * avatar.speed;
+                
+        let potentialX = avatar.x + dx;
+        let potentialY = avatar.y + dy;
+
+        if (checkAvatarBoundaries(potentialX, potentialY)) {
+            if (!checkCollisionAt(potentialX, avatar.y) && 
+                (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(potentialX, avatar.y))) {
+                avatar.x = potentialX;
+            }
+            if (!checkCollisionAt(avatar.x, potentialY) && 
+                (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(avatar.x, potentialY))) {
+                avatar.y = potentialY;
+            }
+        }
+                
+        avatar.moving = true;
+        if (moveX < 0) avatar.lastDir = 'left';
+        if (moveX > 0) avatar.lastDir = 'right';
+    } else { 
+        avatar.moving = false; 
+    }
+
+    updateAI();
+    updateAttentionBadgePosition(); 
+
+    // CRITICAL: Evaluates final frame changes to seamlessly toggle walking.mp3 state
+    updateAvatarMovementAudio();
+}
+function toggleDebugMode(isEnabled) {
+    debugMode = isEnabled;
+    console.log("Debug Mode set to: " + debugMode);
+}
+
+function showSettingsMenu() {
+    const settingsOverlay = document.getElementById('settings-overlay');
+    
+    if (!settingsOverlay) {
+        console.warn("Settings overlay element not found.");
+        return;
+    }
+
+    const isCurrentlyVisible = settingsOverlay.style.display === 'flex';
+    
+    if (!isCurrentlyVisible) {
+        isPaused = true;
+        settingsOverlay.style.display = 'flex';
+    } else {
+        isPaused = false;
+        settingsOverlay.style.display = 'none';
+    }
+}
+/**
+ * Updates all game audio asset tracks safely using standard values.
+ * @param {string|number} value - The volume range input from 0 to 100.
+ */
+function updateGameVolume(value) {
+    const volumeValSpan = document.getElementById('volume-val');
+    if (volumeValSpan) {
+        volumeValSpan.innerText = value + '%';
+    }
+    
+    // Convert 0-100 percentage scale down to standard HTML5 Audio 0.0-1.0 scale
+    const volumeLevel = value / 100;
+    
+    // Dynamically adjust all global tracks instantly
+    sounds.walking.volume = volumeLevel;
+}
+
+
 // Helper to check if a point hits any defined collision box or circle
 function isInsideCollisionZone(x, y, radius = 25) {
     // FIX: Pull collision zones dynamically based on active room ID
