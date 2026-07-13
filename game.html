@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -309,15 +310,15 @@
         <div id="instructions">Arrows = Move | Space = Interact | ESC = Main Menu</div>
         
         <div id="menu-overlay">
-    <h1 class="portal-title">CYBER DEFENSE SYSTEM</h1>
-    <p class="portal-subtitle">Authorized Access Portals Only</p>
+    <h1 class="portal-title">S3 Cyber Room</h1>
+    <p class="portal-subtitle"></p>
 
     <div id="login-container">
         <h3 class="login-heading">Student Authentication</h3>
         
         <div class="input-group">
             <label class="input-label">STUDENT ID / NUMBER</label>
-            <input type="text" id="student-number-input" placeholder="e.g., 2026-10492">
+            <input type="text" id="student-number-input" placeholder="STU_001">
         </div>
 
         <div id="login-error-msg">
@@ -348,7 +349,13 @@
             <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="updateGameVolume(this.value)">
         </div>
 
-        <button onclick="showSettingsMenu()">Close Settings</button>
+        <div class="settings-actions" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+            <button onclick="showSettingsMenu()">Close Settings</button>
+            
+            <button id="exit-game-btn" style="background-color: #d9534f; color: white; border: none; padding: 10px; cursor: pointer; font-weight: bold; border-radius: 4px;">
+                Exit Game
+            </button>
+        </div>
     </div>
 </div>
         <div id="popup-overlay">
@@ -358,7 +365,202 @@
         </div>
     </div>
 <script>
-    const API_BASE = "http://192.168.1.7:3000";
+    const API_BASE = window.location.origin;
+let userIsWindowInactive = false; // Tracks if tab is backgrounded
+
+// --- GLOBAL LISTENERS (Register instantly on script evaluation) ---
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+        userIsWindowInactive = true;
+        if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+            console.log("[SYSTEM] Window backgrounded. Securing persistence status.");
+            if (typeof syncPlayerCoordinates === 'function') syncPlayerCoordinates();
+        }
+    } else {
+        userIsWindowInactive = false;
+        if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+            console.log("[SYSTEM] Window focused. Resuming telemetry tracking loop.");
+            if (typeof syncPlayerCoordinates === 'function') syncPlayerCoordinates();
+        }
+    }
+});
+
+window.addEventListener("beforeunload", () => {
+    if (typeof isAuthenticated === 'undefined' || !isAuthenticated || !currentStudentNumber) {
+        return;
+    }
+    
+    const disconnectUrl = `${API_BASE}/api/multiplayer/leave`;
+    const payload = JSON.stringify({
+        studentNumber: currentStudentNumber.trim().toUpperCase()
+    });
+    
+    // Beacon handles clean socket drops synchronously on page teardown/refresh
+    navigator.sendBeacon(disconnectUrl, payload);
+});
+
+// --- UI AND INITIALIZATION MECHANICS ---
+document.addEventListener("DOMContentLoaded", () => {
+    const loginBtn = document.getElementById('login-submit-btn');
+    const inputField = document.getElementById('student-number-input');
+    const errorMsg = document.getElementById('login-error-msg');
+    const loginContainer = document.getElementById('login-container');
+    const startPrompt = document.getElementById('start-prompt');
+    
+    // Target the newly added exit button and settings container
+    const exitGameBtn = document.getElementById('exit-game-btn');
+    const settingsOverlay = document.getElementById('settings-overlay');
+
+    loginBtn.addEventListener('click', () => {
+        const studentId = inputField.value.trim().toUpperCase();
+
+        if (studentId === "") {
+            errorMsg.textContent = "⚠ Student number cannot be blank.";
+            errorMsg.style.display = 'block';
+            return;
+        }
+
+        const roomSelection = prompt("Enter a Room Code to join or create (e.g., ROOM1):", "ROOM1");
+        if (!roomSelection) {
+            alert("A room code is required for multiplayer mapping functionality.");
+            return;
+        }
+
+        const targetRoomCode = roomSelection.trim().toUpperCase();
+        const temporaryRoomId = getSpawnRoomByScore(cyberknowledgeScore) || 'room1';
+
+        // --- DONT SET CLUSTER GLOBALS UNTIL SERVER SAYS YES ---
+        fetch(`${API_BASE}/api/multiplayer/join-room`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentNumber: studentId, roomCode: targetRoomCode, roomId: temporaryRoomId })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errData => { throw new Error(errData.error || "Authentication failed"); });
+            }
+            return response.json();
+        })
+        .then(data => {
+            // SUCCESS: Write the global variables synchronously at the exact same time
+            currentStudentNumber = studentId;
+            currentRoomCode = targetRoomCode;
+            currentRoomId = temporaryRoomId;
+
+            const activeConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+            avatar.x = activeConfig.spawnX; 
+            avatar.y = activeConfig.spawnY;
+            
+            isCutsceneActive = true;
+            cutsceneStartTime = Date.now();
+
+            // CRITICAL ENGINE REVEAL FLAG: Open telemetry pipeline now
+            isAuthenticated = true; 
+            
+            errorMsg.style.display = 'none';
+            loginContainer.style.display = 'none';
+            startPrompt.style.display = 'block';
+
+            console.log(`Session authorized: ${currentStudentNumber} spawned inside ${currentRoomId} within room channel ${currentRoomCode}`);
+        })
+        .catch(err => {
+            // RESET ENGINE TARGETS
+            currentStudentNumber = "";
+            currentRoomCode = "";
+            isAuthenticated = false;
+
+            console.error("Multiplayer room admission rejected:", err);
+            errorMsg.textContent = `⚠ ${err.message}`;
+            errorMsg.style.display = 'block';
+        });
+    });
+
+    inputField.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') loginBtn.click();
+    });
+
+    // --- EXPLICIT EXIT GAME BUTTON HANDLER ---
+    if (exitGameBtn) {
+        exitGameBtn.addEventListener('click', () => {
+            if (!confirm("Are you sure you want to exit the current game session?")) {
+                return;
+            }
+
+            // 1. Immediately notify the active port shard server to delete session track
+            fetch(`${API_BASE}/api/multiplayer/leave`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentNumber: currentStudentNumber.trim().toUpperCase() })
+            })
+            .then(() => console.log("[SYSTEM] Shard tracking entry cleared successfully."))
+            .catch(err => console.error("Server notify logout failed:", err));
+
+            // 2. Clear out client tracking states to stop ghost render objects
+            isAuthenticated = false;
+            currentStudentNumber = "";
+            currentRoomCode = "";
+            currentRoomId = "room1";
+            remotePlayers = {}; // Wipe local cache clones instantly
+
+            // 3. Reset game state mechanics
+            gameState = 'menu';
+            isPaused = false;
+
+            // 4. Interface visibility toggle updates
+            if (settingsOverlay) settingsOverlay.style.display = 'none';
+            if (startPrompt) startPrompt.style.display = 'none';
+            
+            // Clean slate inputs for next participant
+            if (inputField) inputField.value = "";
+            if (errorMsg) errorMsg.style.display = 'none';
+            if (loginContainer) loginContainer.style.display = 'block';
+
+            console.log("[SESSION CLOSED] Player left the shard room intentionally.");
+        });
+    }
+});
+
+// --- CORE NETWORKING ENGINE PIPELINE ---
+function syncPlayerCoordinates() {
+    if (typeof isAuthenticated === 'undefined' || !isAuthenticated || !currentStudentNumber || !currentRoomCode) {
+        return; 
+    }
+
+    fetch(`${API_BASE}/api/multiplayer/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            studentNumber: currentStudentNumber.trim().toUpperCase(),
+            roomCode: currentRoomCode.trim().toUpperCase(),
+            roomId: currentRoomId || 'room1', 
+            x: avatar.x,
+            y: avatar.y,
+            angle: avatar.angle,
+            moving: avatar.moving,
+            animStep: avatar.frame || 0,
+            isInactive: userIsWindowInactive // Send dynamic status to server
+        })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP network error: ${res.status}`);
+        return res.json();
+    })
+    .then(data => {
+        if (data && data.players) {
+            remotePlayers = data.players;
+        }
+    })
+    .catch(err => console.error("Multiplayer heartbeat synchronization failed:", err));
+}
+
+// Telemetry dispatch loop: Fires updates every 150ms during active game loops
+setInterval(() => {
+    if (gameState === 'game' && typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+        if (typeof syncPlayerCoordinates === 'function') {
+            syncPlayerCoordinates();
+        }
+    }
+}, 150);
 const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const popupOverlay = document.getElementById('popup-overlay');
@@ -406,6 +608,7 @@ const roomConfigurations = {
             { x: 700, y: 0, w: 60, h: 600 },  
             { x: 280, y: 0, w: 250, h: 340 },
             { x: 25, y: 450, w: 295, h: 50 },
+            { x: 490, y: 475, w: 214, h: 50 },
             { type: 'circle', x: 200, y: 410, radius: 40 },
             { type: 'circle', x: 130, y: 160, radius: 40 },
             { type: 'circle', x: 385, y: 499, radius: 35 }
@@ -525,58 +728,50 @@ sounds.walking.volume = 1;
     let currentStudentNumber = "";
     let isAuthenticated = false;
 
-    document.addEventListener("DOMContentLoaded", () => {
-    const loginBtn = document.getElementById('login-submit-btn');
-    const inputField = document.getElementById('student-number-input');
-    const errorMsg = document.getElementById('login-error-msg');
-    const loginContainer = document.getElementById('login-container');
-    const startPrompt = document.getElementById('start-prompt');
 
-    loginBtn.addEventListener('click', () => {
-        const studentId = inputField.value.trim();
 
-        if (studentId === "") {
-            errorMsg.textContent = "⚠ Student number cannot be blank.";
-            errorMsg.style.display = 'block';
-            return;
-        }
+function toggleDebugMode(isEnabled) {
+    debugMode = isEnabled;
+    console.log("Debug Mode set to: " + debugMode);
+}
 
-        const roomSelection = prompt("Enter a Room Code to join or create (e.g., ROOM1):", "ROOM1");
-        if (!roomSelection) {
-            alert("A room code is required for multiplayer mapping functionality.");
-            return;
-        }
+function showSettingsMenu() {
+    const settingsOverlay = document.getElementById('settings-overlay');
+    
+    if (!settingsOverlay) {
+        console.warn("Settings overlay element not found.");
+        return;
+    }
 
-        currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
-        const activeConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+    const isCurrentlyVisible = settingsOverlay.style.display === 'flex';
+    
+    if (!isCurrentlyVisible) {
+        isPaused = true;
+        settingsOverlay.style.display = 'flex';
+    } else {
+        isPaused = false;
+        settingsOverlay.style.display = 'none';
+    }
+}
 
-        avatar.x = activeConfig.spawnX; 
-        avatar.y = activeConfig.spawnY;
-        
-        isCutsceneActive = true;
-        cutsceneStartTime = Date.now();
-
-        currentStudentNumber = studentId;
-        currentRoomCode = roomSelection.trim().toUpperCase();
-        isAuthenticated = true;
-        
-        errorMsg.style.display = 'none';
-        loginContainer.style.display = 'none';
-        startPrompt.style.display = 'block';
-
-        console.log(`Session authorized: ${currentStudentNumber} spawned inside ${currentRoomId} within room channel ${currentRoomCode}`);
-        
-        fetch('/api/multiplayer/join-room', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ studentNumber: currentStudentNumber, roomCode: currentRoomCode })
-        }).catch(err => console.error("Error setting up server room channel:", err));
-    });
-
-    inputField.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') loginBtn.click();
-    });
-});
+/**
+ * Updates all game audio asset tracks safely using standard values.
+ * @param {string|number} value - The volume range input from 0 to 100.
+ */
+function updateGameVolume(value) {
+    const volumeValSpan = document.getElementById('volume-val');
+    if (volumeValSpan) {
+        volumeValSpan.innerText = value + '%';
+    }
+    
+    // Convert 0-100 percentage scale down to standard HTML5 Audio 0.0-1.0 scale
+    const volumeLevel = value / 100;
+    
+    // Dynamically adjust all global tracks instantly
+    if (sounds && sounds.walking) {
+        sounds.walking.volume = volumeLevel;
+    }
+}
 // --- DYNAMIC PROGRESSION ROUTING ---
 function getSpawnRoomByScore(score) {
     if (score >= 40) return 'room3';
@@ -1275,317 +1470,16 @@ function checkAvatarBoundaries(targetX, targetY) {
         ctx.fillStyle = 'rgba(13, 14, 21, 0.4)'; 
         ctx.fillRect(0, 0, 800, 600);
     }
-function draw() {
-    if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
-        if (typeof currentStudentNumber === 'undefined' || !currentStudentNumber) {
-            currentStudentNumber = "DEBUG_USER_001";
-        }
-        if (typeof currentRoomCode === 'undefined' || !currentRoomCode) {
-            currentRoomCode = "DEBUG_ROOM";
-        }
-
-        isAuthenticated = true;
-        gameState = 'game';
-        isPaused = false;
-
-        const menuOverlay = document.getElementById('menu-overlay');
-        if (menuOverlay) menuOverlay.style.display = 'none';
-        
-        // --- DYNAMIC ENTRY PROGRESSION DETERMINATION ---
-        currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
-        const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
-
-        // UPDATED: Dynamically positions the AI Avatar properties based on configuration profile on skip
-        if (currentConfig.aiNPC) {
-            aiAvatar.x = currentConfig.aiNPC.x;
-            aiAvatar.y = currentConfig.aiNPC.y;
-            aiAvatar.angle = currentConfig.aiNPC.angle || 0;
-        }
-
-        avatar.x = currentConfig.spawnX;
-        avatar.y = currentConfig.spawnY;
-        
-        // Directly references the roomConfigurations schema to grab the context angle
-        avatar.angle = (roomConfigurations[currentRoomId]?.cutscene?.directionAngle !== undefined) 
-            ? roomConfigurations[currentRoomId].cutscene.directionAngle 
-            : 90;
-        
-        isCutsceneActive = true;
-        cutsceneStartTime = Date.now();
-        
-        const inst = document.getElementById('instructions');
-        if (inst) {
-            inst.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
-        }
-        
-        const badge = document.getElementById('ai-attention-badge');
-        if (badge) badge.style.display = 'block';
-
-        // Force position updates for the overlay element immediately over new coordinates
-        if (typeof updateAttentionBadgePosition === 'function') {
-            updateAttentionBadgePosition();
-        }
-    }
-
-    if (gameState === 'title') {
-        drawTitleScreen();
-        requestAnimationFrame(draw);
-        return;
-    }
-
-    ctx.clearRect(0, 0, 800, 600);
-        
-    const activeRoomConfig = roomConfigurations[currentRoomId];
-    const activeBgImage = images[activeRoomConfig.bgKey];
-
-    if (activeBgImage && activeBgImage.naturalWidth > 0) {
-        ctx.drawImage(activeBgImage, 0, 0, 800, 600);
-    }
-
-    const activePapers = activeRoomConfig?.papers || [];
-    activePapers.forEach(p => {
-        if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            if (p.angle) {
-                ctx.rotate(p.angle * Math.PI / 180);
-            }
-            ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
-            ctx.restore();
-        }
-                
-        const dx = (avatar.x + 35) - p.x;
-        const dy = (avatar.y + 35) - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < interactionDist) {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            if (p.angle) {
-                ctx.rotate(p.angle * Math.PI / 180);
-            }
-            ctx.strokeStyle = "yellow";
-            ctx.lineWidth = 3;
-            ctx.strokeRect(-55, -40, 110, 80);
-            ctx.restore();
-        }
-    });
-
-    if (typeof remotePlayers !== 'undefined' && remotePlayers) {
-        Object.keys(remotePlayers).forEach(id => {
-            if (id === currentStudentNumber) return; 
-            const peer = remotePlayers[id];
-            
-            if (peer.roomCode === currentRoomCode && peer.roomId === currentRoomId) {
-                ctx.save();
-                ctx.translate(peer.x + 35, peer.y + 35);
-                ctx.rotate((peer.angle || 0) * Math.PI / 180);
-                
-                let peerSprite = images.idle;
-                if (peer.moving) {
-                    peerSprite = (Math.floor(Date.now() / 150) % 2 === 0) ? images.walkLeft : images.walkRight;
-                }
-                
-                if (peerSprite && peerSprite.complete) {
-                    ctx.drawImage(peerSprite, -35, -35, 70, 70);
-                } else {
-                    ctx.fillStyle = '#9b59b6'; 
-                    ctx.fillRect(-25, -25, 50, 50);
-                }
-                ctx.restore();
-
-                ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-                ctx.fillRect(peer.x + 5, peer.y - 18, 60, 14);
-                
-                ctx.fillStyle = "#52b788"; 
-                ctx.font = "bold 9px Arial";
-                ctx.textAlign = 'center';
-                ctx.fillText(peer.studentNumber, peer.x + 35, peer.y - 8);
-            }
-        });
-    }
-
-    let localNow = Date.now();
-    let img;
-
-    if (avatar.moving) {
-        let currentSpeed = avatar.speed || 4;
-        let dynamicInterval = Math.max(60, 600 / currentSpeed);
-
-        if (localNow - avatar.lastFrameSwap > dynamicInterval) {
-            if (typeof avatar.animStep === 'undefined') avatar.animStep = 0;
-            avatar.animStep = (avatar.animStep + 1) % 4;
-            avatar.lastFrameSwap = localNow;
-        }
-
-        if (avatar.animStep === 0) {
-            img = images.walkLeft;
-        } else if (avatar.animStep === 2) {
-            img = images.walkRight;
-        } else {
-            img = images.idle;
-        }
-    } else {
-        img = images.idle;
-    }
-        
-    if (img && img.naturalWidth > 0) {
-        ctx.save();                
-        ctx.translate(avatar.x + 35, avatar.y + 35);                
-        ctx.rotate(avatar.angle * Math.PI / 180);
-        ctx.drawImage(img, -35, -35, 70, 70);
-        ctx.restore();
-    }
-
-    if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
-        ctx.save();
-        ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
-        let correctedAngle = (aiAvatar.angle || 0) + 180;
-        ctx.rotate(correctedAngle * Math.PI / 180);
-        ctx.drawImage(images.aiNPC, -35, -35, 70, 70);
-        ctx.restore();
-    }
-
-    if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber) {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-        ctx.fillRect(avatar.x + 5, avatar.y - 18, 60, 14);
-        
-        ctx.fillStyle = "#52b788"; 
-        ctx.font = "bold 9px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(currentStudentNumber, avatar.x + 35, avatar.y - 8);
-    }
-
-    if (typeof debugMode !== 'undefined' && debugMode) {
-        ctx.lineWidth = 2;
-        const currentZones = activeRoomConfig?.collisionZones || [];
-        currentZones.forEach(z => {
-            ctx.save();
-            if (z.type === 'circle') {
-                ctx.beginPath();
-                ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2);
-                ctx.strokeStyle = "red";
-                ctx.stroke();
-                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
-                ctx.fill();
-            } else {
-                ctx.translate(z.x, z.y);
-                if (z.deg) {
-                    ctx.rotate(z.deg * Math.PI / 180);
-                }
-                ctx.strokeStyle = "red";
-                ctx.strokeRect(0, 0, z.w, z.h);
-                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
-                ctx.fillRect(0, 0, z.w, z.h);
-            }
-            ctx.restore();
-        });
-    }
-
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-    ctx.fillRect(580, 10, 210, 40);
-    ctx.strokeStyle = "#dcc23c";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(580, 10, 210, 40);
-
-    ctx.fillStyle = "white";
-    ctx.font = "bold 14px Arial";
-    ctx.textAlign = "left";
-    ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
-
-    const inst = document.getElementById('instructions');
-    if (inst) {
-        const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
-        if (inst.style.display !== structuralVisibility) {
-            inst.style.display = structuralVisibility;
-        }
-    }
-
-    if (!isPaused) {
-        update();
-    }
-
-    if (fadeState === 'out') {
-        fadeAlpha += 0.05;
-        if (fadeAlpha >= 1) {
-            fadeAlpha = 1;
-            executeRoomSwitch(targetRoomId);
-            fadeState = 'in';
-        }
-    } else if (fadeState === 'in') {
-        fadeAlpha -= 0.05;
-        if (fadeAlpha <= 0) {
-            fadeAlpha = 0;
-            fadeState = 'idle';
-            targetRoomId = null;
-        }
-    }
-
-    if (fadeAlpha > 0) {
-        ctx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
-        ctx.fillRect(0, 0, 800, 600);
-    }
-
-    requestAnimationFrame(draw);
-}
-function updateAttentionBadgePosition() {
-    const badge = document.getElementById('ai-attention-badge');
-    if (badge && badge.style.display !== 'none') {
-        const canvasWidth = 800;
-        const canvasHeight = 550;
-        
-        // Horizontal anchoring remains centered over the AI NPC width
-        const leftPercent = (((aiAvatar.x + 35) / canvasWidth) * 100);
-        
-        // CHANGED: Shifted from -45 to -75 to allocate clear vertical headroom above the sprite head
-        const topPercent = (((aiAvatar.y - 60) / canvasHeight) * 100); 
-        
-        badge.style.left = `${leftPercent}%`;
-        badge.style.top = `${topPercent}%`;
-    }
-}
-function syncPlayerCoordinates() {
-    if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber && currentRoomCode) {
-        fetch(`${API_BASE}/api/multiplayer/sync`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                studentNumber: currentStudentNumber,
-                roomCode: currentRoomCode,
-                roomId: currentRoomId, 
-                x: avatar.x,
-                y: avatar.y,
-                angle: avatar.angle,
-                moving: avatar.moving,
-                animStep: avatar.frame || 0
-            })
-        })
-        .then(res => {
-            if (!res.ok) throw new Error(`HTTP network error: ${res.status}`);
-            return res.json();
-        })
-        .then(data => {
-            if (data && data.players) {
-                remotePlayers = data.players;
-            }
-        })
-        .catch(err => console.error("Multiplayer heartbeat synchronization failed:", err));
-    }
-}
-
-setInterval(() => {
-    if (gameState === 'game' && typeof isAuthenticated !== 'undefined' && isAuthenticated) {
-        if (typeof syncPlayerCoordinates === 'function') {
-            syncPlayerCoordinates();
-        }
-    }
-}, 150);
-
 function update() {
     // --- EMBEDDED WALKING AUDIO MANAGER ENGINE ---
     function updateAvatarMovementAudio() {
         const cutsceneActive = (typeof isCutsceneActive !== 'undefined' && isCutsceneActive);
         
+        // FIX: Add strict guards to make sure sounds object and walking audio asset exist before checking attributes
+        if (typeof sounds === 'undefined' || !sounds || !sounds.walking) {
+            return; // Exit silently so the rest of the game engine keeps running
+        }
+
         // Pass validation if the core game state matches OR if a walking cutscene block is active
         if ((gameState === 'game' || cutsceneActive) && !isPaused && avatar.moving) {
             if (sounds.walking.paused) {
@@ -1697,45 +1591,294 @@ function update() {
     // CRITICAL: Evaluates final frame changes to seamlessly toggle walking.mp3 state
     updateAvatarMovementAudio();
 }
-function toggleDebugMode(isEnabled) {
-    debugMode = isEnabled;
-    console.log("Debug Mode set to: " + debugMode);
-}
+function draw() {
+    if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
+        if (typeof currentStudentNumber === 'undefined' || !currentStudentNumber) {
+            currentStudentNumber = "DEBUG_USER_001";
+        }
+        if (typeof currentRoomCode === 'undefined' || !currentRoomCode) {
+            currentRoomCode = "DEBUG_ROOM";
+        }
 
-function showSettingsMenu() {
-    const settingsOverlay = document.getElementById('settings-overlay');
-    
-    if (!settingsOverlay) {
-        console.warn("Settings overlay element not found.");
+        isAuthenticated = true;
+        gameState = 'game';
+        isPaused = false;
+
+        const menuOverlay = document.getElementById('menu-overlay');
+        if (menuOverlay) menuOverlay.style.display = 'none';
+        
+        // --- DYNAMIC ENTRY PROGRESSION DETERMINATION ---
+        currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
+        const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+
+        // UPDATED: Dynamically positions the AI Avatar properties based on configuration profile on skip
+        if (currentConfig.aiNPC) {
+            aiAvatar.x = currentConfig.aiNPC.x;
+            aiAvatar.y = currentConfig.aiNPC.y;
+            aiAvatar.angle = currentConfig.aiNPC.angle || 0;
+        }
+
+        avatar.x = currentConfig.spawnX;
+        avatar.y = currentConfig.spawnY;
+        
+        // Directly references the roomConfigurations schema to grab the context angle
+        avatar.angle = (roomConfigurations[currentRoomId]?.cutscene?.directionAngle !== undefined) 
+            ? roomConfigurations[currentRoomId].cutscene.directionAngle 
+            : 90;
+        
+        isCutsceneActive = true;
+        cutsceneStartTime = Date.now();
+        
+        const inst = document.getElementById('instructions');
+        if (inst) {
+            inst.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
+        }
+        
+        const badge = document.getElementById('ai-attention-badge');
+        if (badge) badge.style.display = 'block';
+
+        // Force position updates for the overlay element immediately over new coordinates
+        if (typeof updateAttentionBadgePosition === 'function') {
+            updateAttentionBadgePosition();
+        }
+    }
+
+    if (gameState === 'title') {
+        drawTitleScreen();
+        requestAnimationFrame(draw);
         return;
     }
 
-    const isCurrentlyVisible = settingsOverlay.style.display === 'flex';
-    
-    if (!isCurrentlyVisible) {
-        isPaused = true;
-        settingsOverlay.style.display = 'flex';
+    ctx.clearRect(0, 0, 800, 600);
+        
+    const activeRoomConfig = roomConfigurations[currentRoomId];
+    const activeBgImage = images[activeRoomConfig.bgKey];
+
+    if (activeBgImage && activeBgImage.naturalWidth > 0) {
+        ctx.drawImage(activeBgImage, 0, 0, 800, 600);
+    }
+
+    const activePapers = activeRoomConfig?.papers || [];
+    activePapers.forEach(p => {
+        if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            if (p.angle) {
+                ctx.rotate(p.angle * Math.PI / 180);
+            }
+            ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
+            ctx.restore();
+        }
+                
+        const dx = (avatar.x + 35) - p.x;
+        const dy = (avatar.y + 35) - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < interactionDist) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            if (p.angle) {
+                ctx.rotate(p.angle * Math.PI / 180);
+            }
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-55, -40, 110, 80);
+            ctx.restore();
+        }
+    });
+
+    // --- MULTIPLAYER RENDERING PIPELINE ---
+    if (typeof remotePlayers !== 'undefined' && remotePlayers) {
+        Object.keys(remotePlayers).forEach(id => {
+            if (id.trim().toUpperCase() === currentStudentNumber.trim().toUpperCase()) return; 
+            const peer = remotePlayers[id];
+            
+            if (peer.roomCode === currentRoomCode && peer.roomId === currentRoomId) {
+                ctx.save();
+                ctx.translate(peer.x + 35, peer.y + 35);
+                ctx.rotate((peer.angle || 0) * Math.PI / 180);
+                
+                let peerSprite = images.idle;
+                if (peer.moving) {
+                    peerSprite = (Math.floor(Date.now() / 150) % 2 === 0) ? images.walkLeft : images.walkRight;
+                }
+                
+                if (peerSprite && peerSprite.complete) {
+                    ctx.drawImage(peerSprite, -35, -35, 70, 70);
+                } else {
+                    ctx.fillStyle = '#9b59b6'; 
+                    ctx.fillRect(-25, -25, 50, 50);
+                }
+                ctx.restore();
+
+                // --- FIX: Dynamic Width and Shifted Completely Above The Head ---
+                ctx.font = "bold 9px Arial";
+                const textWidth = ctx.measureText(peer.studentNumber).width;
+                const paddingX = 8;
+                const boxWidth = textWidth + paddingX;
+                const boxHeight = 14;
+                
+                // Positioned cleanly clear of the 70px head frame at y - 26
+                ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+                ctx.fillRect(peer.x + 35 - (boxWidth / 2), peer.y - 26, boxWidth, boxHeight);
+                
+                ctx.fillStyle = "#52b788"; 
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(peer.studentNumber, peer.x + 35, peer.y - 26 + (boxHeight / 2));
+            }
+        });
+    }
+
+    let localNow = Date.now();
+    let img;
+
+    if (avatar.moving) {
+        let currentSpeed = avatar.speed || 4;
+        let dynamicInterval = Math.max(60, 600 / currentSpeed);
+
+        if (localNow - avatar.lastFrameSwap > dynamicInterval) {
+            if (typeof avatar.animStep === 'undefined') avatar.animStep = 0;
+            avatar.animStep = (avatar.animStep + 1) % 4;
+            avatar.lastFrameSwap = localNow;
+        }
+
+        if (avatar.animStep === 0) {
+            img = images.walkLeft;
+        } else if (avatar.animStep === 2) {
+            img = images.walkRight;
+        } else {
+            img = images.idle;
+        }
     } else {
-        isPaused = false;
-        settingsOverlay.style.display = 'none';
+        img = images.idle;
+    }
+        
+    if (img && img.naturalWidth > 0) {
+        ctx.save();                
+        ctx.translate(avatar.x + 35, avatar.y + 35);                
+        ctx.rotate(avatar.angle * Math.PI / 180);
+        ctx.drawImage(img, -35, -35, 70, 70);
+        ctx.restore();
+    }
+
+    if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
+        ctx.save();
+        ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
+        let correctedAngle = (aiAvatar.angle || 0) + 180;
+        ctx.rotate(correctedAngle * Math.PI / 180);
+        ctx.drawImage(images.aiNPC, -35, -35, 70, 70);
+        ctx.restore();
+    }
+
+    // --- LOCAL PLAYER NAME INDICATOR ---
+    if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber) {
+        ctx.font = "bold 9px Arial";
+        const localTextWidth = ctx.measureText(currentStudentNumber).width;
+        const localPaddingX = 8;
+        const localBoxWidth = localTextWidth + localPaddingX;
+        const localBoxHeight = 14;
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+        ctx.fillRect(avatar.x + 35 - (localBoxWidth / 2), avatar.y - 26, localBoxWidth, localBoxHeight);
+        
+        ctx.fillStyle = "#52b788"; 
+        ctx.font = "bold 9px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = 'middle';
+        ctx.fillText(currentStudentNumber, avatar.x + 35, avatar.y - 26 + (localBoxHeight / 2));
+    }
+
+    if (typeof debugMode !== 'undefined' && debugMode) {
+        ctx.lineWidth = 2;
+        const currentZones = activeRoomConfig?.collisionZones || [];
+        currentZones.forEach(z => {
+            ctx.save();
+            if (z.type === 'circle') {
+                ctx.beginPath();
+                ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = "red";
+                ctx.stroke();
+                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
+                ctx.fill();
+            } else {
+                ctx.translate(z.x, z.y);
+                if (z.deg) {
+                    ctx.rotate(z.deg * Math.PI / 180);
+                }
+                ctx.strokeStyle = "red";
+                ctx.strokeRect(0, 0, z.w, z.h);
+                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
+                ctx.fillRect(0, 0, z.w, z.h);
+            }
+            ctx.restore();
+        });
+    }
+
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(580, 10, 210, 40);
+    ctx.strokeStyle = "#dcc23c";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(580, 10, 210, 40);
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 14px Arial";
+    ctx.textAlign = "left";
+    ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
+
+    const inst = document.getElementById('instructions');
+    if (inst) {
+        const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
+        if (inst.style.display !== structuralVisibility) {
+            inst.style.display = structuralVisibility;
+        }
+    }
+
+    if (!isPaused) {
+        update();
+    }
+
+    if (fadeState === 'out') {
+        fadeAlpha += 0.05;
+        if (fadeAlpha >= 1) {
+            fadeAlpha = 1;
+            executeRoomSwitch(targetRoomId);
+            fadeState = 'in';
+        }
+    } else if (fadeState === 'in') {
+        fadeAlpha -= 0.05;
+        if (fadeAlpha <= 0) {
+            fadeAlpha = 0;
+            fadeState = 'idle';
+            targetRoomId = null;
+        }
+    }
+
+    if (fadeAlpha > 0) {
+        ctx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
+        ctx.fillRect(0, 0, 800, 600);
+    }
+
+    requestAnimationFrame(draw);
+}
+function updateAttentionBadgePosition() {
+    const badge = document.getElementById('ai-attention-badge');
+    if (badge && badge.style.display !== 'none') {
+        const canvasWidth = 800;
+        const canvasHeight = 550;
+        
+        // Horizontal anchoring remains centered over the AI NPC width
+        const leftPercent = (((aiAvatar.x + 35) / canvasWidth) * 100);
+        
+        // CHANGED: Shifted from -45 to -75 to allocate clear vertical headroom above the sprite head
+        const topPercent = (((aiAvatar.y - 60) / canvasHeight) * 100); 
+        
+        badge.style.left = `${leftPercent}%`;
+        badge.style.top = `${topPercent}%`;
     }
 }
-/**
- * Updates all game audio asset tracks safely using standard values.
- * @param {string|number} value - The volume range input from 0 to 100.
- */
-function updateGameVolume(value) {
-    const volumeValSpan = document.getElementById('volume-val');
-    if (volumeValSpan) {
-        volumeValSpan.innerText = value + '%';
-    }
-    
-    // Convert 0-100 percentage scale down to standard HTML5 Audio 0.0-1.0 scale
-    const volumeLevel = value / 100;
-    
-    // Dynamically adjust all global tracks instantly
-    sounds.walking.volume = volumeLevel;
-}
+
+
 
 
 // Helper to check if a point hits any defined collision box or circle
