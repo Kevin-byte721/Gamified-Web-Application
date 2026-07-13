@@ -358,7 +358,7 @@
         </div>
     </div>
 <script>
-    const API_BASE = "http://192.168.1.7:3000";
+    const API_BASE = "http://192.168.1.8:3000";
 const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const popupOverlay = document.getElementById('popup-overlay');
@@ -378,7 +378,7 @@ const canvas = document.getElementById('gameCanvas');
     var remotePlayers = {};
     let skipTitleScreen = false;
     let debugMode = false; 
-    let showGuideControls = false;
+    let showGuideControls = true;
     let imagesLoaded = 0;
     const totalImages = Object.keys(imageFiles).length;
     let gameState = 'title';
