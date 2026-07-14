@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -398,6 +399,10 @@ window.addEventListener("beforeunload", () => {
     // Beacon handles clean socket drops synchronously on page teardown/refresh
     navigator.sendBeacon(disconnectUrl, payload);
 });
+// --- GLOBAL MODULE COMPLETION TRACKING ---
+let isSafeCompleted = false;
+let isSavvyCompleted = false;
+let isSocialCompleted = false;
 
 // --- UI AND INITIALIZATION MECHANICS ---
 document.addEventListener("DOMContentLoaded", () => {
@@ -420,54 +425,118 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const roomSelection = prompt("Enter a Room Code to join or create (e.g., ROOM1):", "ROOM1");
-        if (!roomSelection) {
-            alert("A room code is required for multiplayer mapping functionality.");
-            return;
-        }
-
-        const targetRoomCode = roomSelection.trim().toUpperCase();
-        const temporaryRoomId = getSpawnRoomByScore(cyberknowledgeScore) || 'room1';
-
-        // --- DONT SET CLUSTER GLOBALS UNTIL SERVER SAYS YES ---
-        fetch(`${API_BASE}/api/multiplayer/join-room`, {
+        // STEP 1: Query credentials and load existing progress scores from Firebase first
+        fetch(`${API_BASE}/api/auth`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ studentNumber: studentId, roomCode: targetRoomCode, roomId: temporaryRoomId })
+            body: JSON.stringify({ studentNumber: studentId })
         })
         .then(response => {
             if (!response.ok) {
-                return response.json().then(errData => { throw new Error(errData.error || "Authentication failed"); });
+                throw new Error("Could not authenticate student record with cloud services.");
             }
             return response.json();
         })
-        .then(data => {
-            // SUCCESS: Write the global variables synchronously at the exact same time
-            currentStudentNumber = studentId;
-            currentRoomCode = targetRoomCode;
-            currentRoomId = temporaryRoomId;
+        .then(authResult => {
+            if (!authResult.authenticated || !authResult.data) {
+                throw new Error("Authentication rejected by cloud database schema.");
+            }
 
-            const activeConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
-            avatar.x = activeConfig.spawnX; 
-            avatar.y = activeConfig.spawnY;
+            const record = authResult.data;
             
-            isCutsceneActive = true;
-            cutsceneStartTime = Date.now();
+            // Sync divided scores to reconstruct the exact global telemetry score locally
+            const safe = record.safe_score || 0;
+            const savvy = record.savvy_score || 0;
+            const social = record.social_score || 0;
+            cyberknowledgeScore = safe + savvy + social;
 
-            // CRITICAL ENGINE REVEAL FLAG: Open telemetry pipeline now
-            isAuthenticated = true; 
+            // Sync and store completed flags from record or fallback to score limits
+            isSafeCompleted = record.safe_completed === 1 || safe >= 20;
+            isSavvyCompleted = record.savvy_completed === 1 || savvy >= 20;
+            isSocialCompleted = record.social_completed === 1 || social >= 20;
+
+            console.log(`[CLOUD RECOVERY] Student authenticated! Syncing active scores -> Safe: ${safe}, Savvy: ${savvy}, Social: ${social} | Total Local: ${cyberknowledgeScore}`);
+            console.log(`[MODULE COMPLETIONS] Safe: ${isSafeCompleted}, Savvy: ${isSavvyCompleted}, Social: ${isSocialCompleted}`);
+
+            // STEP 2: Establish the multiplayer channel
+            const roomSelection = prompt("Enter a Room Code to join or create (e.g., ROOM1):", "ROOM1");
+            if (!roomSelection) {
+                alert("A room code is required for multiplayer mapping functionality.");
+                return;
+            }
+
+            const targetRoomCode = roomSelection.trim().toUpperCase();
             
-            errorMsg.style.display = 'none';
-            loginContainer.style.display = 'none';
-            startPrompt.style.display = 'block';
+            // Calculate starting room dynamically using the synced score
+            let temporaryRoomId = 'room1';
+            if (cyberknowledgeScore >= 40) {
+                temporaryRoomId = 'room3';
+            } else if (cyberknowledgeScore >= 20) {
+                temporaryRoomId = 'room2';
+            }
 
-            console.log(`Session authorized: ${currentStudentNumber} spawned inside ${currentRoomId} within room channel ${currentRoomCode}`);
+            // STEP 3: Request session registration from active server shard matching calculated roomId
+            return fetch(`${API_BASE}/api/multiplayer/join-room`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    studentNumber: studentId, 
+                    roomCode: targetRoomCode, 
+                    roomId: temporaryRoomId 
+                })
+            })
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(errData => { throw new Error(errData.error || "Room admission failed"); });
+                }
+                return res.json();
+            })
+            .then(roomData => {
+                // SUCCESS: Synchronously align all active client coordinates and room states
+                currentStudentNumber = studentId;
+                currentRoomCode = targetRoomCode;
+                currentRoomId = roomData.roomId || temporaryRoomId; // Bind to server response room validation
+
+                const activeConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+                
+                // --- CRITICAL POSITION SYNCHRONIZATION ---
+                // Sync Player Avatar position
+                avatar.x = activeConfig.spawnX; 
+                avatar.y = activeConfig.spawnY;
+                avatar.angle = activeConfig.cutscene?.directionAngle || 180;
+
+                // Sync AI NPC Avatar position (Forces (440, 400) immediately on login load)
+                if (activeConfig.aiNPC) {
+                    aiAvatar.x = activeConfig.aiNPC.x;
+                    aiAvatar.y = activeConfig.aiNPC.y;
+                    aiAvatar.angle = activeConfig.aiNPC.angle || 0;
+                }
+                
+                // Set interactive locking states based on completed modules
+                applyRoomCompletionStates(currentRoomId);
+                
+                isCutsceneActive = true;
+                cutsceneStartTime = Date.now();
+
+                // CRITICAL ENGINE REVEAL FLAG: Open telemetry pipelines
+                isAuthenticated = true; 
+                
+                errorMsg.style.display = 'none';
+                loginContainer.style.display = 'none';
+                startPrompt.style.display = 'block';
+
+                console.log(`Session authorized: ${currentStudentNumber} spawned inside ${currentRoomId} within room channel ${currentRoomCode}. AI NPC located at (${aiAvatar.x}, ${aiAvatar.y})`);
+            });
         })
         .catch(err => {
-            // RESET ENGINE TARGETS
+            // RESET ENGINE TARGETS ON ERROR
             currentStudentNumber = "";
             currentRoomCode = "";
             isAuthenticated = false;
+            cyberknowledgeScore = 0;
+            isSafeCompleted = false;
+            isSavvyCompleted = false;
+            isSocialCompleted = false;
 
             console.error("Multiplayer room admission rejected:", err);
             errorMsg.textContent = `⚠ ${err.message}`;
@@ -486,40 +555,126 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // 1. Immediately notify the active port shard server to delete session track
+            // 1. Notify the active port shard server to delete session track
             fetch(`${API_BASE}/api/multiplayer/leave`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ studentNumber: currentStudentNumber.trim().toUpperCase() })
             })
             .then(() => console.log("[SYSTEM] Shard tracking entry cleared successfully."))
-            .catch(err => console.error("Server notify logout failed:", err));
+            .catch(err => console.error("Server notify logout failed:", err))
+            .finally(() => {
+                // 2. Clear out client tracking states to stop ghost render objects
+                isAuthenticated = false;
+                currentStudentNumber = "";
+                currentRoomCode = "";
+                currentRoomId = "room1";
+                cyberknowledgeScore = 0;
+                isSafeCompleted = false;
+                isSavvyCompleted = false;
+                isSocialCompleted = false;
+                remotePlayers = {}; // Wipe local cache clones instantly
 
-            // 2. Clear out client tracking states to stop ghost render objects
-            isAuthenticated = false;
-            currentStudentNumber = "";
-            currentRoomCode = "";
-            currentRoomId = "room1";
-            remotePlayers = {}; // Wipe local cache clones instantly
+                // 3. Reset game state mechanics
+                gameState = 'menu';
+                isPaused = false;
 
-            // 3. Reset game state mechanics
-            gameState = 'menu';
-            isPaused = false;
+                // 4. Interface visibility toggle updates
+                if (settingsOverlay) settingsOverlay.style.display = 'none';
+                if (startPrompt) startPrompt.style.display = 'none';
+                
+                // Clean slate inputs for next participant
+                if (inputField) inputField.value = "";
+                if (errorMsg) errorMsg.style.display = 'none';
+                if (loginContainer) loginContainer.style.display = 'block';
 
-            // 4. Interface visibility toggle updates
-            if (settingsOverlay) settingsOverlay.style.display = 'none';
-            if (startPrompt) startPrompt.style.display = 'none';
-            
-            // Clean slate inputs for next participant
-            if (inputField) inputField.value = "";
-            if (errorMsg) errorMsg.style.display = 'none';
-            if (loginContainer) loginContainer.style.display = 'block';
-
-            console.log("[SESSION CLOSED] Player left the shard room intentionally.");
+                console.log("[SESSION CLOSED] Player left the shard room intentionally. Reloading...");
+                
+                // FIX: Force clean page refresh to purge Canvas memories, keys, and intervals completely
+                window.location.reload();
+            });
         });
     }
 });
 
+// --- NEW HELPER: APPLY LOCKS AND UPDATE NPC DIALOGUE BASED ON COMPLETED MODULES ---
+function applyRoomCompletionStates(roomId) {
+    const config = roomConfigurations[roomId];
+    if (!config) return;
+
+    let isCurrentModuleCompleted = false;
+    if (roomId === 'room1' && isSafeCompleted) isCurrentModuleCompleted = true;
+    if (roomId === 'room2' && isSavvyCompleted) isCurrentModuleCompleted = true;
+    if (roomId === 'room3' && isSocialCompleted) isCurrentModuleCompleted = true;
+
+    if (isCurrentModuleCompleted) {
+        console.log(`[STATE LOCK] ${roomId} is already completed. Locking laptop and routing AI NPC to success dialogue.`);
+        
+        // 1. Lock the laptop interactions
+        laptopLocked = true;
+
+        // 2. Clear out or mark papers in this room as already solved
+        if (config.papers) {
+            config.papers.forEach(paper => {
+                paper.answered = true;
+                paper.scoreProcessed = true;
+            });
+        }
+
+        // 3. Overwrite AI npc's message state key to success dialog variants
+        aiAvatar.messageType = `${roomId}_success`; 
+    } else {
+        // Standard interactive state
+        laptopLocked = false;
+        aiAvatar.messageType = config.aiNPC.messageType;
+        
+        if (config.papers) {
+            config.papers.forEach(paper => {
+                paper.answered = false;
+                paper.scoreProcessed = false;
+            });
+        }
+    }
+}
+
+// --- EXECUTE ROOM SWITCH ---
+function executeRoomSwitch(roomId) {
+    currentRoomId = roomId;
+    const config = roomConfigurations[roomId];
+
+    if (!config) {
+        console.error(`[EXECUTE SWITCH ERROR] Configurations do not exist for: ${roomId}`);
+        return;
+    }
+
+    // 1. Force-sync AI Avatar coordinates to the configuration values
+    aiAvatar.x = config.aiNPC.x;
+    aiAvatar.y = config.aiNPC.y;
+    aiAvatar.angle = config.aiNPC.angle || 0; 
+    
+    // 2. Assess and apply dynamic lockouts or success message configurations
+    applyRoomCompletionStates(roomId);
+
+    // 3. Force-sync User's Player Avatar coordinates to correct spawning configuration
+    avatar.x = config.spawnX;
+    avatar.y = config.spawnY;
+    avatar.angle = config.cutscene?.directionAngle || 180;
+
+    isCutsceneActive = true;
+    cutsceneStartTime = Date.now();
+
+    // 4. Coordinate telemetry alignment on environment floor map
+    const badge = document.getElementById('ai-attention-badge');
+    if (badge) {
+        badge.style.display = 'block';
+    }
+
+    if (typeof updateAttentionBadgePosition === 'function') {
+        updateAttentionBadgePosition();
+    }
+
+    console.log(`[EXECUTE ROOM SWITCH COMPLETE] Routed to: ${roomId}. Player: (${avatar.x}, ${avatar.y}) | AI: (${aiAvatar.x}, ${aiAvatar.y}) | Laptop Locked: ${laptopLocked} | Message Key: ${aiAvatar.messageType}`);
+}
 // --- CORE NETWORKING ENGINE PIPELINE ---
 function syncPlayerCoordinates() {
     if (typeof isAuthenticated === 'undefined' || !isAuthenticated || !currentStudentNumber || !currentRoomCode) {
@@ -580,7 +735,7 @@ const canvas = document.getElementById('gameCanvas');
     var remotePlayers = {};
     let skipTitleScreen = false;
     let debugMode = false; 
-    let showGuideControls = true;
+    let showGuideControls = false;
     let imagesLoaded = 0;
     const totalImages = Object.keys(imageFiles).length;
     let gameState = 'title';
@@ -591,75 +746,6 @@ const canvas = document.getElementById('gameCanvas');
     let isCutsceneActive = false;       
 let cutsceneStartTime = 0;          
 
-const roomConfigurations = {
-    room1: {
-        bgKey: 'background', 
-        spawnX: 630,
-        spawnY: 240,
-        aiNPC: { x: 100, y: 240, messageType: 'room1_state' },
-        cutscene: { duration: 500, directionAngle: 180 }, 
-        papers: [
-            { x: 210, y: 480, id: 0, angle: 180, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false }
-        ],
-        collisionZones: [
-            { x: 0, y: 75, w: 800, h: 45 },    
-            { x: 0, y: 520, w: 800, h: 80 },  
-            { x: 0, y: 0, w: 60, h: 600 },    
-            { x: 700, y: 0, w: 60, h: 600 },  
-            { x: 280, y: 0, w: 250, h: 340 },
-            { x: 25, y: 450, w: 295, h: 50 },
-            { x: 490, y: 475, w: 214, h: 50 },
-            { type: 'circle', x: 200, y: 410, radius: 40 },
-            { type: 'circle', x: 130, y: 160, radius: 40 },
-            { type: 'circle', x: 385, y: 499, radius: 35 }
-        ]
-    },
-    room2: {
-        bgKey: 'living', 
-        spawnX: 100,
-        spawnY: 315,
-        aiNPC: { x: 440, y: 400, messageType: 'room2_state' },
-        cutscene: { duration: 500, directionAngle: 90 }, // Moving to the right (90 deg)
-        papers: [
-            { x: 480, y: 273, id: 10, angle: 270, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false }
-        ],
-        collisionZones: [
-            { x: 146, y: 170, w: 390, h: 10 },
-            { x: 145, y: 10, w: 140, h: 260 },
-            { x: 90, y: 60, w: 50, h: 20 },
-            { x: 90, y: 455, w: 235, h: 20 },
-            { x: 325, y: 236, w: 180, h: 80 },
-            { x: 0, y: 530, w: 800, h: 60 },
-            { x: 0, y: 0, w: 86, h: 600 },
-            { x: 480, y: 60, w: 60, h: 100 },
-            { x: 500, y: 100, w: 200, h: 40 },
-            { x: 640, y: 180, w: 50, h: 225 },
-            { x: 700, y: 0, w: 40, h: 600 },
-            { type: 'circle', x: 385, y: 495, radius: 30 },
-
-        ]
-    },
-    room3: {
-        bgKey: 'kitchen', 
-        spawnX: 640,
-        spawnY: 210,
-        aiNPC: { x: 330, y: 430, messageType: 'room3_state' },
-        cutscene: { duration: 500, directionAngle: 270 }, 
-        papers: [
-            { x: 320, y: 320, id: 20, angle: 0, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false }
-        ],
-        collisionZones: [
-            { x: 0, y: 0, w: 800, h: 150 },
-            { x: 700, y: 100, w: 20, h: 460 },
-            { x: 180, y: 150, w: 20, h: 400 },
-            { x: 645, y: 350, w: 80, h: 200 },
-            { x: 275, y: 240, w: 260, h: 110 },
-            { x: 200, y: 430, w: 125, h: 100},
-            { x: 490, y: 480, w: 200, h: 120 },
-            { x: 0, y: 500, w: 800, h: 50 }
-        ]
-    }
-};
 // Global Audio Configuration Engine
 const sounds = {
     walking: new Audio('walking.mp3')   // Your Walking Sound Effect file
@@ -720,6 +806,8 @@ sounds.walking.volume = 1;
     const keys = {};
 
     let cyberknowledgeScore = 0;
+
+
     let selectedEmailOption = 0; 
 
     var laptopLocked = true; 
@@ -772,12 +860,82 @@ function updateGameVolume(value) {
         sounds.walking.volume = volumeLevel;
     }
 }
+const roomConfigurations = {
+    room1: {
+        bgKey: 'background', 
+        spawnX: 630,
+        spawnY: 240,
+        aiNPC: { x: 100, y: 240, messageType: 'room1_state', angle: 180 }, // Updated
+        cutscene: { duration: 500, directionAngle: 180 }, 
+        papers: [
+            { x: 210, y: 480, id: 0, angle: 180, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false, module: 'safe' }
+        ],
+        collisionZones: [
+            { x: 0, y: 75, w: 800, h: 45 },    
+            { x: 0, y: 520, w: 800, h: 80 },  
+            { x: 0, y: 0, w: 60, h: 600 },    
+            { x: 700, y: 0, w: 60, h: 600 },  
+            { x: 280, y: 0, w: 250, h: 340 },
+            { x: 25, y: 450, w: 295, h: 50 },
+            { x: 490, y: 475, w: 214, h: 50 },
+            { type: 'circle', x: 200, y: 410, radius: 40 },
+            { type: 'circle', x: 130, y: 160, radius: 40 },
+            { type: 'circle', x: 385, y: 499, radius: 35 }
+        ]
+    },
+    room2: {
+        bgKey: 'living', 
+        spawnX: 100,
+        spawnY: 315,
+        aiNPC: { x: 440, y: 400, messageType: 'room2_state', angle: 90 }, // Retained
+        cutscene: { duration: 500, directionAngle: 90 }, 
+        papers: [
+            { x: 480, y: 273, id: 10, angle: 270, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false, module: 'savvy' }
+        ],
+        collisionZones: [
+            { x: 146, y: 170, w: 390, h: 10 },
+            { x: 145, y: 10, w: 140, h: 260 },
+            { x: 90, y: 60, w: 50, h: 20 },
+            { x: 90, y: 455, w: 235, h: 20 },
+            { x: 325, y: 236, w: 180, h: 80 },
+            { x: 0, y: 530, w: 800, h: 60 },
+            { x: 0, y: 0, w: 86, h: 600 },
+            { x: 480, y: 60, w: 60, h: 100 },
+            { x: 500, y: 100, w: 200, h: 40 },
+            { x: 640, y: 180, w: 50, h: 225 },
+            { x: 700, y: 0, w: 40, h: 600 },
+            { type: 'circle', x: 385, y: 495, radius: 30 }
+        ]
+    },
+    room3: {
+        bgKey: 'kitchen', 
+        spawnX: 640,
+        spawnY: 210,
+        aiNPC: { x: 330, y: 430, messageType: 'room3_state', angle: 270 }, // Updated
+        cutscene: { duration: 500, directionAngle: 270 }, 
+        papers: [
+            { x: 320, y: 320, id: 20, angle: 0, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false, module: 'social' }
+        ],
+        collisionZones: [
+            { x: 0, y: 0, w: 800, h: 150 },
+            { x: 700, y: 100, w: 20, h: 460 },
+            { x: 180, y: 150, w: 20, h: 400 },
+            { x: 645, y: 350, w: 80, h: 200 },
+            { x: 275, y: 240, w: 260, h: 110 },
+            { x: 200, y: 430, w: 125, h: 100},
+            { x: 490, y: 480, w: 200, h: 120 },
+            { x: 0, y: 500, w: 800, h: 50 }
+        ]
+    }
+};
+
 // --- DYNAMIC PROGRESSION ROUTING ---
 function getSpawnRoomByScore(score) {
     if (score >= 40) return 'room3';
     if (score >= 20) return 'room2';
     return 'room1';
 }
+
 // --- TRANSITION MANAGER ---
 function transitionToRoom(roomId) {
     if (fadeState !== 'idle') return;
@@ -800,88 +958,7 @@ function transitionToRoom(roomId) {
     fadeState = 'out';
 }
 
-// --- EXECUTE ROOM SWITCH ---
-function executeRoomSwitch(roomId) {
-    currentRoomId = roomId;
-    const config = roomConfigurations[roomId];
 
-    // Move the local positions of the interactable instances from room configs
-    aiAvatar.x = config.aiNPC.x;
-    aiAvatar.y = config.aiNPC.y;
-    
-    // Explicitly update the AI avatar orientation angle if provided, defaulting to 0
-    aiAvatar.angle = config.aiNPC.angle || 0; 
-    
-    laptopLocked = true;
-
-    // Position avatar at the unique entrance parameters of the new environment
-    avatar.x = config.spawnX;
-    avatar.y = config.spawnY;
-    
-    // Set dynamic look angle based on the room config if available, fallback to 180
-    avatar.angle = config.cutscene?.directionAngle || 180;
-
-    isCutsceneActive = true;
-    cutsceneStartTime = Date.now();
-
-    // REVEAL ATTENTION BADGE IMMEDIATELY UPON CHANGING ROOMS
-    const badge = document.getElementById('ai-attention-badge');
-    if (badge) {
-        badge.style.display = 'block';
-    }
-
-    // Force an immediate recalculation so the badge alignment snaps over the new AI coordinates
-    if (typeof updateAttentionBadgePosition === 'function') {
-        updateAttentionBadgePosition();
-    }
-}
-
-// --- POPUP WINDOW CLEANUP & PROGRESSION MANAGEMENT ---
-function closePopup() {
-    if (showingAIDialogue && currentPaper && currentPaper.answered && !currentPaper.scoreProcessed) {
-        if (currentPaper.userWasCorrect) {
-            cyberknowledgeScore += 20;
-            
-            const currentUser = localStorage.getItem('cyberDashUser');
-            if (currentUser && currentUser !== "INSTRUCTOR") {
-                localStorage.setItem(`terminal_high_score_${currentUser}`, cyberknowledgeScore);
-            }
-        }
-        
-        currentPaper.scoreProcessed = true; 
-
-        if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
-            let activeModule = currentPaper.module || 'safe';
-            let isModuleFinished = false;
-
-            fetch(`/api/save-progress`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    studentNumber: currentStudentNumber,
-                    module: activeModule,
-                    score: cyberknowledgeScore,
-                    completed: isModuleFinished
-                })
-            })
-            .catch(err => console.error("Database sync failed:", err));
-        }
-
-        // --- ROOM PROGRESSION CHECKS ---
-        // Keeps the baseline triggers clean, transitionToRoom will safely route the user
-        if (cyberknowledgeScore >= 40 && currentRoomId === 'room2') {
-            setTimeout(() => transitionToRoom('room3'), 600);
-        } else if (cyberknowledgeScore >= 20 && currentRoomId === 'room1') {
-            setTimeout(() => transitionToRoom('room2'), 600);
-        }
-    }
-
-    document.getElementById('popup-content').className = ''; 
-    document.getElementById('popup-overlay').style.display = 'none';
-    showingAIDialogue = false;
-    isPaused = false;
-    currentPaper = null; 
-}
 window.addEventListener('keydown', e => {
     // SECURITY FILTER: Suppress all character interactions if cutscene runs
     if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
@@ -1194,6 +1271,71 @@ function interactWithLaptop(paper) {
     // Initialize standard outline CSS elements instantly on load
     updateEmailUI();
 }
+// --- POPUP WINDOW CLEANUP & PROGRESSION MANAGEMENT ---
+function closePopup() {
+    if (showingAIDialogue && currentPaper && currentPaper.answered && !currentPaper.scoreProcessed) {
+        let earnedPoints = 0;
+        if (currentPaper.userWasCorrect) {
+            earnedPoints = 20;
+            cyberknowledgeScore += earnedPoints;
+        }
+        
+        currentPaper.scoreProcessed = true; 
+
+        if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+            // DYNAMICALLY DETERMINE MODULE BY THE CURRENT ROOM ID
+            let activeModule = 'safe'; // Room 1 Default
+            
+            if (currentRoomId === 'room2') {
+                activeModule = 'savvy'; // Room 2 uses Savvy
+            } else if (currentRoomId === 'room3') {
+                activeModule = 'social'; // Room 3 uses Social
+            }
+            
+            // If the question object itself has a specific module override, use that instead
+            if (currentPaper.module) {
+                activeModule = currentPaper.module;
+            }
+
+            let isModuleFinished = false;
+            // Mark module completed if they successfully answered the question in that room
+            if (earnedPoints > 0) {
+                isModuleFinished = true;
+            }
+
+            // Fire atomic tracking payload onto server shards
+            fetch(`/api/save-progress`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    studentNumber: currentStudentNumber,
+                    module: activeModule,
+                    score: earnedPoints, 
+                    completed: isModuleFinished
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log(`[SYSTEM] Sync successful for ${activeModule}.`, data);
+            })
+            .catch(err => console.error("Database sync failed:", err));
+        }
+
+        // --- ROOM PROGRESSION CHECKS ---
+        if (cyberknowledgeScore >= 40 && currentRoomId === 'room2') {
+            setTimeout(() => transitionToRoom('room3'), 600);
+        } else if (cyberknowledgeScore >= 20 && currentRoomId === 'room1') {
+            setTimeout(() => transitionToRoom('room2'), 600);
+        }
+    }
+
+    document.getElementById('popup-content').className = ''; 
+    document.getElementById('popup-overlay').style.display = 'none';
+    showingAIDialogue = false;
+    isPaused = false;
+    currentPaper = null; 
+}
+
 function showEmailPopup(paper) {
     isPaused = true;
     currentPaper = paper;
@@ -1217,11 +1359,11 @@ function showEmailPopup(paper) {
         emailBody = "We have detected unauthorized bypass attempts on your workstation segment. Click 'RESPOND TO EMAIL' to download and install the critical network repair utility package immediately.";
         correctOption = 1; 
     } else if (currentRoomId === 'room3') {
-        emailsender = "Office Manager";
+        emailSender = "Office Manager"; // Fixed casing typo
         emailAddress = "Admin@company.corp";
         emailSubject = "Building Maintenance Notice";
         emailBody = "Please be advised that the main office elevator will be under maintenance on Tuesday. Please use the north side stairs.";
-        correctOption = 0;
+        correctOption = 0; // CORRECT ACTION IS RESPOND (0)
     }   
 
     // 2. Inline answer processor helper executed right inside the click events
@@ -1314,7 +1456,6 @@ function showEmailPopup(paper) {
 
     document.getElementById('popup-overlay').style.display = 'block';
 }
-
 function showAIDialoguePopup() {
     isPaused = true;
     showingAIDialogue = true;
@@ -1336,48 +1477,53 @@ function showAIDialoguePopup() {
         badge.style.display = 'none';
     }
 
-    const currentConfig = roomConfigurations[currentRoomId];
+    // Determine target messaging category based on active runtime state
+    const currentMsgType = aiAvatar.messageType || 'room1_state';
 
-    // Process context strings depending on the target room matching keys
-    if (currentConfig.aiNPC.messageType === 'room1_state') {
-        if (!terminalState || !terminalState.answered) {
-            // UNANSWERED STATE
-            textToShow = `<b>AI Guard [Bedroom]:</b><br>Hey there! Welcome to the Entry Foyer. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
-            laptopLocked = false; 
-        } else if (terminalState.answered && !terminalState.userWasCorrect) {
+    // --- ROOM 1 (SAFE MODULE) ---
+    if (currentRoomId === 'room1') {
+        if (currentMsgType === 'room1_success' || isSafeCompleted) {
+            // FORCE COMPLETED SUCCESS STATE
+            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;"> FANTASTIC JOB:</span> Spot on! You saw right through that fake threat and threw it in the trash. That's how you keep your personal profiles safe. Grab your 20 points and let's check out the Living Room area!`;
+        } else if (terminalState && terminalState.answered && !terminalState.userWasCorrect) {
             // FAILURE STATE
             textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #e63946; font-weight: bold;"> OOPS! WATCH OUT:</span> You chose to interact with that email! This is a classic "credential harvesting" trick where a fake page steals your login details. Real targets use fake urgency to panic you. Review your basic safety hints and try again!`;
         } else {
-            // SUCCESS STATE
-            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;"> FANTASTIC JOB:</span> Spot on! You saw right through that fake threat and threw it in the trash. That's how you keep your personal profiles safe. Grab your 20 points and let's check out the Living Room area!`;
+            // UNANSWERED STATE
+            textToShow = `<b>AI Guard [Bedroom]:</b><br>Hey there! Welcome to the Entry Foyer. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
+            laptopLocked = false; 
         }
     } 
-    else if (currentConfig.aiNPC.messageType === 'room2_state') {
-        if (!terminalState || !terminalState.answered) {
-            // UNANSWERED STATE
-            textToShow = `<b>AI Guard [Living Room]:</b><br>Alert! Someone is attempting to trick users on our local network segment. Head over to the floor terminal right away to verify what's coming in!`;
-            laptopLocked = false;
-        } else if (terminalState.answered && !terminalState.userWasCorrect) {
+    // --- ROOM 2 (SAVVY MODULE) ---
+    else if (currentRoomId === 'room2') {
+        if (currentMsgType === 'room2_success' || isSavvyCompleted) {
+            // FORCE COMPLETED SUCCESS STATE
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;"> EXCELLENT INSTINCTS:</span> Awesome defense! You noticed that the urgent program update was completely fake. Avoiding random link downloads protects the whole household network.`;
+        } else if (terminalState && terminalState.answered && !terminalState.userWasCorrect) {
             // FAILURE STATE
             textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #e63946; font-weight: bold;"> SECURITY RISK DETECTED:</span> That file download was actually a hidden piece of malware! Interacting with unverified "support" setups can give bad actors control over system setups. Let's trace the domain closely and give it another shot!`;
         } else {
-            // SUCCESS STATE
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;"> EXCELLENT INSTINCTS:</span> Awesome defense! You noticed that the urgent program update was completely fake. Avoiding random link downloads protects the whole household network.`;
+            // UNANSWERED STATE
+            textToShow = `<b>AI Guard [Living Room]:</b><br>Alert! Someone is attempting to trick users on our local network segment. Head over to the floor terminal right away to verify what's coming in!`;
+            laptopLocked = false;
         }
     } 
-    else if (currentConfig.aiNPC.messageType === 'room3_state') {
-        if (!terminalState || !terminalState.answered) {
-            // UNANSWERED STATE
-            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to the Kitchen!  We've got a suspicious request for admin credentials sitting in the inbox. Stay sharp—this is your final test!`;
-            laptopLocked = false;
-        } else if (terminalState.answered && !terminalState.userWasCorrect) {
+    
+    // --- ROOM 3 (SOCIAL MODULE) ---
+    else if (currentRoomId === 'room3') {
+        if (currentMsgType === 'room3_success' || isSocialCompleted) {
+            // FORCE COMPLETED SUCCESS STATE
+            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;"> Security Mastered!</span> You saw right through that attack. You’ve successfully protected the system integrity. You've officially proven you've got the skills to navigate the digital world safely!`;
+        } else if (terminalState && terminalState.answered && !terminalState.userWasCorrect) {
             // FAILURE STATE
             textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;"> Close one!</span> That email was a "spear-phishing" attack trying to trick you into giving away your admin access. Never share your password, no matter how official the email looks. Refresh your strategy and give it another go!`;
         } else {
-            // SUCCESS STATE
-            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;"> Security Mastered!</span> You saw right through that attack. You’ve successfully protected the system integrity. You've officially proven you've got the skills to navigate the digital world safely!`;
+            // UNANSWERED STATE
+            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to the Kitchen!  We've got a suspicious request for admin credentials sitting in the inbox. Stay sharp—this is your final test!`;
+            laptopLocked = false;
         }
     }
+
     content.innerHTML = `
         <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
             ${textToShow}
@@ -1386,6 +1532,7 @@ function showAIDialoguePopup() {
         
     document.getElementById('popup-overlay').style.display = 'block';
 }
+
     function updateAI() {
         if (isPaused || gameState !== 'game') return;
 
