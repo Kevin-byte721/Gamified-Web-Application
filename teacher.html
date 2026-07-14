@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberTeach - Teacher Progress Console</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --accent-color: #3b82f6;
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+            color: var(--text-main);
+        }
+
+        h1 span {
+            color: var(--accent-color);
+        }
+
+        /* Controls Panel */
+        .controls-panel {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            background-color: var(--bg-secondary);
+            padding: 1.25rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        select, input {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            outline: none;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .btn-refresh {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            align-self: flex-end;
+            height: 40px;
+            transition: background 0.2s;
+        }
+
+        .btn-refresh:hover {
+            background-color: #2563eb;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        .stat-card p {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--text-main);
+        }
+
+        /* Table Design */
+        .table-container {
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: rgba(15, 23, 42, 0.4);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .score-pill {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge-completed {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: var(--accent-success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-pending {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: var(--accent-warning);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .status-info {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>CyberTeach <span>// Teacher Administration</span></h1>
+        <div>
+            <span style="font-size: 0.9rem; color: var(--text-muted);" id="last-updated">Last updated: Never</span>
+        </div>
+    </header>
+
+    <section class="controls-panel">
+        <div class="control-group">
+            <label for="shard-selector">Select Shard Target</label>
+            <select id="shard-selector">
+                <option value="3000">Shard 1 (Port 3000 // STU_001 - STU_020)</option>
+                <option value="3001">Shard 2 (Port 3001 // STU_021 - STU_040)</option>
+                <option value="3002">Shard 3 (Port 3002 // STU_041 - STU_060)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="db-mode">Database Source</label>
+            <select id="db-mode">
+                <option value="true">Offline / Test Mode (cybergame.db)</option>
+                <option value="false">Live Server Cloud (Firebase)</option>
+            </select>
+        </div>
+
+        <div class="control-group" style="flex-grow: 1; min-width: 200px;">
+            <label for="search-input">Search Student ID</label>
+            <input type="text" id="search-input" placeholder="e.g. STU_005">
+        </div>
+
+        <button class="btn-refresh" id="btn-fetch">Fetch Records</button>
+    </section>
+
+    <section class="stats-grid">
+        <div class="stat-card">
+            <h3>Registered Students</h3>
+            <p id="stat-count">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>Avg Safe Score</h3>
+            <p id="avg-safe">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>Avg Savvy Score</h3>
+            <p id="avg-savvy">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>Avg Social Score</h3>
+            <p id="avg-social">0</p>
+        </div>
+    </section>
+
+    <section class="table-container">
+        <table id="student-table">
+            <thead>
+                <tr>
+                    <th>Student Number</th>
+                    <th>Safe Module Progress</th>
+                    <th>Savvy Module Progress</th>
+                    <th>Social Module Progress</th>
+                    <th>Total Score</th>
+                    <th>Last Active Connection</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <tr>
+                    <td colspan="6" class="status-info">Use the query controls above to pull tracking logs.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <script>
+        const HOST = '10.32.96.71';
+
+        document.getElementById('btn-fetch').addEventListener('click', fetchStudentRecords);
+        document.getElementById('search-input').addEventListener('input', renderFilteredTable);
+
+        let studentDataCache = [];
+
+        async function fetchStudentRecords() {
+            const selectedPort = document.getElementById('shard-selector').value;
+            const useDebugMode = document.getElementById('db-mode').value;
+            const apiBase = `http://${HOST}:${selectedPort}`;
+            
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = `<tr><td colspan="6" class="status-info">Attempting payload handshakes on Port ${selectedPort}...</td></tr>`;
+
+            try {
+                const response = await fetch(`${apiBase}/api/teacher/records`, {
+                    method: 'GET',
+                    headers: {
+                        'x-debug-mode': useDebugMode
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP Fault status: ${response.status}`);
+                const payload = await response.ok ? await response.json() : null;
+                
+                if (payload && payload.success) {
+                    studentDataCache = payload.players || [];
+                    calculateStatistics(studentDataCache);
+                    renderFilteredTable();
+                    document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+                } else {
+                    throw new Error("Target returned negative success matrix.");
+                }
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = `<tr><td colspan="6" class="status-info" style="color: #ef4444;">❌ Failed connection: Could not sync with port ${selectedPort}. Ensure your server is active.</td></tr>`;
+            }
+        }
+
+        function calculateStatistics(students) {
+            const count = students.length;
+            document.getElementById('stat-count').textContent = count;
+
+            if (count === 0) {
+                document.getElementById('avg-safe').textContent = '0';
+                document.getElementById('avg-savvy').textContent = '0';
+                document.getElementById('avg-social').textContent = '0';
+                return;
+            }
+
+            let totalSafe = 0, totalSavvy = 0, totalSocial = 0;
+            students.forEach(s => {
+                totalSafe += s.safe_score || 0;
+                totalSavvy += s.savvy_score || 0;
+                totalSocial += s.social_score || 0;
+            });
+
+            document.getElementById('avg-safe').textContent = (totalSafe / count).toFixed(1);
+            document.getElementById('avg-savvy').textContent = (totalSavvy / count).toFixed(1);
+            document.getElementById('avg-social').textContent = (totalSocial / count).toFixed(1);
+        }
+
+        function renderFilteredTable() {
+            const tbody = document.getElementById('table-body');
+            const searchVal = document.getElementById('search-input').value.trim().toUpperCase();
+
+            const filtered = studentDataCache.filter(s => {
+                const identifier = (s.student_number || s.studentNumber || '').toUpperCase();
+                return identifier.includes(searchVal);
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="status-info">No match patterns found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            filtered.forEach(s => {
+                const tr = document.createElement('tr');
+                
+                const studentNumber = s.student_number || s.studentNumber || 'UNKNOWN';
+                const safeScore = s.safe_score || 0;
+                const savvyScore = s.savvy_score || 0;
+                const socialScore = s.social_score || 0;
+                const total = safeScore + savvyScore + socialScore;
+
+                const isSafeDone = s.safe_completed === 1 || s.safe_completed === true;
+                const isSavvyDone = s.savvy_completed === 1 || s.savvy_completed === true;
+                const isSocialDone = s.social_completed === 1 || s.social_completed === true;
+
+                const lastActiveRaw = s.last_active;
+                let formattedTime = 'Never';
+                if (lastActiveRaw) {
+                    try {
+                        formattedTime = new Date(lastActiveRaw).toLocaleString();
+                    } catch (e) {}
+                }
+
+                tr.innerHTML = `
+                    <td style="font-weight: bold; color: var(--accent-color);">${studentNumber}</td>
+                    <td>
+                        <span class="score-pill">${safeScore} pts</span> 
+                        <span class="badge ${isSafeDone ? 'badge-completed' : 'badge-pending'}">${isSafeDone ? 'Done' : 'In Progress'}</span>
+                    </td>
+                    <td>
+                        <span class="score-pill">${savvyScore} pts</span> 
+                        <span class="badge ${isSavvyDone ? 'badge-completed' : 'badge-pending'}">${isSavvyDone ? 'Done' : 'In Progress'}</span>
+                    </td>
+                    <td>
+                        <span class="score-pill">${socialScore} pts</span> 
+                        <span class="badge ${isSocialDone ? 'badge-completed' : 'badge-pending'}">${isSocialDone ? 'Done' : 'In Progress'}</span>
+                    </td>
+                    <td style="font-weight: bold; font-size: 1.1rem;">${total}</td>
+                    <td style="color: var(--text-muted); font-size: 0.85rem;">${formattedTime}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>

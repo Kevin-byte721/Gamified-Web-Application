@@ -1,24 +1,32 @@
-
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { initializeApp, cert } = require('firebase-admin/app');
-const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const sqlite3 = require('sqlite3').verbose(); 
 
 const HOST = '10.32.96.71';
 
 // =========================================================================
-// INTEGRATED CLOUD SERVICE STORAGE ENGINE (FIREBASE GLOBAL ACCESS)
+// SQLITE LOCAL STORAGE ENGINE CONFIGURATION (cybergame.db)
 // =========================================================================
-// Ensure your 'firebase-service-account.json' file is in the same directory!
-const serviceAccount = require('./firebase-service-account.json');
-
-initializeApp({
-    credential: cert(serviceAccount)
+const dbPath = path.join(__dirname, 'cybergame.db');
+const localDb = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        console.error("❌ Failed to connect to cybergame.db:", err.message);
+    } else {
+        console.log("💾 Connected successfully to cybergame.db");
+        // Create local students table reproducing the exact schema fields
+        localDb.run(`CREATE TABLE IF NOT EXISTS students (
+            student_number TEXT PRIMARY KEY,
+            safe_score INTEGER DEFAULT 0,
+            savvy_score INTEGER DEFAULT 0,
+            social_score INTEGER DEFAULT 0,
+            safe_completed INTEGER DEFAULT 0,
+            savvy_completed INTEGER DEFAULT 0,
+            social_completed INTEGER DEFAULT 0,
+            last_active TEXT
+        )`);
+    }
 });
-
-const firestore = getFirestore(); 
-const studentsCollection = firestore.collection('students');
 
 // =========================================================================
 // FACTORY ENGINE: GENERATES INDEPENDENT SHARDS DYNAMICALLY
@@ -49,74 +57,55 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
     });
 
     // =========================================================================
-    // CLOUD-BASED AUTHENTICATION & SEEDING ROUTE (EXPLICIT 3-MODULE SCHEMA)
+    // LOCAL SQLITE AUTHENTICATION & SEEDING ROUTE (3-MODULE SCHEMA)
     // =========================================================================
-    app.post('/api/auth', async (req, res) => {
+    app.post('/api/auth', (req, res) => {
         const { studentNumber } = req.body;
         if (!studentNumber) return res.status(400).json({ error: "Identification argument expected." });
 
         const normalizedKey = studentNumber.trim().toUpperCase();
-        const studentDocRef = studentsCollection.doc(normalizedKey);
+        
+        console.log(`[LOCAL AUTH - SHARD ${portNumber}] Local database authentication: ${normalizedKey}`);
+        
+        localDb.get(`SELECT * FROM students WHERE student_number = ?`, [normalizedKey], (err, row) => {
+            if (err) {
+                console.error("[LOCAL DB ERROR]:", err.message);
+                return res.status(500).json({ error: "Local database tracking fault." });
+            }
 
-        try {
-            const doc = await studentDocRef.get();
-
-            if (doc.exists) {
-                // Return data directly from Cloud Firestore
-                res.json({ authenticated: true, data: doc.data() });
+            if (row) {
+                return res.json({ authenticated: true, data: row });
             } else {
-                // Force-seed all three sub-modules (Safe, Savvy, Social) upon initial sign-in
                 const newRecord = {
-                    student_number: studentNumber,
-                    
-                    // Scores Divided Into 3 Modules
+                    student_number: normalizedKey,
                     safe_score: 0,
                     savvy_score: 0,
                     social_score: 0,
-                    
-                    // Completion States
                     safe_completed: 0,
                     savvy_completed: 0,
                     social_completed: 0,
-                    
-                    last_active: FieldValue.serverTimestamp()
+                    last_active: new Date().toISOString()
                 };
-                
-                await studentDocRef.set(newRecord);
-                res.json({ authenticated: true, data: newRecord });
-            }
-        } catch (err) {
-            console.error(`[CLOUD AUTH ERROR - SHARD ${portNumber}]:`, err.message);
-            res.status(500).json({ error: "Cloud database synchronization failed." });
-        }
-    });
-    // =========================================================================
-    // TEACHER RECORDS FETCH ROUTE (FIREBASE CLOUD READ)
-    // =========================================================================
-    app.get('/api/teacher/records', async (req, res) => {
-        try {
-            const snapshot = await studentsCollection.get();
-            const players = [];
-            
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                // Helper to convert Firestore Timestamp to standard string
-                if (data.last_active && typeof data.last_active.toDate === 'function') {
-                    data.last_active = data.last_active.toDate().toISOString();
-                }
-                players.push(data);
-            });
 
-            res.json({ success: true, players: players });
-        } catch (err) {
-            console.error(`[TEACHER FETCH ERROR - SHARD ${portNumber}]:`, err.message);
-            res.status(500).json({ error: "Failed to retrieve student records from cloud." });
-        }
+                localDb.run(`INSERT INTO students (student_number, safe_score, savvy_score, social_score, safe_completed, savvy_completed, social_completed, last_active) 
+                    VALUES (?, 0, 0, 0, 0, 0, 0, ?)`, 
+                    [normalizedKey, newRecord.last_active], 
+                    (insertErr) => {
+                        if (insertErr) {
+                            console.error("[LOCAL DB INSERT ERROR]:", insertErr.message);
+                            return res.status(500).json({ error: "Local seeding process crashed." });
+                        }
+                        return res.json({ authenticated: true, data: newRecord });
+                    }
+                );
+            }
+        });
     });
+
     // =========================================================================
-    // AUTOMATIC CLOUD-BASED PROGRESSION ROUTING ON ROOM ENTRANCE
+    // AUTOMATIC PROGRESSION ROUTING ON ROOM ENTRANCE
     // =========================================================================
-    app.post('/api/multiplayer/join-room', async (req, res) => {
+    app.post('/api/multiplayer/join-room', (req, res) => {
         const { studentNumber, roomCode, roomId } = req.body;
         if (!studentNumber || !roomCode) {
             return res.status(400).json({ error: "Missing identity or room sequence parameters." });
@@ -134,19 +123,13 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
         const normalizedId = studentNumber.trim().toUpperCase();
         const normalizedRoom = roomCode.toUpperCase();
         
-        // Fallback default
         let calculatedRoomId = roomId ? roomId.toLowerCase() : 'room1';
 
-        try {
-            // Retrieve latest progression scores directly from Cloud Firestore record to calculate spawn room
-            const doc = await studentsCollection.doc(normalizedId).get();
-            if (doc.exists) {
-                const record = doc.data();
-                
-                // Aggregate score categories safely
-                const safe = record.safe_score || 0;
-                const savvy = record.savvy_score || 0;
-                const social = record.social_score || 0;
+        localDb.get(`SELECT * FROM students WHERE student_number = ?`, [normalizedId], (err, row) => {
+            if (!err && row) {
+                const safe = row.safe_score || 0;
+                const savvy = row.savvy_score || 0;
+                const social = row.social_score || 0;
                 const totalScore = safe + savvy + social;
 
                 if (totalScore >= 40) {
@@ -156,47 +139,43 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
                 } else {
                     calculatedRoomId = 'room1';
                 }
-                
-                console.log(`[SPAWN ROUTER - SHARD ${portNumber}] Recalled Student #${studentNumber} (Scores -> Safe: ${safe}, Savvy: ${savvy}, Social: ${social} | Total: ${totalScore}). Routed to: ${calculatedRoomId}`);
-            } else {
-                console.log(`[SPAWN ROUTER - SHARD ${portNumber}] No cloud record found yet for ${studentNumber}. Defaulting spawn to room1.`);
-                calculatedRoomId = 'room1';
+                console.log(`[SPAWN ROUTER LOCAL - SHARD ${portNumber}] Student #${studentNumber} Score: ${totalScore}. Routed to: ${calculatedRoomId}`);
             }
-        } catch (err) {
-            console.error(`[SHARD ${portNumber} CLOUD ROOM ROUTE ERROR]:`, err.message);
-            calculatedRoomId = 'room1'; // Gracefully fallback to prevent player blockage on connection faults
-        }
+            completeJoinRoom();
+        });
 
-        // --- OVERRIDE GHOST SESSIONS SAFELY ---
-        if (activePlayers[normalizedId]) {
-            if (activePlayers[normalizedId].isInactive || (Date.now() - activePlayers[normalizedId].lastPing > 15000)) {
-                console.log(`[SHARD ${portNumber}] Evicting stale session ghost for Student #${normalizedId}.`);
-                delete activePlayers[normalizedId];
-            } else {
-                console.log(`[CONCURRENCY REJECTION] Student #${normalizedId} is truly active.`);
-                return res.status(409).json({ 
-                    success: false, 
-                    error: `Access Denied: Student number ${normalizedId} is already active in a running session.` 
-                });
+        function completeJoinRoom() {
+            // --- OVERRIDE GHOST SESSIONS SAFELY ---
+            if (activePlayers[normalizedId]) {
+                if (activePlayers[normalizedId].isInactive || (Date.now() - activePlayers[normalizedId].lastPing > 15000)) {
+                    console.log(`[SHARD ${portNumber}] Evicting stale session ghost for Student #${normalizedId}.`);
+                    delete activePlayers[normalizedId];
+                } else {
+                    console.log(`[CONCURRENCY REJECTION] Student #${normalizedId} is truly active.`);
+                    return res.status(409).json({ 
+                        success: false, 
+                        error: `Access Denied: Student number ${normalizedId} is already active in a running session.` 
+                    });
+                }
             }
-        }
 
-        // --- INITIALIZE MEMORY BLOCK WITH DYNAMIC COORDINATE PROTECTION ---
-        activePlayers[normalizedId] = {
-            studentNumber: studentNumber,
-            roomCode: normalizedRoom,
-            roomId: calculatedRoomId,
-            x: null,
-            y: null, 
-            angle: 0, 
-            moving: false, 
-            animStep: 0,
-            lastPing: Date.now(),
-            isInactive: false 
-        };
-        
-        console.log(`[ROOM MATCH - SHARD ${portNumber}] Student #${studentNumber} initialized inside Screen Shard: ${calculatedRoomId}`);
-        res.json({ success: true, roomCode: normalizedRoom, roomId: calculatedRoomId });
+            // --- INITIALIZE MEMORY BLOCK WITH DYNAMIC COORDINATE PROTECTION ---
+            activePlayers[normalizedId] = {
+                studentNumber: studentNumber,
+                roomCode: normalizedRoom,
+                roomId: calculatedRoomId,
+                x: null,
+                y: null, 
+                angle: 0, 
+                moving: false, 
+                animStep: 0,
+                lastPing: Date.now(),
+                isInactive: false 
+            };
+            
+            console.log(`[ROOM MATCH - SHARD ${portNumber}] Student #${studentNumber} initialized inside Screen Shard: ${calculatedRoomId}`);
+            res.json({ success: true, roomCode: normalizedRoom, roomId: calculatedRoomId });
+        }
     });
 
     app.post('/api/multiplayer/sync', (req, res) => {
@@ -273,9 +252,9 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
     });
 
     // =========================================================================
-    // ATOMIC CLOUD PROGRESS SAVING ROUTE (FIREBASE CLOUD WRITE - MERGE FIXED)
+    // LOCAL PROGRESS SAVING ROUTE (SQLITE EXCLUSIVE WRITE)
     // =========================================================================
-    app.post('/api/save-progress', async (req, res) => {
+    app.post('/api/save-progress', (req, res) => {
         const { studentNumber, module, score, completed } = req.body;
         
         if (!studentNumber || !module) {
@@ -283,22 +262,35 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
         }
 
         const normalizedKey = studentNumber.trim().toUpperCase();
-        const studentDocRef = studentsCollection.doc(normalizedKey);
 
-        try {
-            // set with { merge: true } safely writes fields whether the record is fresh or pre-existing
-            await studentDocRef.set({
-                [`${module}_score`]: FieldValue.increment(score),
-                [`${module}_completed`]: completed ? 1 : 0,
-                last_active: FieldValue.serverTimestamp()
-            }, { merge: true });
+        console.log(`[LOCAL PROGRESS SAVE] Committing ${score} pts to ${module}_score inside cybergame.db`);
+        
+        // Query current score first to perform incremental updates safely
+        localDb.get(`SELECT * FROM students WHERE student_number = ?`, [normalizedKey], (err, row) => {
+            if (err || !row) {
+                return res.status(500).json({ error: "Failed to locate local database identity row." });
+            }
 
-            console.log(`[CLOUD PROGRESS RECORDED]: Added ${score} points to ${module}_score for Student #${studentNumber}.`);
-            res.json({ success: true, changes: 1 });
-        } catch (err) {
-            console.error(`[CLOUD PROGRESS SAVE ERROR - SHARD ${portNumber}]:`, err.message);
-            res.status(500).json({ error: "Failed to persist score matrix to cloud buckets." });
-        }
+            const currentScore = row[`${module}_score`] || 0;
+            const updatedScore = currentScore + score;
+            const completedVal = completed ? 1 : 0;
+            const nowStr = new Date().toISOString();
+
+            localDb.run(`UPDATE students SET 
+                ${module}_score = ?, 
+                ${module}_completed = ?, 
+                last_active = ? 
+                WHERE student_number = ?`,
+                [updatedScore, completedVal, nowStr, normalizedKey],
+                function(updateErr) {
+                    if (updateErr) {
+                        console.error("[LOCAL UPDATE ERROR]:", updateErr.message);
+                        return res.status(500).json({ error: "Local state write failure." });
+                    }
+                    res.json({ success: true, localDbChanges: this.changes });
+                }
+            );
+        });
     });
 
     // --- Respect Background Tab State & Target True Window Drops ---
@@ -318,6 +310,18 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
     app.listen(portNumber, HOST, () => {
         console.log(`[GAME SHARD] http://${HOST}:${portNumber} Active (STU_${String(minStudentNum).padStart(3, '0')} - STU_${String(maxStudentNum).padStart(3, '0')})`);
     });
+    // =========================================================================
+    // TEACHER RECORDS FETCH ROUTE (SQLITE EXCLUSIVE)
+    // =========================================================================
+    app.get('/api/teacher/records', (req, res) => {
+        localDb.all(`SELECT * FROM students ORDER BY student_number ASC`, [], (err, rows) => {
+            if (err) {
+                console.error("[TEACHER FETCH ERROR]:", err.message);
+                return res.status(500).json({ error: "Failed to read student database." });
+            }
+            res.json({ success: true, players: rows });
+        });
+    });
 }
 
 // =========================================================================
@@ -325,4 +329,4 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
 // =========================================================================
 createGameShard(3000, 1, 20);  // Server Shard 1: Tracks STU_001 through STU_020
 createGameShard(3001, 21, 40); // Server Shard 2: Tracks STU_021 through STU_040
-createGameShard(3002, 41, 60); // Server Shard 3: Tracks STU_041 through STU_060
+createGameShard(3002, 41, 60); // Server Sh0ard 3: Tracks STU_041 through STU_060
