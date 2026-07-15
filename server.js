@@ -250,20 +250,29 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
         res.json({ players: peerPlayers });
     });
 
+    // =========================================================================
+    // MULTIPLAYER CONNECTION TERMINATION (IMMEDIATE DEPARTURE)
+    // =========================================================================
     app.post('/api/multiplayer/leave', (req, res) => {
         let payload = req.body;
         if (typeof payload === 'string') {
-            try { payload = JSON.parse(payload); } catch (e) {}
+            try { 
+                payload = JSON.parse(payload); 
+            } catch (e) {
+                // Fallback if formatting fails during fast teardown
+            }
         }
 
         const { studentNumber } = payload;
-        if (!studentNumber) return res.status(400).json({ error: "Missing identity sequence argument." });
+        if (!studentNumber) {
+            return res.status(400).json({ error: "Missing identity sequence argument." });
+        }
 
         const normalizedId = studentNumber.trim().toUpperCase();
 
         if (activePlayers[normalizedId]) {
             console.log(`\n===================================================`);
-            console.log(`[MULTIPLAYER DISCONNECT] 🚪 Student #${studentNumber} left the game!`);
+            console.log(`[MULTIPLAYER DISCONNECT] 🚪 Student #${normalizedId} left the game!`);
             console.log(`[Shard Port]  ${portNumber}`);
             console.log(`[Timestamp]   ${new Date().toLocaleTimeString()}`);
             console.log(`===================================================\n`);

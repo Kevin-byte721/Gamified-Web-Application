@@ -6,14 +6,14 @@
     <title>CyberTeach - Teacher Progress Console</title>
     <style>
         :root {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
+            --bg-primary: #0a0e17;
+            --bg-secondary: #161e2e;
             --accent-color: #3b82f6;
             --accent-success: #10b981;
             --accent-warning: #f59e0b;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
-            --border-color: #334155;
+            --border-color: #253147;
         }
 
         * {
@@ -35,13 +35,12 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 2rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
         }
 
         h1 {
             font-size: 1.8rem;
-            letter-spacing: 1px;
+            font-weight: 700;
             color: var(--text-main);
         }
 
@@ -52,12 +51,12 @@
         /* Controls Panel */
         .controls-panel {
             display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
+            gap: 1.25rem;
+            align-items: flex-end;
             margin-bottom: 2rem;
             background-color: var(--bg-secondary);
-            padding: 1.25rem;
-            border-radius: 8px;
+            padding: 1.5rem;
+            border-radius: 6px;
             border: 1px solid var(--border-color);
         }
 
@@ -68,20 +67,22 @@
         }
 
         label {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-muted);
             text-transform: uppercase;
-            font-weight: bold;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
 
         select, input {
             background-color: var(--bg-primary);
             border: 1px solid var(--border-color);
             color: var(--text-main);
-            padding: 0.6rem 1rem;
-            border-radius: 6px;
+            padding: 0.65rem 1rem;
+            border-radius: 4px;
             outline: none;
             font-size: 0.95rem;
+            height: 42px;
             transition: border-color 0.2s;
         }
 
@@ -94,12 +95,13 @@
             color: white;
             border: none;
             padding: 0 1.5rem;
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
             font-weight: 600;
-            align-self: flex-end;
-            height: 40px;
+            font-size: 0.9rem;
+            height: 42px;
             transition: background 0.2s;
+            white-space: nowrap;
         }
 
         .btn-refresh:hover {
@@ -109,36 +111,38 @@
         /* Stats Cards */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
 
         .stat-card {
             background-color: var(--bg-secondary);
-            padding: 1.5rem;
-            border-radius: 8px;
+            padding: 1.75rem 1.5rem;
+            border-radius: 6px;
             border: 1px solid var(--border-color);
             text-align: center;
         }
 
         .stat-card h3 {
-            font-size: 0.9rem;
+            font-size: 0.75rem;
             color: var(--text-muted);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
         }
 
         .stat-card p {
-            font-size: 2rem;
-            font-weight: bold;
+            font-size: 2.2rem;
+            font-weight: 700;
             color: var(--text-main);
         }
 
         /* Table Design */
         .table-container {
             background-color: var(--bg-secondary);
-            border-radius: 8px;
+            border-radius: 6px;
             border: 1px solid var(--border-color);
             overflow-x: auto;
         }
@@ -150,20 +154,24 @@
         }
 
         th, td {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--border-color);
+            padding: 1.1rem 1.5rem;
         }
 
         th {
-            background-color: rgba(15, 23, 42, 0.4);
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
             color: var(--text-muted);
             letter-spacing: 0.5px;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            border-bottom: 1px solid rgba(37, 49, 71, 0.5);
         }
 
         tr:hover {
-            background-color: rgba(255, 255, 255, 0.02);
+            background-color: rgba(255, 255, 255, 0.01);
         }
 
         .score-pill {
@@ -210,31 +218,14 @@
 <body>
 
     <header>
-        <h1>CyberTeach <span>// Teacher Administration</span></h1>
+        <h1>S3 Cyber Room <span>// Teacher Administration</span></h1>
         <div>
             <span style="font-size: 0.9rem; color: var(--text-muted);" id="last-updated">Last updated: Never</span>
         </div>
     </header>
 
     <section class="controls-panel">
-        <div class="control-group">
-            <label for="shard-selector">Select Shard Target</label>
-            <select id="shard-selector">
-                <option value="3000">Shard 1 (Port 3000 // STU_001 - STU_020)</option>
-                <option value="3001">Shard 2 (Port 3001 // STU_021 - STU_040)</option>
-                <option value="3002">Shard 3 (Port 3002 // STU_041 - STU_060)</option>
-            </select>
-        </div>
-
-        <div class="control-group">
-            <label for="db-mode">Database Source</label>
-            <select id="db-mode">
-                <option value="true">Offline / Test Mode (cybergame.db)</option>
-                <option value="false">Live Server Cloud (Firebase)</option>
-            </select>
-        </div>
-
-        <div class="control-group" style="flex-grow: 1; min-width: 200px;">
+        <div class="control-group" style="flex-grow: 1;">
             <label for="search-input">Search Student ID</label>
             <input type="text" id="search-input" placeholder="e.g. STU_005">
         </div>
@@ -282,22 +273,31 @@
     </section>
 
     <script>
-        const HOST = '10.32.96.71';
+        const HOST = '192.168.1.12';
+        const PORT = '3000'; // Default port to fetch data directly from target shard array
 
+        // Run automated handshake once DOM layer mounts
+        document.addEventListener('DOMContentLoaded', fetchStudentRecords);
+        
         document.getElementById('btn-fetch').addEventListener('click', fetchStudentRecords);
         document.getElementById('search-input').addEventListener('input', renderFilteredTable);
 
         let studentDataCache = [];
 
         async function fetchStudentRecords() {
-            const selectedPort = document.getElementById('shard-selector').value;
-            const useDebugMode = document.getElementById('db-mode').value;
-            const apiBase = `http://${HOST}:${selectedPort}`;
+            // Defaulting to live/cloud mode ('false') since the toggle UI has been removed. 
+            // Set to 'true' if you want to default to testing with local SQL db.
+            const useDebugMode = 'false'; 
+            
+            // Define the candidate targets for both server endpoints
+            const primaryApiBase = `http://${HOST}:${PORT}`; // e.g., server.js deployment target
+            const fallbackApiBase = `http://127.0.0.1:${PORT}`; // e.g., localserver.js deployment target
             
             const tbody = document.getElementById('table-body');
-            tbody.innerHTML = `<tr><td colspan="6" class="status-info">Attempting payload handshakes on Port ${selectedPort}...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="status-info">Attempting payload handshakes on Port ${PORT}...</td></tr>`;
 
-            try {
+            // Inner helper function to cleanly manage consecutive fetch sweeps
+            async function tryFetch(apiBase, serverName) {
                 const response = await fetch(`${apiBase}/api/teacher/records`, {
                     method: 'GET',
                     headers: {
@@ -305,9 +305,24 @@
                     }
                 });
 
-                if (!response.ok) throw new Error(`HTTP Fault status: ${response.status}`);
-                const payload = await response.ok ? await response.json() : null;
+                if (!response.ok) throw new Error(`${serverName} Fault status: ${response.status}`);
+                return await response.json();
+            }
+
+            try {
+                let payload;
+                try {
+                    // First attempt: Primary target (server.js)
+                    payload = await tryFetch(primaryApiBase, 'server.js');
+                } catch (primaryErr) {
+                    console.warn(`Primary route (${primaryApiBase}) failed. Redirecting handshake to localserver.js...`, primaryErr);
+                    
+                    // Second attempt: Fallback target (localserver.js)
+                    tbody.innerHTML = `<tr><td colspan="6" class="status-info">Primary server down. Attempting local network handshake on Port ${PORT}...</td></tr>`;
+                    payload = await tryFetch(fallbackApiBase, 'localserver.js');
+                }
                 
+                // Final evaluation and component cache rendering
                 if (payload && payload.success) {
                     studentDataCache = payload.players || [];
                     calculateStatistics(studentDataCache);
@@ -317,8 +332,8 @@
                     throw new Error("Target returned negative success matrix.");
                 }
             } catch (err) {
-                console.error(err);
-                tbody.innerHTML = `<tr><td colspan="6" class="status-info" style="color: #ef4444;">❌ Failed connection: Could not sync with port ${selectedPort}. Ensure your server is active.</td></tr>`;
+                console.error("All available server nodes failed sync routines: ", err);
+                tbody.innerHTML = `<tr><td colspan="6" class="status-info" style="color: #ef4444;">❌ Failed connection: Could not sync with server.js or localserver.js on port ${PORT}. Ensure at least one instance is active.</td></tr>`;
             }
         }
 

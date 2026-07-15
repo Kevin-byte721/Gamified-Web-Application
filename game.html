@@ -366,7 +366,7 @@
         </div>
     </div>
 <script>
-    const API_BASE = window.location.origin;
+const API_BASE = window.location.origin;
 let userIsWindowInactive = false; // Tracks if tab is backgrounded
 
 // --- GLOBAL LISTENERS (Register instantly on script evaluation) ---
@@ -386,7 +386,8 @@ document.addEventListener("visibilitychange", () => {
     }
 });
 
-window.addEventListener("beforeunload", () => {
+// Clean slate exit execution helper
+function dispatchDisconnectBeacon() {
     if (typeof isAuthenticated === 'undefined' || !isAuthenticated || !currentStudentNumber) {
         return;
     }
@@ -396,9 +397,31 @@ window.addEventListener("beforeunload", () => {
         studentNumber: currentStudentNumber.trim().toUpperCase()
     });
     
-    // Beacon handles clean socket drops synchronously on page teardown/refresh
-    navigator.sendBeacon(disconnectUrl, payload);
+    // Beacon handles clean drops synchronously on page teardown/refresh.
+    // We send as a plain string payload to bypass preflight requests during fast teardown.
+    if (navigator.sendBeacon) {
+        navigator.sendBeacon(disconnectUrl, payload);
+    } else {
+        // Fallback synchronous fetch
+        fetch(disconnectUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: payload,
+            keepalive: true
+        }).catch(() => {});
+    }
+}
+
+// Fire when page is closing, refreshed, or navigating away
+window.addEventListener("beforeunload", () => {
+    dispatchDisconnectBeacon();
 });
+
+// Handle mobile browsers where beforeunload is unreliable
+window.addEventListener("pagehide", () => {
+    dispatchDisconnectBeacon();
+});
+
 // --- GLOBAL MODULE COMPLETION TRACKING ---
 let isSafeCompleted = false;
 let isSavvyCompleted = false;
@@ -555,47 +578,61 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // 1. Notify the active port shard server to delete session track
-            fetch(`${API_BASE}/api/multiplayer/leave`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ studentNumber: currentStudentNumber.trim().toUpperCase() })
-            })
-            .then(() => console.log("[SYSTEM] Shard tracking entry cleared successfully."))
-            .catch(err => console.error("Server notify logout failed:", err))
-            .finally(() => {
-                // 2. Clear out client tracking states to stop ghost render objects
-                isAuthenticated = false;
-                currentStudentNumber = "";
-                currentRoomCode = "";
-                currentRoomId = "room1";
-                cyberknowledgeScore = 0;
-                isSafeCompleted = false;
-                isSavvyCompleted = false;
-                isSocialCompleted = false;
-                remotePlayers = {}; // Wipe local cache clones instantly
+            // 1. Trigger the clean disconnect beacon immediately
+            dispatchDisconnectBeacon();
 
-                // 3. Reset game state mechanics
-                gameState = 'menu';
-                isPaused = false;
+            // 2. Clear out client tracking states to stop ghost render objects
+            isAuthenticated = false;
+            currentStudentNumber = "";
+            currentRoomCode = "";
+            currentRoomId = "room1";
+            cyberknowledgeScore = 0;
+            isSafeCompleted = false;
+            isSavvyCompleted = false;
+            isSocialCompleted = false;
+            remotePlayers = {}; // Wipe local cache clones instantly
 
-                // 4. Interface visibility toggle updates
-                if (settingsOverlay) settingsOverlay.style.display = 'none';
-                if (startPrompt) startPrompt.style.display = 'none';
-                
-                // Clean slate inputs for next participant
-                if (inputField) inputField.value = "";
-                if (errorMsg) errorMsg.style.display = 'none';
-                if (loginContainer) loginContainer.style.display = 'block';
+            // 3. Reset game state mechanics
+            gameState = 'menu';
+            isPaused = false;
 
-                console.log("[SESSION CLOSED] Player left the shard room intentionally. Reloading...");
-                
-                // FIX: Force clean page refresh to purge Canvas memories, keys, and intervals completely
-                window.location.reload();
-            });
+            // 4. Interface visibility toggle updates
+            if (settingsOverlay) settingsOverlay.style.display = 'none';
+            if (startPrompt) startPrompt.style.display = 'none';
+            
+            // Clean slate inputs for next participant
+            if (inputField) inputField.value = "";
+            if (errorMsg) errorMsg.style.display = 'none';
+            if (loginContainer) loginContainer.style.display = 'block';
+
+            console.log("[SESSION CLOSED] Player left the shard room intentionally. Reloading...");
+            
+            // FIX: Force clean page refresh to purge Canvas memories, keys, and intervals completely
+            window.location.reload();
         });
     }
 });
+// --- TRANSITION MANAGER ---
+function transitionToRoom(roomId) {
+    if (fadeState !== 'idle') return;
+
+    // BRANCHING ROUTE LOGIC: Intercept progression if leaving Room 1
+    if (currentRoomId === 'room1' && roomId === 'room2') {
+        // Evaluate score to determine path threshold
+        if (cyberknowledgeScore >= 40) {
+            console.log(`[Branching Route]: Score is ${cyberknowledgeScore}. High proficiency path unlocked to Room 3.`);
+            targetRoomId = 'room3';
+        } else {
+            console.log(`[Branching Route]: Score is ${cyberknowledgeScore}. Baseline path routing to Room 2.`);
+            targetRoomId = 'room2';
+        }
+    } else {
+        // Standard non-branching progression
+        targetRoomId = roomId;
+    }
+
+    fadeState = 'out';
+}
 
 // --- NEW HELPER: APPLY LOCKS AND UPDATE NPC DIALOGUE BASED ON COMPLETED MODULES ---
 function applyRoomCompletionStates(roomId) {
@@ -618,25 +655,99 @@ function applyRoomCompletionStates(roomId) {
             config.papers.forEach(paper => {
                 paper.answered = true;
                 paper.scoreProcessed = true;
+                paper.hasConsultedAI = true; // Set to true so completed rooms don't trigger blocks
             });
         }
 
         // 3. Overwrite AI npc's message state key to success dialog variants
         aiAvatar.messageType = `${roomId}_success`; 
     } else {
-        // Standard interactive state
-        laptopLocked = false;
+        // --- SECURE WORKSTATION: Strictly lock the laptop on room entry ---
+        laptopLocked = true; 
         aiAvatar.messageType = config.aiNPC.messageType;
         
         if (config.papers) {
             config.papers.forEach(paper => {
                 paper.answered = false;
                 paper.scoreProcessed = false;
+                paper.hasConsultedAI = false; // Player must consult the AI in this level first
             });
         }
     }
 }
 
+
+function showAIDialoguePopup() {
+    isPaused = true;
+    showingAIDialogue = true;
+    
+    const content = document.getElementById('popup-content');
+    
+    // Reference the active room papers instead of a global array
+    const activePapers = roomConfigurations[currentRoomId]?.papers || [];
+    const terminalState = activePapers[0]; 
+    currentPaper = terminalState; 
+    let textToShow = "";
+    
+    content.className = ''; 
+    content.removeAttribute('style'); 
+    content.classList.add('dialogue-bubble-mode');
+
+    const badge = document.getElementById('ai-attention-badge');
+    if (badge) {
+        badge.style.display = 'none';
+    }
+
+    const currentConfig = roomConfigurations[currentRoomId];
+
+    // Process context strings depending on the target room matching keys
+    if (currentConfig.aiNPC.messageType === 'room1_state') {
+        if (!terminalState || !terminalState.answered) {
+            // UNANSWERED STATE
+            textToShow = `<b>AI Guard [Bedroom]:</b><br>Hey there! Welcome to the Entry Foyer. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
+            laptopLocked = false; 
+        } else if (terminalState.answered && !terminalState.userWasCorrect) {
+            // FAILURE STATE
+            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #e63946; font-weight: bold;"> OOPS! WATCH OUT:</span> You chose to interact with that email! This is a classic "credential harvesting" trick where a fake page steals your login details. Real targets use fake urgency to panic you. Review your basic safety hints and try again!`;
+        } else {
+            // SUCCESS STATE
+            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;"> FANTASTIC JOB:</span> Spot on! You saw right through that fake threat and threw it in the trash. That's how you keep your personal profiles safe. Grab your 20 points and let's check out the Living Room area!`;
+        }
+    } 
+    else if (currentConfig.aiNPC.messageType === 'room2_state') {
+        if (!terminalState || !terminalState.answered) {
+            // UNANSWERED STATE
+            textToShow = `<b>AI Guard [Living Room]:</b><br>Alert! Someone is attempting to trick users on our local network segment. Head over to the floor terminal right away to verify what's coming in!`;
+            laptopLocked = false;
+        } else if (terminalState.answered && !terminalState.userWasCorrect) {
+            // FAILURE STATE
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #e63946; font-weight: bold;"> SECURITY RISK DETECTED:</span> That file download was actually a hidden piece of malware! Interacting with unverified "support" setups can give bad actors control over system setups. Let's trace the domain closely and give it another shot!`;
+        } else {
+            // SUCCESS STATE
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;"> EXCELLENT INSTINCTS:</span> Awesome defense! You noticed that the urgent program update was completely fake. Avoiding random link downloads protects the whole household network.`;
+        }
+    } 
+    else if (currentConfig.aiNPC.messageType === 'room3_state') {
+        if (!terminalState || !terminalState.answered) {
+            // UNANSWERED STATE
+            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to the Kitchen!  We've got a suspicious request for admin credentials sitting in the inbox. Stay sharp—this is your final test!`;
+            laptopLocked = false;
+        } else if (terminalState.answered && !terminalState.userWasCorrect) {
+            // FAILURE STATE
+            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;"> Close one!</span> That email was a "spear-phishing" attack trying to trick you into giving away your admin access. Never share your password, no matter how official the email looks. Refresh your strategy and give it another go!`;
+        } else {
+            // SUCCESS STATE
+            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;"> Security Mastered!</span> You saw right through that attack. You’ve successfully protected the system integrity. You've officially proven you've got the skills to navigate the digital world safely!`;
+        }
+    }
+    content.innerHTML = `
+        <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
+            ${textToShow}
+        </div>
+    `;
+        
+    document.getElementById('popup-overlay').style.display = 'block';
+}
 // --- EXECUTE ROOM SWITCH ---
 function executeRoomSwitch(roomId) {
     currentRoomId = roomId;
@@ -868,7 +979,18 @@ const roomConfigurations = {
         aiNPC: { x: 100, y: 240, messageType: 'room1_state', angle: 180 }, // Updated
         cutscene: { duration: 500, directionAngle: 180 }, 
         papers: [
-            { x: 210, y: 480, id: 0, angle: 180, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false, module: 'safe' }
+            { 
+                x: 210, 
+                y: 480, 
+                id: 0, 
+                angle: 180, 
+                answered: false, 
+                userWasCorrect: false, 
+                scoreAwarded: false, 
+                scoreProcessed: false, 
+                hasConsultedAI: false, // Prevents bypass before talking to AI
+                module: 'safe' 
+            }
         ],
         collisionZones: [
             { x: 0, y: 75, w: 800, h: 45 },    
@@ -890,7 +1012,18 @@ const roomConfigurations = {
         aiNPC: { x: 440, y: 400, messageType: 'room2_state', angle: 90 }, // Retained
         cutscene: { duration: 500, directionAngle: 90 }, 
         papers: [
-            { x: 480, y: 273, id: 10, angle: 270, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false, module: 'savvy' }
+            { 
+                x: 480, 
+                y: 273, 
+                id: 10, 
+                angle: 270, 
+                answered: false, 
+                userWasCorrect: false, 
+                scoreAwarded: false, 
+                scoreProcessed: false, 
+                hasConsultedAI: false, // Prevents bypass before talking to AI
+                module: 'savvy' 
+            }
         ],
         collisionZones: [
             { x: 146, y: 170, w: 390, h: 10 },
@@ -914,7 +1047,18 @@ const roomConfigurations = {
         aiNPC: { x: 330, y: 430, messageType: 'room3_state', angle: 270 }, // Updated
         cutscene: { duration: 500, directionAngle: 270 }, 
         papers: [
-            { x: 320, y: 320, id: 20, angle: 0, answered: false, userWasCorrect: false, scoreAwarded: false, scoreProcessed: false, module: 'social' }
+            { 
+                x: 320, 
+                y: 320, 
+                id: 20, 
+                angle: 0, 
+                answered: false, 
+                userWasCorrect: false, 
+                scoreAwarded: false, 
+                scoreProcessed: false, 
+                hasConsultedAI: false, // Prevents bypass before talking to AI
+                module: 'social' 
+            }
         ],
         collisionZones: [
             { x: 0, y: 0, w: 800, h: 150 },
@@ -936,27 +1080,6 @@ function getSpawnRoomByScore(score) {
     return 'room1';
 }
 
-// --- TRANSITION MANAGER ---
-function transitionToRoom(roomId) {
-    if (fadeState !== 'idle') return;
-
-    // BRANCHING ROUTE LOGIC: Intercept progression if leaving Room 1
-    if (currentRoomId === 'room1' && roomId === 'room2') {
-        // Evaluate score to determine path threshold
-        if (cyberknowledgeScore >= 40) {
-            console.log(`[Branching Route]: Score is ${cyberknowledgeScore}. High proficiency path unlocked to Room 3.`);
-            targetRoomId = 'room3';
-        } else {
-            console.log(`[Branching Route]: Score is ${cyberknowledgeScore}. Baseline path routing to Room 2.`);
-            targetRoomId = 'room2';
-        }
-    } else {
-        // Standard non-branching progression
-        targetRoomId = roomId;
-    }
-
-    fadeState = 'out';
-}
 
 
 window.addEventListener('keydown', e => {
@@ -1189,17 +1312,15 @@ function checkInteraction() {
         showAIDialoguePopup();
     }
 }
-
 function interactWithLaptop(paper) {
-    // Reset standard default selection index index context when launching laptop interface modal
+    // Reset standard default selection index context when launching laptop interface modal
     selectedEmailOption = 0;
 
-    // If the terminal has been cleared/processed already
+    // 1. If the terminal has been cleared/processed already
     if (paper.scoreProcessed) {
         isPaused = true;
         const content = document.getElementById('popup-content');
         
-        // Clean and apply proper layout classes
         content.className = ''; 
         content.classList.add('center-modal-mode');
 
@@ -1226,8 +1347,9 @@ function interactWithLaptop(paper) {
         return; 
     }
 
-    // --- NEW CONDITION: Attempted opening after submitting a choice without speaking to AI ---
-    if (paper.locked && paper.answered && !paper.scoreProcessed) {
+    // 2. --- CRITICAL LOCK: Player answered the choice, but did not consult the AI yet ---
+    // If paper.hasConsultedAI is false or undefined, we trigger the lock
+    if (paper.answered && !paper.hasConsultedAI) {
         isPaused = true;
         const content = document.getElementById('popup-content');
         
@@ -1247,8 +1369,8 @@ function interactWithLaptop(paper) {
         return;
     }
 
-    // Initial state check when first starting the scene
-    if (laptopLocked) {
+    // 3. Initial state check when first starting the room (Forces player to talk to AI first)
+    if (typeof laptopLocked !== 'undefined' && laptopLocked) {
         isPaused = true;
         const content = document.getElementById('popup-content');
         
@@ -1267,10 +1389,11 @@ function interactWithLaptop(paper) {
         return; 
     }
 
+    // 4. Open the interactive layout if all safety checks pass
     showEmailPopup(paper);
-    // Initialize standard outline CSS elements instantly on load
     updateEmailUI();
 }
+
 // --- POPUP WINDOW CLEANUP & PROGRESSION MANAGEMENT ---
 function closePopup() {
     if (showingAIDialogue && currentPaper && currentPaper.answered && !currentPaper.scoreProcessed) {
@@ -1359,7 +1482,7 @@ function showEmailPopup(paper) {
         emailBody = "We have detected unauthorized bypass attempts on your workstation segment. Click 'RESPOND TO EMAIL' to download and install the critical network repair utility package immediately.";
         correctOption = 1; 
     } else if (currentRoomId === 'room3') {
-        emailSender = "Office Manager"; // Fixed casing typo
+        emailSender = "Office Manager"; 
         emailAddress = "Admin@company.corp";
         emailSubject = "Building Maintenance Notice";
         emailBody = "Please be advised that the main office elevator will be under maintenance on Tuesday. Please use the north side stairs.";
@@ -1379,6 +1502,9 @@ function showEmailPopup(paper) {
 
         currentPaper.answered = true;
         currentPaper.locked = true; // Engage local station lock
+        
+        // Ensure they must talk to AI avatar to unlock evaluation progression
+        currentPaper.hasConsultedAI = false; 
 
         // Reveal the floating AI attention badge icon on the environment floor map
         const badge = document.getElementById('ai-attention-badge');
@@ -1456,82 +1582,7 @@ function showEmailPopup(paper) {
 
     document.getElementById('popup-overlay').style.display = 'block';
 }
-function showAIDialoguePopup() {
-    isPaused = true;
-    showingAIDialogue = true;
-    
-    const content = document.getElementById('popup-content');
-    
-    // Reference the active room papers instead of a global array
-    const activePapers = roomConfigurations[currentRoomId]?.papers || [];
-    const terminalState = activePapers[0]; 
-    currentPaper = terminalState; 
-    let textToShow = "";
-    
-    content.className = ''; 
-    content.removeAttribute('style'); 
-    content.classList.add('dialogue-bubble-mode');
 
-    const badge = document.getElementById('ai-attention-badge');
-    if (badge) {
-        badge.style.display = 'none';
-    }
-
-    // Determine target messaging category based on active runtime state
-    const currentMsgType = aiAvatar.messageType || 'room1_state';
-
-    // --- ROOM 1 (SAFE MODULE) ---
-    if (currentRoomId === 'room1') {
-        if (currentMsgType === 'room1_success' || isSafeCompleted) {
-            // FORCE COMPLETED SUCCESS STATE
-            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;"> FANTASTIC JOB:</span> Spot on! You saw right through that fake threat and threw it in the trash. That's how you keep your personal profiles safe. Grab your 20 points and let's check out the Living Room area!`;
-        } else if (terminalState && terminalState.answered && !terminalState.userWasCorrect) {
-            // FAILURE STATE
-            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #e63946; font-weight: bold;"> OOPS! WATCH OUT:</span> You chose to interact with that email! This is a classic "credential harvesting" trick where a fake page steals your login details. Real targets use fake urgency to panic you. Review your basic safety hints and try again!`;
-        } else {
-            // UNANSWERED STATE
-            textToShow = `<b>AI Guard [Bedroom]:</b><br>Hey there! Welcome to the Entry Foyer. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
-            laptopLocked = false; 
-        }
-    } 
-    // --- ROOM 2 (SAVVY MODULE) ---
-    else if (currentRoomId === 'room2') {
-        if (currentMsgType === 'room2_success' || isSavvyCompleted) {
-            // FORCE COMPLETED SUCCESS STATE
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;"> EXCELLENT INSTINCTS:</span> Awesome defense! You noticed that the urgent program update was completely fake. Avoiding random link downloads protects the whole household network.`;
-        } else if (terminalState && terminalState.answered && !terminalState.userWasCorrect) {
-            // FAILURE STATE
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #e63946; font-weight: bold;"> SECURITY RISK DETECTED:</span> That file download was actually a hidden piece of malware! Interacting with unverified "support" setups can give bad actors control over system setups. Let's trace the domain closely and give it another shot!`;
-        } else {
-            // UNANSWERED STATE
-            textToShow = `<b>AI Guard [Living Room]:</b><br>Alert! Someone is attempting to trick users on our local network segment. Head over to the floor terminal right away to verify what's coming in!`;
-            laptopLocked = false;
-        }
-    } 
-    
-    // --- ROOM 3 (SOCIAL MODULE) ---
-    else if (currentRoomId === 'room3') {
-        if (currentMsgType === 'room3_success' || isSocialCompleted) {
-            // FORCE COMPLETED SUCCESS STATE
-            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;"> Security Mastered!</span> You saw right through that attack. You’ve successfully protected the system integrity. You've officially proven you've got the skills to navigate the digital world safely!`;
-        } else if (terminalState && terminalState.answered && !terminalState.userWasCorrect) {
-            // FAILURE STATE
-            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;"> Close one!</span> That email was a "spear-phishing" attack trying to trick you into giving away your admin access. Never share your password, no matter how official the email looks. Refresh your strategy and give it another go!`;
-        } else {
-            // UNANSWERED STATE
-            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to the Kitchen!  We've got a suspicious request for admin credentials sitting in the inbox. Stay sharp—this is your final test!`;
-            laptopLocked = false;
-        }
-    }
-
-    content.innerHTML = `
-        <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
-            ${textToShow}
-        </div>
-    `;
-        
-    document.getElementById('popup-overlay').style.display = 'block';
-}
 
     function updateAI() {
         if (isPaused || gameState !== 'game') return;
