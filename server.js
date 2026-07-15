@@ -5,7 +5,7 @@ const path = require('path');
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
-const HOST = '10.32.96.71';
+const HOST = '192.168.1.12';
 
 // =========================================================================
 // INTEGRATED CLOUD SERVICE STORAGE ENGINE (FIREBASE GLOBAL ACCESS)
@@ -32,7 +32,9 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
 
     // Each individual port keeps its own unique in-memory real-time tracking instance
     const activePlayers = {};
-
+    app.get('/api/config', (req, res) => {
+        res.json({ host: HOST });
+    });
     // --- MULTIPLAYER CONNECTION LOGGING ---
     app.get('/game.html', (req, res, next) => {
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;

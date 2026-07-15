@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose(); 
 
-const HOST = '10.32.96.71';
+const HOST = '192.168.1.12';
 
 // =========================================================================
 // SQLITE LOCAL STORAGE ENGINE CONFIGURATION (cybergame.db)
@@ -32,6 +32,8 @@ const localDb = new sqlite3.Database(dbPath, (err) => {
 // FACTORY ENGINE: GENERATES INDEPENDENT SHARDS DYNAMICALLY
 // =========================================================================
 function createGameShard(portNumber, minStudentNum, maxStudentNum) {
+    
+
     const app = express();
 
     app.use(cors());
@@ -40,7 +42,10 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
 
     // Each individual port keeps its own unique in-memory real-time tracking instance
     const activePlayers = {};
-
+// Allow client-side dashboard to discover the host dynamically
+    app.get('/api/config', (req, res) => {
+        res.json({ host: HOST });
+    });
     // --- MULTIPLAYER CONNECTION LOGGING ---
     app.get('/game.html', (req, res, next) => {
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
