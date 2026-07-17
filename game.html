@@ -1553,7 +1553,6 @@ function interactWithPrinter() {
         window.updatePrinterUI();
     }
 }
-
 function showAIDialoguePopup() {
     isPaused = true;
     showingAIDialogue = true;
@@ -1579,32 +1578,36 @@ function showAIDialoguePopup() {
     }
 
     const currentConfig = roomConfigurations[currentRoomId];
+    
+    // Initialize room-specific tracking states if they don't exist yet
+    if (currentConfig.hasSeenRoomIntro === undefined) currentConfig.hasSeenRoomIntro = false;
+    if (currentConfig.hasSeenLaptopFeedback === undefined) currentConfig.hasSeenLaptopFeedback = false;
+    if (currentConfig.hasSeenPrinterFeedback === undefined) currentConfig.hasSeenPrinterFeedback = false;
 
     // =========================================================================
-    // RETURNING CHAMPION BYPASS (PREVENTS FAIL MESSAGE FOR FINISHED STUDENTS)
+    // LIVE SCORE ENGINE
     // =========================================================================
-    if (hasCompletedAllTasks) {
-        textToShow = `<b>AI Guard:</b><br><span style="color: #52b788; font-weight: bold;">Security Mastered!</span> Welcome back, Specialist! You have already successfully completed all modules and secured the system integrity. You have officially proven you've got the skills to navigate the digital world safely!`;
-    } 
+    const scoreElement = document.getElementById('score-display');
+    const currentScore = scoreElement ? parseInt(scoreElement.textContent.replace(/\D/g, '')) || 0 : cyberknowledgeScore;
+
     // =========================================================================
-    // STANDARD PROGRESSION FLOWS
+    // ROOM 1 FLOW (Bedroom)
     // =========================================================================
-    else if (currentConfig.aiNPC.messageType === 'room1_state') {
-        if (!terminalState || !terminalState.answered) {
-            hasSeenRoomIntro = true; // Mark intro read
+    if (currentConfig.aiNPC.messageType === 'room1_state') {
+        if (hasCompletedPrinterTask && (currentScore === 20 || currentScore === 30)) {
+            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Room Secured!</span> You've already processed the workstation and checked the printer assets here. Head through the doorway to advance to the next challenge!`;
+        }
+        else if (terminalState && terminalState.answered && !hasCompletedPrinterTask) {
+            currentConfig.hasSeenLaptopFeedback = true; // Scoped to Room 1
+            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Great eye!</span> You handled that phishing email perfectly. Now, look over at the <span class="highlight-blue">Printer</span>. Someone left a printout sitting out in the open—go decide how to secure it!`;
+        }
+        else if (!hasCompletedPrinterTask && (!terminalState || !terminalState.answered)) {
+            currentConfig.hasSeenRoomIntro = true; // Scoped to Room 1
             textToShow = `<b>AI Guard [Bedroom]:</b><br>Welcome to the Entry Foyer. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
             laptopLocked = false; 
         } 
-        else if (terminalState.answered && !hasCompletedPrinterTask) {
-            hasSeenLaptopFeedback = true; // Mark laptop feedback read
-            if (!terminalState.userWasCorrect) {
-                textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #e63946; font-weight: bold;">Ouch!</span> That email link got you. Next, I need you to check the <span class="highlight-blue">Printer</span>. There's an active printout sitting on the tray that needs securing!`;
-            } else {
-                textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Great eye!</span> You handled that phishing email perfectly. Now, look over at the <span class="highlight-blue">Printer</span>. Someone left a printout sitting out in the open—go decide how to secure it!`;
-            }
-        }
         else if (hasCompletedPrinterTask) {
-            hasSeenPrinterFeedback = true; // Mark printer feedback read
+            currentConfig.hasSeenPrinterFeedback = true; // Scoped to Room 1
             if (printerTaskCorrect) {
                 textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRINTER HYGIENE!</span> Shredding that network diagram was the perfect decision. Leaving default passwords and system IPs in a physical tray is a major physical-security risk. You've earned your points—let's move on to Room 2!`;
             } else {
@@ -1612,22 +1615,24 @@ function showAIDialoguePopup() {
             }
         }
     } 
+    // =========================================================================
+    // ROOM 2 FLOW (Living Room)
+    // =========================================================================
     else if (currentConfig.aiNPC.messageType === 'room2_state') {
-        if (!terminalState || !terminalState.answered) {
-            hasSeenRoomIntro = true; // Mark intro read
+        if (hasCompletedPrinterTask && (currentScore === 40 || currentScore === 50)) {
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Area Monitored!</span> Network traffic analysis and physical document checks for this room are complete. Head over to the Kitchen when ready!`;
+        }
+        else if (terminalState && terminalState.answered && !hasCompletedPrinterTask) {
+            currentConfig.hasSeenLaptopFeedback = true; // Scoped to Room 2
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Nice defense!</span> Rejecting fake support links keeps our networks clean. Now, run over to the <span class="highlight-blue">Printer</span>. We have a physical data privacy decision waiting for you there.`;
+        }
+        else if (!hasCompletedPrinterTask && (!terminalState || !terminalState.answered)) {
+            currentConfig.hasSeenRoomIntro = true; // Scoped to Room 2
             textToShow = `<b>AI Guard [Living Room]:</b><br>Alert! Someone is attempting to trick users on our local network segment. Head over to the floor terminal right away to verify what's coming in!`;
             laptopLocked = false;
         } 
-        else if (terminalState.answered && !hasCompletedPrinterTask) {
-            hasSeenLaptopFeedback = true; // Mark laptop feedback read
-            if (!terminalState.userWasCorrect) {
-                textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #e63946; font-weight: bold;">Careful!</span> That download contained malware. Let's step up our defenses. Go inspect the <span class="highlight-blue">Printer</span> and check what's sitting on the document tray!`;
-            } else {
-                textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Nice defense!</span> Rejecting fake support links keeps our networks clean. Now, run over to the <span class="highlight-blue">Printer</span>. We have a physical data privacy decision waiting for you there.`;
-            }
-        }
         else if (hasCompletedPrinterTask) {
-            hasSeenPrinterFeedback = true; // Mark printer feedback read
+            currentConfig.hasSeenPrinterFeedback = true; // Scoped to Room 2
             if (printerTaskCorrect) {
                 textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">PRIVACY PROTECTED!</span> Superb job shredding that student export document. Leaving full names, home addresses, and phone directories exposed violates privacy policies. You handled that like a true security analyst! Let's enter Room 3!`;
             } else {
@@ -1635,17 +1640,19 @@ function showAIDialoguePopup() {
             }
         }
     } 
+    // =========================================================================
+    // ROOM 3 FLOW (Kitchen)
+    // =========================================================================
     else if (currentConfig.aiNPC.messageType === 'room3_state') {
-        if (!terminalState || !terminalState.answered) {
-            hasSeenRoomIntro = true; // Mark intro read
-            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to the Kitchen! We've got a suspicious request for admin credentials sitting in the inbox. Stay sharp—this is your final test!`;
-            laptopLocked = false;
-        } else if (terminalState.answered && !terminalState.userWasCorrect) {
-            hasSeenLaptopFeedback = true; // Mark laptop feedback read
-            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">Close one!</span> That email was a spear-phishing attack. Never share your password, no matter how official the email looks. Refresh your strategy and give it another go!`;
-        } else {
-            hasSeenLaptopFeedback = true; // Mark laptop feedback read
+        laptopLocked = false; 
+
+        if (terminalState && terminalState.answered) {
+            currentConfig.hasSeenLaptopFeedback = true; // Scoped to Room 3
             textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">Security Mastered!</span> You saw right through that attack. You’ve successfully protected the system integrity. You've officially proven you've got the skills to navigate the digital world safely!`;
+        } 
+        else {
+            currentConfig.hasSeenRoomIntro = true; // Scoped to Room 3
+            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to the Kitchen! We've got a suspicious request for admin credentials sitting in the inbox. Stay sharp—this is your final test!`;
         }
     }
 
@@ -1656,6 +1663,49 @@ function showAIDialoguePopup() {
     `;
         
     document.getElementById('popup-overlay').style.display = 'block';
+}
+
+function updateAttentionBadgePosition() {
+    const badge = document.getElementById('ai-attention-badge');
+    if (!badge) return;
+
+    const currentConfig = roomConfigurations[currentRoomId];
+    if (!currentConfig) return;
+
+    const activePapers = currentConfig.papers || [];
+    const terminalState = activePapers[0];
+
+    // Mirror initialization checks to prevent baseline undefined issues
+    if (currentConfig.hasSeenRoomIntro === undefined) currentConfig.hasSeenRoomIntro = false;
+    if (currentConfig.hasSeenLaptopFeedback === undefined) currentConfig.hasSeenLaptopFeedback = false;
+    if (currentConfig.hasSeenPrinterFeedback === undefined) currentConfig.hasSeenPrinterFeedback = false;
+
+    let shouldShowBadge = false;
+
+    // Check progress milestones using the room-scoped configuration states
+    if (!terminalState || !terminalState.answered) {
+        if (!currentConfig.hasSeenRoomIntro) shouldShowBadge = true;
+    } else if (terminalState && terminalState.answered && !hasCompletedPrinterTask) {
+        if (!currentConfig.hasSeenLaptopFeedback) shouldShowBadge = true;
+    } else if (hasCompletedPrinterTask) {
+        if (!currentConfig.hasSeenPrinterFeedback) shouldShowBadge = true;
+    }
+
+    if (!shouldShowBadge) {
+        badge.style.display = 'none';
+        return;
+    }
+
+    badge.style.display = 'block';
+
+    const canvasWidth = 800;
+    const canvasHeight = 550;
+    
+    const leftPercent = (((aiAvatar.x + 35) / canvasWidth) * 100);
+    const topPercent = (((aiAvatar.y - 60) / canvasHeight) * 100); 
+    
+    badge.style.left = `${leftPercent}%`;
+    badge.style.top = `${topPercent}%`;
 }
 function closePopup() {
     if (showingAIDialogue) {
@@ -1780,55 +1830,7 @@ function closePopup() {
     isPaused = false;
     currentPaper = null; 
 }
-function updateAttentionBadgePosition() {
-    const badge = document.getElementById('ai-attention-badge');
-    if (!badge) return;
 
-    const activePapers = roomConfigurations[currentRoomId]?.papers || [];
-    const terminalState = activePapers[0];
-
-    let shouldShowBadge = false;
-
-    // Logic for new players/ongoing sessions
-    if (!hasSeenRoomIntro) {
-        shouldShowBadge = true;
-    } else if (terminalState && terminalState.answered && !hasCompletedPrinterTask) {
-        if (!hasSeenLaptopFeedback) {
-            shouldShowBadge = true;
-        }
-    } else if (hasCompletedPrinterTask) {
-        if (!hasSeenPrinterFeedback) {
-            shouldShowBadge = true;
-        }
-    }
-
-    // Logic for returning "Master" players
-    // Only show badge if they haven't "seen" the completion message yet
-    if (typeof hasCompletedAllTasks !== 'undefined' && hasCompletedAllTasks) {
-        // If they haven't seen the final summary, show it; otherwise, hide it
-        if (!hasSeenPrinterFeedback) {
-            shouldShowBadge = true;
-        } else {
-            shouldShowBadge = false;
-        }
-    }
-
-    if (!shouldShowBadge) {
-        badge.style.display = 'none';
-        return;
-    }
-
-    badge.style.display = 'block';
-
-    const canvasWidth = 800;
-    const canvasHeight = 550;
-    
-    const leftPercent = (((aiAvatar.x + 35) / canvasWidth) * 100);
-    const topPercent = (((aiAvatar.y - 60) / canvasHeight) * 100); 
-    
-    badge.style.left = `${leftPercent}%`;
-    badge.style.top = `${topPercent}%`;
-}
 
 function update() {
     // --- EMBEDDED WALKING AUDIO MANAGER ENGINE ---
