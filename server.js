@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -92,6 +91,7 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
             res.status(500).json({ error: "Cloud database synchronization failed." });
         }
     });
+
     // =========================================================================
     // TEACHER RECORDS FETCH ROUTE (FIREBASE CLOUD READ)
     // =========================================================================
@@ -115,6 +115,7 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
             res.status(500).json({ error: "Failed to retrieve student records from cloud." });
         }
     });
+
     // =========================================================================
     // AUTOMATIC CLOUD-BASED PROGRESSION ROUTING ON ROOM ENTRANCE
     // =========================================================================
@@ -145,15 +146,17 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
             if (doc.exists) {
                 const record = doc.data();
                 
-                // Aggregate score categories safely
-                const safe = record.safe_score || 0;
-                const savvy = record.savvy_score || 0;
-                const social = record.social_score || 0;
+                // CASE-INSENSITIVE FALLBACK READS:
+                // This guarantees we query the document correctly regardless of module string casing.
+                const safe = record.safe_score || record.Safe_score || record.SAFE_SCORE || 0;
+                const savvy = record.savvy_score || record.Savvy_score || record.SAVVY_SCORE || 0;
+                const social = record.social_score || record.Social_score || record.SOCIAL_SCORE || 0;
                 const totalScore = safe + savvy + social;
 
-                if (totalScore >= 40) {
+                // UPDATED: 60+ total points routes to Room 3, 30+ total points routes to Room 2
+                if (totalScore >= 60) {
                     calculatedRoomId = 'room3';
-                } else if (totalScore >= 20) {
+                } else if (totalScore >= 30) {
                     calculatedRoomId = 'room2';
                 } else {
                     calculatedRoomId = 'room1';
@@ -296,15 +299,18 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
         const normalizedKey = studentNumber.trim().toUpperCase();
         const studentDocRef = studentsCollection.doc(normalizedKey);
 
+        // Normalize module parameter (e.g., lowercase "safe") to match database schema conventions
+        const normalizedModule = module.trim().toLowerCase();
+
         try {
             // set with { merge: true } safely writes fields whether the record is fresh or pre-existing
             await studentDocRef.set({
-                [`${module}_score`]: FieldValue.increment(score),
-                [`${module}_completed`]: completed ? 1 : 0,
+                [`${normalizedModule}_score`]: FieldValue.increment(score),
+                [`${normalizedModule}_completed`]: completed ? 1 : 0,
                 last_active: FieldValue.serverTimestamp()
             }, { merge: true });
 
-            console.log(`[CLOUD PROGRESS RECORDED]: Added ${score} points to ${module}_score for Student #${studentNumber}.`);
+            console.log(`[CLOUD PROGRESS RECORDED]: Added ${score} points to ${normalizedModule}_score for Student #${studentNumber}.`);
             res.json({ success: true, changes: 1 });
         } catch (err) {
             console.error(`[CLOUD PROGRESS SAVE ERROR - SHARD ${portNumber}]:`, err.message);

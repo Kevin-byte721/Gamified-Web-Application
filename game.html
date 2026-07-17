@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -421,11 +422,19 @@ window.addEventListener("beforeunload", () => {
 window.addEventListener("pagehide", () => {
     dispatchDisconnectBeacon();
 });
-
-// --- GLOBAL MODULE COMPLETION TRACKING ---
 let isSafeCompleted = false;
 let isSavvyCompleted = false;
 let isSocialCompleted = false;
+
+// Global flag to indicate the entire suite of modules has been finished
+let hasCompletedAllTasks = false; 
+
+// --- DYNAMIC PROGRESSION ROUTING ---
+function getSpawnRoomByScore(score) {
+    if (score >= 60) return 'room3';
+    if (score >= 30) return 'room2';
+    return 'room1';
+}
 
 // --- UI AND INITIALIZATION MECHANICS ---
 document.addEventListener("DOMContentLoaded", () => {
@@ -478,8 +487,15 @@ document.addEventListener("DOMContentLoaded", () => {
             isSavvyCompleted = record.savvy_completed === 1 || savvy >= 20;
             isSocialCompleted = record.social_completed === 1 || social >= 20;
 
+            // CRITICAL: Determine overall completion to bypass AI avatar's "fail/retry" checks
+            if (isSafeCompleted && isSavvyCompleted && isSocialCompleted) {
+                hasCompletedAllTasks = true;
+            } else {
+                hasCompletedAllTasks = false;
+            }
+
             console.log(`[CLOUD RECOVERY] Student authenticated! Syncing active scores -> Safe: ${safe}, Savvy: ${savvy}, Social: ${social} | Total Local: ${cyberknowledgeScore}`);
-            console.log(`[MODULE COMPLETIONS] Safe: ${isSafeCompleted}, Savvy: ${isSavvyCompleted}, Social: ${isSocialCompleted}`);
+            console.log(`[MODULE COMPLETIONS] Safe: ${isSafeCompleted}, Savvy: ${isSavvyCompleted}, Social: ${isSocialCompleted} | All Tasks Complete: ${hasCompletedAllTasks}`);
 
             // STEP 2: Establish the multiplayer channel
             const roomSelection = prompt("Enter a Room Code to join or create (e.g., ROOM1):", "ROOM1");
@@ -490,13 +506,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const targetRoomCode = roomSelection.trim().toUpperCase();
             
-            // Calculate starting room dynamically using the synced score
-            let temporaryRoomId = 'room1';
-            if (cyberknowledgeScore >= 40) {
-                temporaryRoomId = 'room3';
-            } else if (cyberknowledgeScore >= 20) {
-                temporaryRoomId = 'room2';
-            }
+            // Calculate starting room dynamically using the synced score and new routing rules
+            const temporaryRoomId = getSpawnRoomByScore(cyberknowledgeScore);
 
             // STEP 3: Request session registration from active server shard matching calculated roomId
             return fetch(`${API_BASE}/api/multiplayer/join-room`, {
@@ -528,7 +539,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 avatar.y = activeConfig.spawnY;
                 avatar.angle = activeConfig.cutscene?.directionAngle || 180;
 
-                // Sync AI NPC Avatar position (Forces (440, 400) immediately on login load)
+                // Sync AI NPC Avatar position (Forces correct config coordinates immediately on login load)
                 if (activeConfig.aiNPC) {
                     aiAvatar.x = activeConfig.aiNPC.x;
                     aiAvatar.y = activeConfig.aiNPC.y;
@@ -560,6 +571,7 @@ document.addEventListener("DOMContentLoaded", () => {
             isSafeCompleted = false;
             isSavvyCompleted = false;
             isSocialCompleted = false;
+            hasCompletedAllTasks = false;
 
             console.error("Multiplayer room admission rejected:", err);
             errorMsg.textContent = `⚠ ${err.message}`;
@@ -571,7 +583,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.key === 'Enter') loginBtn.click();
     });
 
-    // --- EXPLICIT EXIT GAME BUTTON HANDLER ---
+    // --- EXPLICIT EXIT GAME BUTTON HANDLES ---
     if (exitGameBtn) {
         exitGameBtn.addEventListener('click', () => {
             if (!confirm("Are you sure you want to exit the current game session?")) {
@@ -590,6 +602,7 @@ document.addEventListener("DOMContentLoaded", () => {
             isSafeCompleted = false;
             isSavvyCompleted = false;
             isSocialCompleted = false;
+            hasCompletedAllTasks = false;
             remotePlayers = {}; // Wipe local cache clones instantly
 
             // 3. Reset game state mechanics
@@ -607,19 +620,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
             console.log("[SESSION CLOSED] Player left the shard room intentionally. Reloading...");
             
-            // FIX: Force clean page refresh to purge Canvas memories, keys, and intervals completely
+            // Force clean page refresh to purge Canvas memories, keys, and intervals completely
             window.location.reload();
         });
     }
 });
+
 // --- TRANSITION MANAGER ---
 function transitionToRoom(roomId) {
     if (fadeState !== 'idle') return;
 
     // BRANCHING ROUTE LOGIC: Intercept progression if leaving Room 1
     if (currentRoomId === 'room1' && roomId === 'room2') {
-        // Evaluate score to determine path threshold
-        if (cyberknowledgeScore >= 40) {
+        // Evaluate score to determine path threshold (aligned to new milestones)
+        if (cyberknowledgeScore >= 60) {
             console.log(`[Branching Route]: Score is ${cyberknowledgeScore}. High proficiency path unlocked to Room 3.`);
             targetRoomId = 'room3';
         } else {
@@ -659,7 +673,7 @@ function applyRoomCompletionStates(roomId) {
             });
         }
 
-        // 3. Overwrite AI npc's message state key to success dialog variants
+        // 3. Overwrite AI NPC's message state key to success dialog variants
         aiAvatar.messageType = `${roomId}_success`; 
     } else {
         // --- SECURE WORKSTATION: Strictly lock the laptop on room entry ---
@@ -676,78 +690,6 @@ function applyRoomCompletionStates(roomId) {
     }
 }
 
-
-function showAIDialoguePopup() {
-    isPaused = true;
-    showingAIDialogue = true;
-    
-    const content = document.getElementById('popup-content');
-    
-    // Reference the active room papers instead of a global array
-    const activePapers = roomConfigurations[currentRoomId]?.papers || [];
-    const terminalState = activePapers[0]; 
-    currentPaper = terminalState; 
-    let textToShow = "";
-    
-    content.className = ''; 
-    content.removeAttribute('style'); 
-    content.classList.add('dialogue-bubble-mode');
-
-    const badge = document.getElementById('ai-attention-badge');
-    if (badge) {
-        badge.style.display = 'none';
-    }
-
-    const currentConfig = roomConfigurations[currentRoomId];
-
-    // Process context strings depending on the target room matching keys
-    if (currentConfig.aiNPC.messageType === 'room1_state') {
-        if (!terminalState || !terminalState.answered) {
-            // UNANSWERED STATE
-            textToShow = `<b>AI Guard [Bedroom]:</b><br>Hey there! Welcome to the Entry Foyer. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
-            laptopLocked = false; 
-        } else if (terminalState.answered && !terminalState.userWasCorrect) {
-            // FAILURE STATE
-            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #e63946; font-weight: bold;"> OOPS! WATCH OUT:</span> You chose to interact with that email! This is a classic "credential harvesting" trick where a fake page steals your login details. Real targets use fake urgency to panic you. Review your basic safety hints and try again!`;
-        } else {
-            // SUCCESS STATE
-            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;"> FANTASTIC JOB:</span> Spot on! You saw right through that fake threat and threw it in the trash. That's how you keep your personal profiles safe. Grab your 20 points and let's check out the Living Room area!`;
-        }
-    } 
-    else if (currentConfig.aiNPC.messageType === 'room2_state') {
-        if (!terminalState || !terminalState.answered) {
-            // UNANSWERED STATE
-            textToShow = `<b>AI Guard [Living Room]:</b><br>Alert! Someone is attempting to trick users on our local network segment. Head over to the floor terminal right away to verify what's coming in!`;
-            laptopLocked = false;
-        } else if (terminalState.answered && !terminalState.userWasCorrect) {
-            // FAILURE STATE
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #e63946; font-weight: bold;"> SECURITY RISK DETECTED:</span> That file download was actually a hidden piece of malware! Interacting with unverified "support" setups can give bad actors control over system setups. Let's trace the domain closely and give it another shot!`;
-        } else {
-            // SUCCESS STATE
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;"> EXCELLENT INSTINCTS:</span> Awesome defense! You noticed that the urgent program update was completely fake. Avoiding random link downloads protects the whole household network.`;
-        }
-    } 
-    else if (currentConfig.aiNPC.messageType === 'room3_state') {
-        if (!terminalState || !terminalState.answered) {
-            // UNANSWERED STATE
-            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to the Kitchen!  We've got a suspicious request for admin credentials sitting in the inbox. Stay sharp—this is your final test!`;
-            laptopLocked = false;
-        } else if (terminalState.answered && !terminalState.userWasCorrect) {
-            // FAILURE STATE
-            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;"> Close one!</span> That email was a "spear-phishing" attack trying to trick you into giving away your admin access. Never share your password, no matter how official the email looks. Refresh your strategy and give it another go!`;
-        } else {
-            // SUCCESS STATE
-            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;"> Security Mastered!</span> You saw right through that attack. You’ve successfully protected the system integrity. You've officially proven you've got the skills to navigate the digital world safely!`;
-        }
-    }
-    content.innerHTML = `
-        <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
-            ${textToShow}
-        </div>
-    `;
-        
-    document.getElementById('popup-overlay').style.display = 'block';
-}
 // --- EXECUTE ROOM SWITCH ---
 function executeRoomSwitch(roomId) {
     currentRoomId = roomId;
@@ -840,6 +782,9 @@ const canvas = document.getElementById('gameCanvas');
         walkLeft: 'avatar_walk_left.png',
         walkRight: 'avatar_walk_right.png',
         laptopEmail: 'Laptop-computer1.png',
+        printer: 'printer (2).png',
+        paper_shredder: 'paper_shredder.png',
+        paper: 'paper.png',
         aiNPC: 'ai_helper_avatar.png'
     };
     let currentRoomCode = ""; 
@@ -916,7 +861,7 @@ sounds.walking.volume = 1;
 
     const keys = {};
 
-    let cyberknowledgeScore = 0;
+    let cyberknowledgeScore = 30;
 
 
     let selectedEmailOption = 0; 
@@ -976,8 +921,11 @@ const roomConfigurations = {
         bgKey: 'background', 
         spawnX: 630,
         spawnY: 240,
-        aiNPC: { x: 100, y: 240, messageType: 'room1_state', angle: 180 }, // Updated
+        aiNPC: { x: 100, y: 240, messageType: 'room1_state', angle: 180 },
         cutscene: { duration: 500, directionAngle: 180 }, 
+        // New interactive physical devices
+        printerDevice: { x: 240, y: 100, angle: 0 },
+        shredderDevice: { x: 650, y: 100, angle: 0 },
         papers: [
             { 
                 x: 210, 
@@ -988,7 +936,7 @@ const roomConfigurations = {
                 userWasCorrect: false, 
                 scoreAwarded: false, 
                 scoreProcessed: false, 
-                hasConsultedAI: false, // Prevents bypass before talking to AI
+                hasConsultedAI: false,
                 module: 'safe' 
             }
         ],
@@ -1009,8 +957,11 @@ const roomConfigurations = {
         bgKey: 'living', 
         spawnX: 100,
         spawnY: 315,
-        aiNPC: { x: 440, y: 400, messageType: 'room2_state', angle: 90 }, // Retained
+        aiNPC: { x: 440, y: 400, messageType: 'room2_state', angle: 90 },
         cutscene: { duration: 500, directionAngle: 90 }, 
+        // New interactive physical devices
+        printerDevice: { x: 205, y: 500, angle: 180 },
+        shredderDevice: { x: 130, y: 500, angle: 180 },
         papers: [
             { 
                 x: 480, 
@@ -1021,7 +972,7 @@ const roomConfigurations = {
                 userWasCorrect: false, 
                 scoreAwarded: false, 
                 scoreProcessed: false, 
-                hasConsultedAI: false, // Prevents bypass before talking to AI
+                hasConsultedAI: false,
                 module: 'savvy' 
             }
         ],
@@ -1044,7 +995,7 @@ const roomConfigurations = {
         bgKey: 'kitchen', 
         spawnX: 640,
         spawnY: 210,
-        aiNPC: { x: 330, y: 430, messageType: 'room3_state', angle: 270 }, // Updated
+        aiNPC: { x: 330, y: 430, messageType: 'room3_state', angle: 270 },
         cutscene: { duration: 500, directionAngle: 270 }, 
         papers: [
             { 
@@ -1056,7 +1007,7 @@ const roomConfigurations = {
                 userWasCorrect: false, 
                 scoreAwarded: false, 
                 scoreProcessed: false, 
-                hasConsultedAI: false, // Prevents bypass before talking to AI
+                hasConsultedAI: false,
                 module: 'social' 
             }
         ],
@@ -1073,191 +1024,6 @@ const roomConfigurations = {
     }
 };
 
-// --- DYNAMIC PROGRESSION ROUTING ---
-function getSpawnRoomByScore(score) {
-    if (score >= 40) return 'room3';
-    if (score >= 20) return 'room2';
-    return 'room1';
-}
-
-
-
-window.addEventListener('keydown', e => {
-    // SECURITY FILTER: Suppress all character interactions if cutscene runs
-    if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
-        if (gameState !== 'title' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyS', 'KeyA', 'KeyD', 'Space'].includes(e.code)) {
-            e.preventDefault();
-            return false;
-        }
-    }
-
-    if (gameState === 'title') {
-        if (e.code === 'Space' || e.code === 'Enter') {
-            e.preventDefault();
-
-            // BLOCK ENTRY IF NOT AUTHENTICATED VIA THE PORTAL FORM YET
-            if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
-                const inputField = document.getElementById('student-number-input');
-                if (inputField) {
-                    inputField.focus();
-                    inputField.style.borderColor = '#ff4a4a';
-                }
-                console.log("Access Denied: Complete student session initialization first.");
-                return;
-            }
-
-            // --- CRITICAL TIMED ENTRY INTEGRATION ---
-            gameState = 'game';
-            document.getElementById('menu-overlay').style.display = 'none';
-            
-            // --- DYNAMIC ENTRY PROGRESSION DETERMINATION ---
-            currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
-            const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
-
-            avatar.x = currentConfig.spawnX;
-            avatar.y = currentConfig.spawnY;
-            avatar.angle = currentConfig.cutscene?.directionAngle || 180; 
-            
-            isCutsceneActive = true;
-            cutsceneStartTime = Date.now(); 
-
-            // Respect the dynamic guide control setting on launch
-            const instElement = document.getElementById('instructions');
-            if (instElement) {
-                instElement.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
-            }
-            
-            // REVEAL ATTENTION BADGE ONCE GAME OFFICIALLY STARTS
-            const badge = document.getElementById('ai-attention-badge');
-            if (badge) {
-                badge.style.display = 'block';
-            }
-            
-            console.log(`[Scene Transition]: Initialization verified. Spawning into environment ${currentRoomId} based on scoring profile.`);
-        }
-        return;
-    }
-
-    // Toggle Title Screen state with the 'T' key
-    if (e.code === 'KeyT') {
-        if (gameState === 'title') {
-            if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) return;
-
-            gameState = 'game';
-            document.getElementById('menu-overlay').style.display = 'none';
-            
-            // --- DYNAMIC ENTRY PROGRESSION DETERMINATION ---
-            currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
-            const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
-
-            avatar.x = currentConfig.spawnX;
-            avatar.y = currentConfig.spawnY;
-            avatar.angle = currentConfig.cutscene?.directionAngle || 180;
-            isCutsceneActive = true;
-            cutsceneStartTime = Date.now();
-
-            const instElement = document.getElementById('instructions');
-            if (instElement) {
-                instElement.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
-            }
-            if (typeof sounds !== 'undefined' && sounds.bgm) {
-                sounds.bgm.play().catch(err => console.log("Audio playback blocked."));
-            }
-            const badge = document.getElementById('ai-attention-badge');
-            if (badge) badge.style.display = 'block';
-        } else if (gameState === 'game') {
-            gameState = 'title';
-            document.getElementById('menu-overlay').style.display = 'flex';
-            document.getElementById('instructions').style.display = 'none';
-            
-            const badge = document.getElementById('ai-attention-badge');
-            if (badge) badge.style.display = 'none';
-        }
-        console.log("Game State toggled via T key. Current state:", gameState);
-        return;
-    }
-
-    // Toggle Guide Controls UI block with the 'G' key
-    if (e.code === 'KeyG') {
-        showGuideControls = !showGuideControls;
-        const instructionsElement = document.getElementById('instructions');
-        if (instructionsElement) {
-            instructionsElement.style.display = (showGuideControls && gameState === 'game') ? 'block' : 'none';
-        }
-        console.log("Guide Controls:", showGuideControls ? "VISIBLE" : "HIDDEN");
-        return;
-    }
-
-    if (gameState === 'game') {
-        keys[e.code] = true;
-
-        if (isPaused) {
-            if (showingAIDialogue) {
-                if (e.code === 'Space' || e.code === 'Escape') {
-                    e.preventDefault();
-                    closePopup();
-                }
-                return;
-            }
-
-            if (currentPaper) {
-                if (!currentPaper.answered) {
-                    if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
-                        e.preventDefault();
-                        selectedEmailOption = 1; 
-                        updateEmailUI(); 
-                    }
-                    if (e.code === 'ArrowUp' || e.code === 'KeyW') { 
-                        e.preventDefault();
-                        selectedEmailOption = 0; 
-                        updateEmailUI(); 
-                    }
-                    if (e.code === 'Space') {
-                        e.preventDefault();
-                        if (typeof window.handleEmailSubmission === 'function') {
-                            window.handleEmailSubmission(selectedEmailOption);
-                        }
-                    }
-                } else {
-                    if (e.code === 'Space' || e.code === 'Escape') {
-                        e.preventDefault();
-                        closePopup();
-                    }
-                }
-                
-                if (e.code === 'Escape') { 
-                    e.preventDefault();
-                    closePopup(); 
-                }
-                return;
-            }
-            
-            if (!showingAIDialogue && !currentPaper) {
-                if (e.code === 'Space' || e.code === 'Escape') {
-                    e.preventDefault();
-                    closePopup();
-                }
-                return;
-            }
-        }
-
-        if (e.code === 'Space' && !isPaused) {
-            checkInteraction();
-        }
-
-        // UPDATED: Escape now triggers the Settings Menu instead of returning to Title
-        if (e.code === 'Escape' && !isPaused) {
-            e.preventDefault();
-            
-            // Still stop movement and clear input keys
-            Object.keys(keys).forEach(key => keys[key] = false);
-            avatar.moving = false;
-            
-            // Show the settings menu overlay
-            showSettingsMenu();
-        }
-    }
-});
 
 window.addEventListener('keyup', e => { 
     if (gameState === 'game') {
@@ -1288,9 +1054,7 @@ function updateEmailUI() {
 }
 
 
-
 function checkInteraction() {
-    // FIX: Get papers array from the active room configuration
     const activePapers = roomConfigurations[currentRoomId]?.papers || [];
 
     for (let p of activePapers) {
@@ -1312,6 +1076,7 @@ function checkInteraction() {
         showAIDialoguePopup();
     }
 }
+
 function interactWithLaptop(paper) {
     // Reset standard default selection index context when launching laptop interface modal
     selectedEmailOption = 0;
@@ -1381,7 +1146,7 @@ function interactWithLaptop(paper) {
             <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
                  Terminal Access Locked
                 <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
-                    You must consult the floating attention marker at the <b>AI Avatar</b> first to clear incoming threat directives before logging in.
+                    You must consult the <b>AI Avatar</b> first to clear incoming threat directives before logging in.
                 </div>
             </div>
         `;
@@ -1394,61 +1159,618 @@ function interactWithLaptop(paper) {
     updateEmailUI();
 }
 
-// --- POPUP WINDOW CLEANUP & PROGRESSION MANAGEMENT ---
+// --- STATE MANAGEMENT EXTENSIONS ---
+let selectedPrinterOption = 0; // Sync selection state tracker index globally
+
+// --- GLOBAL KEYBOARD CAPTURE HOOK ---
+window.addEventListener('keydown', e => {
+    // SECURITY FILTER: Suppress all character interactions if cutscene runs
+    if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
+        if (gameState !== 'title' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyS', 'KeyA', 'KeyD', 'Space'].includes(e.code)) {
+            e.preventDefault();
+            return false;
+        }
+    }
+
+    if (gameState === 'title') {
+        if (e.code === 'Space' || e.code === 'Enter') {
+            e.preventDefault();
+
+            // BLOCK ENTRY IF NOT AUTHENTICATED VIA THE PORTAL FORM YET
+            if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
+                const inputField = document.getElementById('student-number-input');
+                if (inputField) {
+                    inputField.focus();
+                    inputField.style.borderColor = '#ff4a4a';
+                }
+                console.log("Access Denied: Complete student session initialization first.");
+                return;
+            }
+
+            gameState = 'game';
+            document.getElementById('menu-overlay').style.display = 'none';
+            
+            currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
+            const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+
+            avatar.x = currentConfig.spawnX;
+            avatar.y = currentConfig.spawnY;
+            avatar.angle = currentConfig.cutscene?.directionAngle || 180; 
+            
+            isCutsceneActive = true;
+            cutsceneStartTime = Date.now(); 
+
+            const instElement = document.getElementById('instructions');
+            if (instElement) {
+                instElement.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
+            }
+            
+            const badge = document.getElementById('ai-attention-badge');
+            if (badge) {
+                badge.style.display = 'block';
+            }
+            
+            console.log(`[Scene Transition]: Initialization verified. Spawning into environment ${currentRoomId} based on scoring profile.`);
+        }
+        return;
+    }
+
+    // Toggle Title Screen state with the 'T' key
+    if (e.code === 'KeyT') {
+        if (gameState === 'title') {
+            if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) return;
+
+            gameState = 'game';
+            document.getElementById('menu-overlay').style.display = 'none';
+            
+            currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
+            const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+
+            avatar.x = currentConfig.spawnX;
+            avatar.y = currentConfig.spawnY;
+            avatar.angle = currentConfig.cutscene?.directionAngle || 180;
+            isCutsceneActive = true;
+            cutsceneStartTime = Date.now();
+
+            const instElement = document.getElementById('instructions');
+            if (instElement) {
+                instElement.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
+            }
+            if (typeof sounds !== 'undefined' && sounds.bgm) {
+                sounds.bgm.play().catch(err => console.log("Audio playback blocked."));
+            }
+            const badge = document.getElementById('ai-attention-badge');
+            if (badge) badge.style.display = 'block';
+        } else if (gameState === 'game') {
+            gameState = 'title';
+            document.getElementById('menu-overlay').style.display = 'flex';
+            document.getElementById('instructions').style.display = 'none';
+            
+            const badge = document.getElementById('ai-attention-badge');
+            if (badge) badge.style.display = 'none';
+        }
+        console.log("Game State toggled via T key. Current state:", gameState);
+        return;
+    }
+
+    // Toggle Guide Controls UI block with the 'G' key
+    if (e.code === 'KeyG') {
+        showGuideControls = !showGuideControls;
+        const instructionsElement = document.getElementById('instructions');
+        if (instructionsElement) {
+            instructionsElement.style.display = (showGuideControls && gameState === 'game') ? 'block' : 'none';
+        }
+        console.log("Guide Controls:", showGuideControls ? "VISIBLE" : "HIDDEN");
+        return;
+    }
+
+    if (gameState === 'game') {
+        keys[e.code] = true;
+
+        if (isPaused) {
+            if (showingAIDialogue) {
+                if (e.code === 'Space' || e.code === 'Escape' || e.code === 'Enter') {
+                    e.preventDefault();
+                    closePopup();
+                }
+                return;
+            }
+
+            if (currentPaper) {
+                // DIALOGUE ROUTINE INTERCEPT FOR PRINTER INTERACTIVE POPUP
+                if (currentPaper.type === 'printer_document') {
+                    if (!currentPaper.answered) {
+                        if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
+                            e.preventDefault();
+                            selectedPrinterOption = 1; 
+                            if (typeof window.updatePrinterUI === 'function') window.updatePrinterUI(); 
+                        }
+                        if (e.code === 'ArrowUp' || e.code === 'KeyW') { 
+                            e.preventDefault();
+                            selectedPrinterOption = 0; 
+                            if (typeof window.updatePrinterUI === 'function') window.updatePrinterUI(); 
+                        }
+                        if (e.code === 'Space' || e.code === 'Enter') {
+                            e.preventDefault();
+                            if (typeof window.handlePrinterSubmission === 'function') {
+                                window.handlePrinterSubmission(selectedPrinterOption);
+                            }
+                        }
+                    } else {
+                        if (e.code === 'Space' || e.code === 'Escape' || e.code === 'Enter') {
+                            e.preventDefault();
+                            closePopup();
+                        }
+                    }
+                } 
+                // STANDARD LAPTOP EMAIL DISPOSAL ROUTINE INTERCEPT
+                else {
+                    if (!currentPaper.answered) {
+                        if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
+                            e.preventDefault();
+                            selectedEmailOption = 1; 
+                            updateEmailUI(); 
+                        }
+                        if (e.code === 'ArrowUp' || e.code === 'KeyW') { 
+                            e.preventDefault();
+                            selectedEmailOption = 0; 
+                            updateEmailUI(); 
+                        }
+                        if (e.code === 'Space' || e.code === 'Enter') {
+                            e.preventDefault();
+                            if (typeof window.handleEmailSubmission === 'function') {
+                                window.handleEmailSubmission(selectedEmailOption);
+                            }
+                        }
+                    } else {
+                        if (e.code === 'Space' || e.code === 'Escape' || e.code === 'Enter') {
+                            e.preventDefault();
+                            closePopup();
+                        }
+                    }
+                }
+                
+                if (e.code === 'Escape') { 
+                    e.preventDefault();
+                    closePopup(); 
+                }
+                return;
+            }
+            
+            if (!showingAIDialogue && !currentPaper) {
+                if (e.code === 'Space' || e.code === 'Escape' || e.code === 'Enter') {
+                    e.preventDefault();
+                    closePopup();
+                }
+                return;
+            }
+        }
+
+        // ALLOW BOTH SPACE KEY AND E KEY FOR GENERAL INTERACTIONS
+        if ((e.code === 'Space' || e.code === 'KeyE') && !isPaused) {
+            e.preventDefault();
+            
+            // Check printer distance proximity before calling generalized email interact triggers
+            const activeRoomConfig = roomConfigurations[currentRoomId];
+            if (activeRoomConfig && activeRoomConfig.printerDevice) {
+                const pX = activeRoomConfig.printerDevice.x;
+                const pY = activeRoomConfig.printerDevice.y;
+                const dx = (avatar.x + 35) - pX;
+                const dy = (avatar.y + 35) - pY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < interactionDist) {
+                    interactWithPrinter();
+                    return; 
+                }
+            }
+
+            // Fallback to checking laptops/papers if not directly on top of printer device
+            checkInteraction();
+        }
+
+        if (e.code === 'Escape' && !isPaused) {
+            e.preventDefault();
+            Object.keys(keys).forEach(key => keys[key] = false);
+            avatar.moving = false;
+            showSettingsMenu();
+        }
+    }
+});
+
+
+// --- PRINTER INTERACTION & PROGRESSION MANAGEMENT ---
+let hasCompletedPrinterTask = false;
+let printerTaskCorrect = false; 
+// New state trackers to prevent badge flickering and manage unread notifications
+let hasSeenRoomIntro = false; // <-- NEW: Tracks if player viewed the initial room greeting
+let hasSeenLaptopFeedback = false;
+let hasSeenPrinterFeedback = false;
+// --- PRINTER INTERACTION & PROGRESSION MANAGEMENT ---
+function interactWithPrinter() {
+    if (hasCompletedPrinterTask && currentPaper) {
+        isPaused = true;
+        const popupOverlay = document.getElementById('popup-overlay');
+        const popupContent = document.getElementById('popup-content');
+        
+        if (popupOverlay && popupContent) {
+            popupContent.className = ''; 
+            popupContent.classList.add('center-modal-mode');
+
+            if (currentPaper.userWasCorrect) {
+                popupContent.innerHTML = `
+                    <div style="font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 18px; font-weight: bold; width: 100%; text-align: center; color: #333; padding: 25px; box-sizing: border-box;">
+                        Workstation Secure
+                        <div style="font-size: 14px; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
+                            Inbox clean. There are <b>no emails yet</b> for this terminal.
+                        </div>
+                        <button onclick="closePopup()" style="margin-top: 20px; padding: 8px 20px; font-size: 13px; font-weight: bold; background: #0055cc; color: white; border: none; border-radius: 100px; cursor: pointer;">Acknowledge</button>
+                    </div>
+                `;
+            } else {
+                popupContent.innerHTML = `
+                    <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
+                         Terminal Access Locked
+                        <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
+                            You must consult the <b>AI Avatar</b> first to clear incoming threat directives before logging in.
+                        </div>
+                    </div>
+                `;
+            }
+            popupOverlay.style.display = 'block';
+        }
+        return;
+    }
+    
+    if (cyberknowledgeScore < 20) {
+        isPaused = true;
+        const popupOverlay = document.getElementById('popup-overlay');
+        const popupContent = document.getElementById('popup-content');
+        
+        if (popupOverlay && popupContent) {
+            popupContent.className = ''; 
+            popupContent.classList.add('center-modal-mode');
+            popupContent.innerHTML = `
+                <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
+                     Terminal Access Locked
+                    <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
+                        You must consult the <b>AI Avatar</b> first to clear incoming threat directives before logging in.
+                    </div>
+                </div>
+            `;
+            popupOverlay.style.display = 'block';
+        }
+        return;
+    }
+
+    if (currentRoomId === 'room1') {
+        currentPaper = {
+            type: 'printer_document',
+            title: "Internal IP Network Diagram",
+            content: "CONFIDENTIAL INTERNAL IP NETWORK DIAGRAM\n\nGateway IP: 192.168.1.1\nDefault Admin User: admin\nDefault Admin Pass: Stu_Admin2026\n\nWarning: Unauthorized distribution or exposure of this network layout violates safety policies. Dispose of immediately after reading.",
+            correctOption: 1, 
+            answered: false,
+            scoreProcessed: false,
+            userWasCorrect: false
+        };
+    } else if (currentRoomId === 'room2') {
+        currentPaper = {
+            type: 'printer_document',
+            title: "Student Database Export",
+            content: "SENSITIVE STUDENT DATABASE EXPORT\n\nRecord Count: 142 students\nFields: [Full Name, Date of Birth, Home Address, Parents' Email]\n\nNote: For physical filing purposes only. Do not leave exposed on office equipment.",
+            correctOption: 1, 
+            answered: false,
+            scoreProcessed: false,
+            userWasCorrect: false
+        };
+    } else {
+        currentPaper = {
+            type: 'printer_document',
+            title: "Unidentified Print Job",
+            content: "CONFIDENTIAL CORPORATE DATA\n\nContains operational keys and private records. Ensure secure disposal.",
+            correctOption: 1,
+            answered: false,
+            scoreProcessed: false,
+            userWasCorrect: false
+        };
+    }
+
+    showingAIDialogue = false; 
+    isPaused = true;
+    selectedPrinterOption = 0; 
+
+    const popupOverlay = document.getElementById('popup-overlay');
+    const popupContent = document.getElementById('popup-content');
+    
+    if (popupOverlay && popupContent) {
+        popupContent.className = ''; 
+        popupContent.classList.add('center-modal-mode');
+
+        window.handlePrinterSubmission = function(optionIndex) {
+            if (!currentPaper || currentPaper.answered) return;
+
+            currentPaper.answered = true;
+            currentPaper.userWasCorrect = (optionIndex === currentPaper.correctOption);
+
+            if (currentPaper.type === 'printer_document') {
+                printerTaskCorrect = currentPaper.userWasCorrect;
+                hasCompletedPrinterTask = true;
+                // Reset printer feedback seen state so it triggers the AI badge alert
+                hasSeenPrinterFeedback = false; 
+            }
+
+            document.getElementById('popup-content').className = ''; 
+            document.getElementById('popup-overlay').style.display = 'none';
+            isPaused = false;
+
+            // Instantly activate and update the badge since the AI has points/feedback ready to show
+            const badge = document.getElementById('ai-attention-badge');
+            if (badge) {
+                badge.style.display = 'block';
+                updateAttentionBadgePosition();
+            }
+        };
+
+        window.updatePrinterUI = function() {
+            const optionsBlock = document.getElementById('printer-options');
+            if (!optionsBlock) return;
+
+            optionsBlock.innerHTML = `
+                <button onclick="window.handlePrinterSubmission(0)" 
+                        style="width: 100%; text-align: left; background: ${selectedPrinterOption === 0 ? '#eedec2' : '#fff'}; border: 2px solid ${selectedPrinterOption === 0 ? '#88765d' : '#bbb'}; padding: 12px 15px; border-radius: 4px; color: #222; font-family: 'Georgia', serif; font-size: 13px; cursor: pointer; transition: all 0.1s; font-weight: normal; line-height: 1.3; box-sizing: border-box;">
+                    ${selectedPrinterOption === 0 ? '[X]' : '[ ]'} Leave the hardcopy document directly inside the tray allocation pool.
+                </button>
+                <button onclick="window.handlePrinterSubmission(1)" 
+                        style="width: 100%; text-align: left; background: ${selectedPrinterOption === 1 ? '#eedec2' : '#fff'}; border: 2px solid ${selectedPrinterOption === 1 ? '#88765d' : '#bbb'}; padding: 12px 15px; border-radius: 4px; color: #222; font-family: 'Georgia', serif; font-size: 13px; cursor: pointer; transition: all 0.1s; font-weight: normal; line-height: 1.3; box-sizing: border-box;">
+                    ${selectedPrinterOption === 1 ? '[X]' : '[ ]'} Bring media file parameters immediately to physical cross-cut destruction shredder.
+                </button>
+                <div style="margin-top: 6px; font-size: 11px; color: #666; font-style: italic; text-align: center; width: 100%;">
+                    Press W/S or Arrow Keys to change selection. Press Space or Enter to submit.
+                </div>
+            `;
+        };
+
+        popupContent.innerHTML = `
+        <div class="paper-layout-wrapper" style="font-family: 'Georgia', serif; background-color: #fcfbf7; color: #222; box-sizing: border-box; width: 90%; max-width: 440px; max-height: 85vh; margin: 0 auto; display: flex; flex-direction: column; padding: 20px; border: 1px solid #e3decb; box-shadow: 5px 5px 25px rgba(0, 0, 0, 0.15), inset 0 0 40px rgba(0,0,0,0.02); position: relative; border-radius: 4px; overflow: hidden;">
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: repeating-linear-gradient(90deg, #b8a686, #b8a686 10px, #e3decb 10px, #e3decb 20px);"></div>
+            
+            <div style="border-bottom: 2px double #333; padding-bottom: 6px; margin-bottom: 12px; text-align: center; flex-shrink: 0;">
+                <h2 style="margin: 0; font-size: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #111;">${currentPaper.title}</h2>
+                <span style="font-size: 9px; font-style: italic; color: #666;">Classification Status: RESTRICTED DISTRIBUTION</span>
+            </div>
+            
+            <div style="font-size: 11px; line-height: 1.5; color: #222; background: transparent; padding: 5px; flex-grow: 1; overflow-y: auto; white-space: pre-line; font-family: 'Courier New', Courier, monospace; border: 1px solid #f0ede0; margin-bottom: 12px; background-color: #faf9f2;">
+                ${currentPaper.content}
+            </div>
+            
+            <div style="margin-top: auto; border-top: 1px solid #ddd; padding-top: 10px; flex-shrink: 0;">
+                <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: bold; font-family: 'Georgia', serif; color: #333; font-style: italic;">Select actionable handling mitigation step:</p>
+                <div id="printer-options" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+        </div>
+        `;
+        popupOverlay.style.display = 'block';
+        window.updatePrinterUI();
+    }
+}
+
+function showAIDialoguePopup() {
+    isPaused = true;
+    showingAIDialogue = true;
+    
+    const content = document.getElementById('popup-content');
+    const activePapers = roomConfigurations[currentRoomId]?.papers || [];
+    const terminalState = activePapers[0]; 
+    
+    if (!hasCompletedPrinterTask) {
+        currentPaper = terminalState;
+    }
+    
+    let textToShow = "";
+    
+    content.className = ''; 
+    content.removeAttribute('style'); 
+    content.classList.add('dialogue-bubble-mode');
+
+    // Turn attention badge off immediately when accessing the dialogue
+    const badge = document.getElementById('ai-attention-badge');
+    if (badge) {
+        badge.style.display = 'none';
+    }
+
+    const currentConfig = roomConfigurations[currentRoomId];
+
+    // =========================================================================
+    // RETURNING CHAMPION BYPASS (PREVENTS FAIL MESSAGE FOR FINISHED STUDENTS)
+    // =========================================================================
+    if (hasCompletedAllTasks) {
+        textToShow = `<b>AI Guard:</b><br><span style="color: #52b788; font-weight: bold;">Security Mastered!</span> Welcome back, Specialist! You have already successfully completed all modules and secured the system integrity. You have officially proven you've got the skills to navigate the digital world safely!`;
+    } 
+    // =========================================================================
+    // STANDARD PROGRESSION FLOWS
+    // =========================================================================
+    else if (currentConfig.aiNPC.messageType === 'room1_state') {
+        if (!terminalState || !terminalState.answered) {
+            hasSeenRoomIntro = true; // Mark intro read
+            textToShow = `<b>AI Guard [Bedroom]:</b><br>Welcome to the Entry Foyer. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
+            laptopLocked = false; 
+        } 
+        else if (terminalState.answered && !hasCompletedPrinterTask) {
+            hasSeenLaptopFeedback = true; // Mark laptop feedback read
+            if (!terminalState.userWasCorrect) {
+                textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #e63946; font-weight: bold;">Ouch!</span> That email link got you. Next, I need you to check the <span class="highlight-blue">Printer</span>. There's an active printout sitting on the tray that needs securing!`;
+            } else {
+                textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Great eye!</span> You handled that phishing email perfectly. Now, look over at the <span class="highlight-blue">Printer</span>. Someone left a printout sitting out in the open—go decide how to secure it!`;
+            }
+        }
+        else if (hasCompletedPrinterTask) {
+            hasSeenPrinterFeedback = true; // Mark printer feedback read
+            if (printerTaskCorrect) {
+                textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRINTER HYGIENE!</span> Shredding that network diagram was the perfect decision. Leaving default passwords and system IPs in a physical tray is a major physical-security risk. You've earned your points—let's move on to Room 2!`;
+            } else {
+                textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #e63946; font-weight: bold;">PRINTER LEAK DETECTED:</span> Oh no, you chose to leave the document on the tray! That printout had local network administration passwords on it. Remember to always shred sensitive papers! Let's keep trying!`;
+            }
+        }
+    } 
+    else if (currentConfig.aiNPC.messageType === 'room2_state') {
+        if (!terminalState || !terminalState.answered) {
+            hasSeenRoomIntro = true; // Mark intro read
+            textToShow = `<b>AI Guard [Living Room]:</b><br>Alert! Someone is attempting to trick users on our local network segment. Head over to the floor terminal right away to verify what's coming in!`;
+            laptopLocked = false;
+        } 
+        else if (terminalState.answered && !hasCompletedPrinterTask) {
+            hasSeenLaptopFeedback = true; // Mark laptop feedback read
+            if (!terminalState.userWasCorrect) {
+                textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #e63946; font-weight: bold;">Careful!</span> That download contained malware. Let's step up our defenses. Go inspect the <span class="highlight-blue">Printer</span> and check what's sitting on the document tray!`;
+            } else {
+                textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Nice defense!</span> Rejecting fake support links keeps our networks clean. Now, run over to the <span class="highlight-blue">Printer</span>. We have a physical data privacy decision waiting for you there.`;
+            }
+        }
+        else if (hasCompletedPrinterTask) {
+            hasSeenPrinterFeedback = true; // Mark printer feedback read
+            if (printerTaskCorrect) {
+                textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">PRIVACY PROTECTED!</span> Superb job shredding that student export document. Leaving full names, home addresses, and phone directories exposed violates privacy policies. You handled that like a true security analyst! Let's enter Room 3!`;
+            } else {
+                textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #e63946; font-weight: bold;">DATA BREACH ALERT:</span> Leaving a complete physical database of student addresses on an open tray is a massive vulnerability. Identity thieves prey on papers like this. Remember, private databases must be destroyed!`;
+            }
+        }
+    } 
+    else if (currentConfig.aiNPC.messageType === 'room3_state') {
+        if (!terminalState || !terminalState.answered) {
+            hasSeenRoomIntro = true; // Mark intro read
+            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to the Kitchen! We've got a suspicious request for admin credentials sitting in the inbox. Stay sharp—this is your final test!`;
+            laptopLocked = false;
+        } else if (terminalState.answered && !terminalState.userWasCorrect) {
+            hasSeenLaptopFeedback = true; // Mark laptop feedback read
+            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">Close one!</span> That email was a spear-phishing attack. Never share your password, no matter how official the email looks. Refresh your strategy and give it another go!`;
+        } else {
+            hasSeenLaptopFeedback = true; // Mark laptop feedback read
+            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">Security Mastered!</span> You saw right through that attack. You’ve successfully protected the system integrity. You've officially proven you've got the skills to navigate the digital world safely!`;
+        }
+    }
+
+    content.innerHTML = `
+        <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
+            ${textToShow}
+        </div>
+    `;
+        
+    document.getElementById('popup-overlay').style.display = 'block';
+}
 function closePopup() {
-    if (showingAIDialogue && currentPaper && currentPaper.answered && !currentPaper.scoreProcessed) {
-        let earnedPoints = 0;
-        if (currentPaper.userWasCorrect) {
-            earnedPoints = 20;
+    if (showingAIDialogue) {
+        const activePapers = roomConfigurations[currentRoomId]?.papers || [];
+        const activeLaptopPaper = activePapers[0];
+
+        // Ensure the game registers the introductory dialogue has been fully processed
+        hasSeenRoomIntro = true;
+
+        // 1. Process Laptop/Email scoring if not run yet
+        if (activeLaptopPaper && activeLaptopPaper.answered && !activeLaptopPaper.scoreProcessed) {
+            let earnedPoints = activeLaptopPaper.userWasCorrect ? 20 : 0;
             cyberknowledgeScore += earnedPoints;
+            activeLaptopPaper.scoreProcessed = true;
+            
+            // Player closed dialogue, so they've officially read the laptop feedback
+            hasSeenLaptopFeedback = true; 
+
+            // Direct progress synchronization
+            if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+                let activeModule = 'safe'; 
+                if (currentRoomId === 'room2') activeModule = 'savvy';
+                else if (currentRoomId === 'room3') activeModule = 'social';
+
+                fetch(`/api/save-progress`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentNumber: currentStudentNumber,
+                        module: activeModule,
+                        score: earnedPoints, 
+                        completed: earnedPoints > 0
+                    })
+                })
+                .then(res => res.json())
+                .then(data => console.log(`[SYSTEM] Sync successful for email. Score payload: +${earnedPoints}`, data))
+                .catch(err => console.error("Database sync failed:", err));
+            }
         }
         
-        currentPaper.scoreProcessed = true; 
-
-        if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
-            // DYNAMICALLY DETERMINE MODULE BY THE CURRENT ROOM ID
-            let activeModule = 'safe'; // Room 1 Default
-            
-            if (currentRoomId === 'room2') {
-                activeModule = 'savvy'; // Room 2 uses Savvy
-            } else if (currentRoomId === 'room3') {
-                activeModule = 'social'; // Room 3 uses Social
+        // 2. Process Printer document score metrics
+        if (hasCompletedPrinterTask && currentPaper && currentPaper.type === 'printer_document' && !currentPaper.scoreProcessed) {
+            let earnedPoints = 0;
+            if (currentPaper.userWasCorrect) {
+                earnedPoints = currentRoomId === 'room3' ? 20 : 10;
+                cyberknowledgeScore += earnedPoints;
             }
             
-            // If the question object itself has a specific module override, use that instead
-            if (currentPaper.module) {
-                activeModule = currentPaper.module;
-            }
+            currentPaper.scoreProcessed = true;
+            
+            // Player closed dialogue, so they've officially read the printer feedback
+            hasSeenPrinterFeedback = true;
 
-            let isModuleFinished = false;
-            // Mark module completed if they successfully answered the question in that room
-            if (earnedPoints > 0) {
-                isModuleFinished = true;
-            }
+            // Direct progress synchronization
+            if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+                let activeModule = 'safe'; 
+                if (currentRoomId === 'room2') activeModule = 'savvy';
+                else if (currentRoomId === 'room3') activeModule = 'social';
 
-            // Fire atomic tracking payload onto server shards
-            fetch(`/api/save-progress`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    studentNumber: currentStudentNumber,
-                    module: activeModule,
-                    score: earnedPoints, 
-                    completed: isModuleFinished
+                fetch(`/api/save-progress`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentNumber: currentStudentNumber,
+                        module: activeModule,
+                        score: earnedPoints, 
+                        completed: earnedPoints > 0
+                    })
                 })
-            })
-            .then(res => res.json())
-            .then(data => {
-                console.log(`[SYSTEM] Sync successful for ${activeModule}.`, data);
-            })
-            .catch(err => console.error("Database sync failed:", err));
+                .then(res => res.json())
+                .then(data => console.log(`[SYSTEM] Sync successful for printer_document. Score payload: +${earnedPoints}`, data))
+                .catch(err => console.error("Database sync failed:", err));
+            }
         }
 
+        // --- MARK ALL FEEDBACK AS SEEN ---
+        // This ensures the badge conditions in updateAttentionBadgePosition() 
+        // return false immediately upon closing.
+        hasSeenRoomIntro = true;
+        hasSeenLaptopFeedback = true;
+        hasSeenPrinterFeedback = true;
+
+        // --- EXPLICITLY HIDE ATTENTION BADGE ON CLOSE ---
+        const badge = document.getElementById('ai-attention-badge');
+        if (badge) {
+            badge.style.display = 'none';
+        }
+
+        // Force-evaluate state immediately to ensure UI reflects the new "seen" status
+        updateAttentionBadgePosition();
+
         // --- ROOM PROGRESSION CHECKS ---
-        if (cyberknowledgeScore >= 40 && currentRoomId === 'room2') {
-            setTimeout(() => transitionToRoom('room3'), 600);
-        } else if (cyberknowledgeScore >= 20 && currentRoomId === 'room1') {
-            setTimeout(() => transitionToRoom('room2'), 600);
+        // Only trigger room transitions if the user hasn't finished the entire game
+        if (!hasCompletedAllTasks) {
+            if (cyberknowledgeScore >= 60 && currentRoomId === 'room2') {
+                setTimeout(() => {
+                    transitionToRoom('room3');
+                    hasCompletedPrinterTask = false;
+                    printerTaskCorrect = false;
+                    hasSeenRoomIntro = false;
+                    hasSeenLaptopFeedback = false; 
+                    hasSeenPrinterFeedback = false;
+                    updateAttentionBadgePosition();
+                }, 600);
+            } else if (cyberknowledgeScore >= 30 && currentRoomId === 'room1') {
+                setTimeout(() => {
+                    transitionToRoom('room2');
+                    hasCompletedPrinterTask = false;
+                    printerTaskCorrect = false;
+                    hasSeenRoomIntro = false;
+                    hasSeenLaptopFeedback = false; 
+                    hasSeenPrinterFeedback = false;
+                    updateAttentionBadgePosition();
+                }, 600);
+            }
         }
     }
 
@@ -1458,10 +1780,515 @@ function closePopup() {
     isPaused = false;
     currentPaper = null; 
 }
+function updateAttentionBadgePosition() {
+    const badge = document.getElementById('ai-attention-badge');
+    if (!badge) return;
 
+    const activePapers = roomConfigurations[currentRoomId]?.papers || [];
+    const terminalState = activePapers[0];
+
+    let shouldShowBadge = false;
+
+    // Logic for new players/ongoing sessions
+    if (!hasSeenRoomIntro) {
+        shouldShowBadge = true;
+    } else if (terminalState && terminalState.answered && !hasCompletedPrinterTask) {
+        if (!hasSeenLaptopFeedback) {
+            shouldShowBadge = true;
+        }
+    } else if (hasCompletedPrinterTask) {
+        if (!hasSeenPrinterFeedback) {
+            shouldShowBadge = true;
+        }
+    }
+
+    // Logic for returning "Master" players
+    // Only show badge if they haven't "seen" the completion message yet
+    if (typeof hasCompletedAllTasks !== 'undefined' && hasCompletedAllTasks) {
+        // If they haven't seen the final summary, show it; otherwise, hide it
+        if (!hasSeenPrinterFeedback) {
+            shouldShowBadge = true;
+        } else {
+            shouldShowBadge = false;
+        }
+    }
+
+    if (!shouldShowBadge) {
+        badge.style.display = 'none';
+        return;
+    }
+
+    badge.style.display = 'block';
+
+    const canvasWidth = 800;
+    const canvasHeight = 550;
+    
+    const leftPercent = (((aiAvatar.x + 35) / canvasWidth) * 100);
+    const topPercent = (((aiAvatar.y - 60) / canvasHeight) * 100); 
+    
+    badge.style.left = `${leftPercent}%`;
+    badge.style.top = `${topPercent}%`;
+}
+
+function update() {
+    // --- EMBEDDED WALKING AUDIO MANAGER ENGINE ---
+    function updateAvatarMovementAudio() {
+        const cutsceneActive = (typeof isCutsceneActive !== 'undefined' && isCutsceneActive);
+        
+        if (typeof sounds === 'undefined' || !sounds || !sounds.walking) {
+            return; 
+        }
+
+        if ((gameState === 'game' || cutsceneActive) && !isPaused && avatar.moving) {
+            if (sounds.walking.paused) {
+                sounds.walking.play().catch(err => console.log("Audio waiting for first input interaction."));
+            }
+        } else {
+            if (!sounds.walking.paused) {
+                sounds.walking.pause();
+                sounds.walking.currentTime = 0; 
+            }
+        }
+    }
+
+    updateAvatarMovementAudio();
+
+    if (isPaused || gameState !== 'game') return;
+
+    // --- TIMED INTERCEPT ROUTINE ---
+    if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
+        let now = Date.now();
+        const activeConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+        const activeDuration = activeConfig.cutscene?.duration || 500; 
+
+        if (now - cutsceneStartTime < activeDuration) {
+            avatar.moving = true;
+            avatar.angle = activeConfig.cutscene?.directionAngle || 180; 
+
+            let currentSpeed = avatar.speed || 4;
+            let angleRad = (avatar.angle - 90) * Math.PI / 180;
+            
+            let potentialX = avatar.x + Math.cos(angleRad) * currentSpeed;
+            let potentialY = avatar.y + Math.sin(angleRad) * currentSpeed;
+
+            if (checkAvatarBoundaries(potentialX, potentialY)) {
+                if (!checkCollisionAt(potentialX, potentialY) && 
+                    (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(potentialX, potentialY))) {
+                    avatar.x = potentialX;
+                    avatar.y = potentialY;
+                }
+            }
+        } else {
+            isCutsceneActive = false;
+            avatar.moving = false;
+            console.log(`[Cutscene Complete]: Room-specific structural automation sequence over. Controls unlocked.`);
+        }
+
+        updateAI();
+        updateAttentionBadgePosition();
+        updateAvatarMovementAudio();
+        return; 
+    }
+
+    // --- STANDARD PLAYER MANUAL CONTROLS ---
+    let moveX = 0, moveY = 0;
+        
+    if (keys['ArrowLeft'] || keys['KeyA'] || keys['a'] || keys['A']) moveX = -1;
+    if (keys['ArrowRight'] || keys['KeyD'] || keys['d'] || keys['D']) moveX = 1;
+    if (keys['ArrowUp'] || keys['KeyW'] || keys['w'] || keys['W']) moveY = -1;
+    if (keys['ArrowDown'] || keys['KeyS'] || keys['s'] || keys['S']) moveY = 1;
+
+    if (moveX !== 0 || moveY !== 0) {
+        if (moveX > 0 && moveY === 0) avatar.angle = 90;      
+        else if (moveX < 0 && moveY === 0) avatar.angle = 270;  
+        else if (moveY < 0 && moveX === 0) avatar.angle = 0;    
+        else if (moveY > 0 && moveX === 0) avatar.angle = 180;  
+        else if (moveX > 0 && moveY < 0) avatar.angle = 45;     
+        else if (moveX < 0 && moveY < 0) avatar.angle = 315;    
+        else if (moveX > 0 && moveY > 0) avatar.angle = 135;    
+        else if (moveX < 0 && moveY > 0) avatar.angle = 225;    
+                
+        let dx = moveX * avatar.speed;
+        let dy = moveY * avatar.speed;
+                
+        let potentialX = avatar.x + dx;
+        let potentialY = avatar.y + dy;
+
+        if (checkAvatarBoundaries(potentialX, potentialY)) {
+            if (!checkCollisionAt(potentialX, avatar.y) && 
+                (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(potentialX, avatar.y))) {
+                avatar.x = potentialX;
+            }
+            if (!checkCollisionAt(avatar.x, potentialY) && 
+                (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(avatar.x, potentialY))) {
+                avatar.y = potentialY;
+            }
+        }
+                
+        avatar.moving = true;
+        if (moveX < 0) avatar.lastDir = 'left';
+        if (moveX > 0) avatar.lastDir = 'right';
+    } else { 
+        avatar.moving = false; 
+    }
+
+    // --- PRINTER INTERACTION INTERCEPT KEY (E Key) ---
+    if (keys['KeyE'] || keys['e'] || keys['E']) {
+        const activeRoomConfig = roomConfigurations[currentRoomId];
+        if (activeRoomConfig && activeRoomConfig.printerDevice) {
+            const pX = activeRoomConfig.printerDevice.x;
+            const pY = activeRoomConfig.printerDevice.y;
+            const dx = (avatar.x + 35) - pX;
+            const dy = (avatar.y + 35) - pY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // Trigger printer workflow if player is standing near the printer
+            if (dist < interactionDist) {
+                // Instantly clear keypress to prevent rapid firing
+                keys['KeyE'] = false;
+                keys['e'] = false;
+                keys['E'] = false;
+                interactWithPrinter();
+            }
+        }
+    }
+
+    updateAI();
+    updateAttentionBadgePosition(); 
+    updateAvatarMovementAudio();
+}
+// --- DYNAMIC ASSET DIMENSION CONFIGURATION ---
+const SHREDDER_WIDTH = 75;      // Adjust to change Paper Shredder width (original: 50)
+const SHREDDER_HEIGHT = 80;     // Adjust to change Paper Shredder height (original: 50)
+// Adjusted to restore correct wider aspect ratio as seen in the second image
+const PRINTER_WIDTH = 76;       // Made wider (from 65) to fix the squished look
+const PRINTER_HEIGHT = 60;      // Made slightly shorter to preserve native 4:3 style aspect ratio
+function draw() {
+    if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
+        if (typeof currentStudentNumber === 'undefined' || !currentStudentNumber) {
+            currentStudentNumber = "DEBUG_USER_001";
+        }
+        if (typeof currentRoomCode === 'undefined' || !currentRoomCode) {
+            currentRoomCode = "DEBUG_ROOM";
+        }
+
+        isAuthenticated = true;
+        gameState = 'game';
+        isPaused = false;
+
+        const menuOverlay = document.getElementById('menu-overlay');
+        if (menuOverlay) menuOverlay.style.display = 'none';
+        
+        currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
+        const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+
+        if (currentConfig.aiNPC) {
+            aiAvatar.x = currentConfig.aiNPC.x;
+            aiAvatar.y = currentConfig.aiNPC.y;
+            aiAvatar.angle = currentConfig.aiNPC.angle || 0;
+        }
+
+        avatar.x = currentConfig.spawnX;
+        avatar.y = currentConfig.spawnY;
+        
+        avatar.angle = (roomConfigurations[currentRoomId]?.cutscene?.directionAngle !== undefined) 
+            ? roomConfigurations[currentRoomId].cutscene.directionAngle 
+            : 90;
+        
+        isCutsceneActive = true;
+        cutsceneStartTime = Date.now();
+        
+        const inst = document.getElementById('instructions');
+        if (inst) {
+            inst.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
+        }
+        
+        const badge = document.getElementById('ai-attention-badge');
+        if (badge) badge.style.display = 'block';
+
+        if (typeof updateAttentionBadgePosition === 'function') {
+            updateAttentionBadgePosition();
+        }
+    }
+
+    if (gameState === 'title') {
+        drawTitleScreen();
+        requestAnimationFrame(draw);
+        return;
+    }
+
+    ctx.clearRect(0, 0, 800, 600);
+        
+    const activeRoomConfig = roomConfigurations[currentRoomId];
+    const activeBgImage = images[activeRoomConfig.bgKey];
+
+    if (activeBgImage && activeBgImage.naturalWidth > 0) {
+        ctx.drawImage(activeBgImage, 0, 0, 800, 600);
+    }
+
+    // --- RENDER DYNAMIC PHYSICAL PRINTER & SHREDDER OBJECTS ---
+    if (activeRoomConfig?.printerDevice) {
+        const printer = activeRoomConfig.printerDevice;
+        const shredder = activeRoomConfig.shredderDevice;
+
+        // 1. Draw Paper Shredder
+        if (shredder && images.paper_shredder && images.paper_shredder.naturalWidth > 0) {
+            ctx.save();
+            ctx.translate(shredder.x, shredder.y);
+            if (shredder.angle) ctx.rotate(shredder.angle * Math.PI / 180);
+            ctx.drawImage(
+                images.paper_shredder, 
+                -SHREDDER_WIDTH / 2, 
+                -SHREDDER_HEIGHT / 2, 
+                SHREDDER_WIDTH, 
+                SHREDDER_HEIGHT
+            );
+            ctx.restore();
+        }
+
+        // 2. Draw Printer (Correct aspect ratio, paper.png overlay removed)
+        if (images.printer && images.printer.naturalWidth > 0) {
+            ctx.save();
+            ctx.translate(printer.x, printer.y);
+            if (printer.angle) ctx.rotate(printer.angle * Math.PI / 180);
+            ctx.drawImage(
+                images.printer, 
+                -PRINTER_WIDTH / 2, 
+                -PRINTER_HEIGHT / 2, 
+                PRINTER_WIDTH, 
+                PRINTER_HEIGHT
+            );
+            ctx.restore();
+        }
+
+        // Proximity Highlight & Prompt for Printer
+        const pDx = (avatar.x + 35) - printer.x;
+        const pDy = (avatar.y + 35) - printer.y;
+        const printerDist = Math.sqrt(pDx * pDx + pDy * pDy);
+
+        if (printerDist < interactionDist) {
+            ctx.save();
+            ctx.translate(printer.x, printer.y);
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(
+                -(PRINTER_WIDTH / 2 + 5), 
+                -(PRINTER_HEIGHT / 2 + 5), 
+                PRINTER_WIDTH + 10, 
+                PRINTER_HEIGHT + 10
+            );
+            ctx.restore();
+        }
+    }
+
+    const activePapers = activeRoomConfig?.papers || [];
+    activePapers.forEach(p => {
+        if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            if (p.angle) {
+                ctx.rotate(p.angle * Math.PI / 180);
+            }
+            ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
+            ctx.restore();
+        }
+                
+        const dx = (avatar.x + 35) - p.x;
+        const dy = (avatar.y + 35) - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < interactionDist) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            if (p.angle) {
+                ctx.rotate(p.angle * Math.PI / 180);
+            }
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-55, -40, 110, 80);
+            ctx.restore();
+        }
+    });
+
+    // --- MULTIPLAYER RENDERING PIPELINE ---
+    if (typeof remotePlayers !== 'undefined' && remotePlayers) {
+        Object.keys(remotePlayers).forEach(id => {
+            if (id.trim().toUpperCase() === currentStudentNumber.trim().toUpperCase()) return; 
+            const peer = remotePlayers[id];
+            
+            if (peer.roomCode === currentRoomCode && peer.roomId === currentRoomId) {
+                ctx.save();
+                ctx.translate(peer.x + 35, peer.y + 35);
+                ctx.rotate((peer.angle || 0) * Math.PI / 180);
+                
+                let peerSprite = images.idle;
+                if (peer.moving) {
+                    peerSprite = (Math.floor(Date.now() / 150) % 2 === 0) ? images.walkLeft : images.walkRight;
+                }
+                
+                if (peerSprite && peerSprite.complete) {
+                    ctx.drawImage(peerSprite, -35, -35, 70, 70);
+                } else {
+                    ctx.fillStyle = '#9b59b6'; 
+                    ctx.fillRect(-25, -25, 50, 50);
+                }
+                ctx.restore();
+
+                ctx.font = "bold 9px Arial";
+                const textWidth = ctx.measureText(peer.studentNumber).width;
+                const paddingX = 8;
+                const boxWidth = textWidth + paddingX;
+                const boxHeight = 14;
+                
+                ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+                ctx.fillRect(peer.x + 35 - (boxWidth / 2), peer.y - 26, boxWidth, boxHeight);
+                
+                ctx.fillStyle = "#52b788"; 
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(peer.studentNumber, peer.x + 35, peer.y - 26 + (boxHeight / 2));
+            }
+        });
+    }
+
+    let localNow = Date.now();
+    let img;
+
+    if (avatar.moving) {
+        let currentSpeed = avatar.speed || 4;
+        let dynamicInterval = Math.max(60, 600 / currentSpeed);
+
+        if (localNow - avatar.lastFrameSwap > dynamicInterval) {
+            if (typeof avatar.animStep === 'undefined') avatar.animStep = 0;
+            avatar.animStep = (avatar.animStep + 1) % 4;
+            avatar.lastFrameSwap = localNow;
+        }
+
+        if (avatar.animStep === 0) {
+            img = images.walkLeft;
+        } else if (avatar.animStep === 2) {
+            img = images.walkRight;
+        } else {
+            img = images.idle;
+        }
+    } else {
+        img = images.idle;
+    }
+        
+    if (img && img.naturalWidth > 0) {
+        ctx.save();                
+        ctx.translate(avatar.x + 35, avatar.y + 35);                
+        ctx.rotate(avatar.angle * Math.PI / 180);
+        ctx.drawImage(img, -35, -35, 70, 70);
+        ctx.restore();
+    }
+
+    if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
+        ctx.save();
+        ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
+        let correctedAngle = (aiAvatar.angle || 0) + 180;
+        ctx.rotate(correctedAngle * Math.PI / 180);
+        ctx.drawImage(images.aiNPC, -35, -35, 70, 70);
+        ctx.restore();
+    }
+
+    // --- LOCAL PLAYER NAME INDICATOR ---
+    if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber) {
+        ctx.font = "bold 9px Arial";
+        const localTextWidth = ctx.measureText(currentStudentNumber).width;
+        const localPaddingX = 8;
+        const localBoxWidth = localTextWidth + localPaddingX;
+        const localBoxHeight = 14;
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+        ctx.fillRect(avatar.x + 35 - (localBoxWidth / 2), avatar.y - 26, localBoxWidth, localBoxHeight);
+        
+        ctx.fillStyle = "#52b788"; 
+        ctx.font = "bold 9px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = 'middle';
+        ctx.fillText(currentStudentNumber, avatar.x + 35, avatar.y - 26 + (localBoxHeight / 2));
+    }
+
+    if (typeof debugMode !== 'undefined' && debugMode) {
+        ctx.lineWidth = 2;
+        const currentZones = activeRoomConfig?.collisionZones || [];
+        currentZones.forEach(z => {
+            ctx.save();
+            if (z.type === 'circle') {
+                ctx.beginPath();
+                ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = "red";
+                ctx.stroke();
+                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
+                ctx.fill();
+            } else {
+                ctx.translate(z.x, z.y);
+                if (z.deg) {
+                    ctx.rotate(z.deg * Math.PI / 180);
+                }
+                ctx.strokeStyle = "red";
+                ctx.strokeRect(0, 0, z.w, z.h);
+                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
+                ctx.fillRect(0, 0, z.w, z.h);
+            }
+            ctx.restore();
+        });
+    }
+
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(580, 10, 210, 40);
+    ctx.strokeStyle = "#dcc23c";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(580, 10, 210, 40);
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 14px Arial";
+    ctx.textAlign = "left";
+    ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
+
+    const inst = document.getElementById('instructions');
+    if (inst) {
+        const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
+        if (inst.style.display !== structuralVisibility) {
+            inst.style.display = structuralVisibility;
+        }
+    }
+
+    if (!isPaused) {
+        update();
+    }
+
+    if (fadeState === 'out') {
+        fadeAlpha += 0.05;
+        if (fadeAlpha >= 1) {
+            fadeAlpha = 1;
+            executeRoomSwitch(targetRoomId);
+            fadeState = 'in';
+        }
+    } else if (fadeState === 'in') {
+        fadeAlpha -= 0.05;
+        if (fadeAlpha <= 0) {
+            fadeAlpha = 0;
+            fadeState = 'idle';
+            targetRoomId = null;
+        }
+    }
+
+    if (fadeAlpha > 0) {
+        ctx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
+        ctx.fillRect(0, 0, 800, 600);
+    }
+
+    requestAnimationFrame(draw);
+}
 function showEmailPopup(paper) {
     isPaused = true;
     currentPaper = paper;
+    
+    // FORCE TYPE TO 'EMAIL': This guarantees closePopup() evaluates this as a 20-point task
+    currentPaper.type = 'email'; 
+    
     showingAIDialogue = false;
     
     const content = document.getElementById('popup-content');
@@ -1668,416 +2495,6 @@ function checkAvatarBoundaries(targetX, targetY) {
         ctx.fillStyle = 'rgba(13, 14, 21, 0.4)'; 
         ctx.fillRect(0, 0, 800, 600);
     }
-function update() {
-    // --- EMBEDDED WALKING AUDIO MANAGER ENGINE ---
-    function updateAvatarMovementAudio() {
-        const cutsceneActive = (typeof isCutsceneActive !== 'undefined' && isCutsceneActive);
-        
-        // FIX: Add strict guards to make sure sounds object and walking audio asset exist before checking attributes
-        if (typeof sounds === 'undefined' || !sounds || !sounds.walking) {
-            return; // Exit silently so the rest of the game engine keeps running
-        }
-
-        // Pass validation if the core game state matches OR if a walking cutscene block is active
-        if ((gameState === 'game' || cutsceneActive) && !isPaused && avatar.moving) {
-            if (sounds.walking.paused) {
-                // Catches browser security blocks if player hasn't interacted with screen yet
-                sounds.walking.play().catch(err => console.log("Audio waiting for first input interaction."));
-            }
-        } else {
-            // If they stop, pause, or go to menu, halt and reset instantly
-            if (!sounds.walking.paused) {
-                sounds.walking.pause();
-                sounds.walking.currentTime = 0; // Rewinds to ensure no awkward audio dragging
-            }
-        }
-    }
-
-    // CRITICAL: Call here so it instantly stops the walking sound if the game is paused or exited
-    updateAvatarMovementAudio();
-
-    if (isPaused || gameState !== 'game') return;
-
-    // --- TIMED INTERCEPT ROUTINE ---
-    if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
-        let now = Date.now();
-        const activeConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
-        const activeDuration = activeConfig.cutscene?.duration || 500; 
-
-        if (now - cutsceneStartTime < activeDuration) {
-            avatar.moving = true;
-            
-            // Extract direction angle from configuration schema
-            avatar.angle = activeConfig.cutscene?.directionAngle || 180; 
-
-            let currentSpeed = avatar.speed || 4;
-            
-            // Convert angle orientation to radians (Subtracting 90 aligns 0°=Up, 90°=Right, 180°=Down, 270°=Left)
-            let angleRad = (avatar.angle - 90) * Math.PI / 180;
-            
-            // Calculate vector trajectory adjustments
-            let potentialX = avatar.x + Math.cos(angleRad) * currentSpeed;
-            let potentialY = avatar.y + Math.sin(angleRad) * currentSpeed;
-
-            // Enforce safety boundary filters dynamically
-            if (checkAvatarBoundaries(potentialX, potentialY)) {
-                if (!checkCollisionAt(potentialX, potentialY) && 
-                    (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(potentialX, potentialY))) {
-                    avatar.x = potentialX;
-                    avatar.y = potentialY;
-                }
-            }
-        } else {
-            isCutsceneActive = false;
-            avatar.moving = false;
-            console.log(`[Cutscene Complete]: Room-specific structural automation sequence over. Controls unlocked.`);
-        }
-
-        updateAI();
-        updateAttentionBadgePosition();
-        
-        // Ensure cutscene walking steps trigger audio changes before stopping execution
-        updateAvatarMovementAudio();
-        return; 
-    }
-
-    // --- STANDARD PLAYER MANUAL CONTROLS ---
-    let moveX = 0, moveY = 0;
-        
-    if (keys['ArrowLeft'] || keys['KeyA'] || keys['a'] || keys['A']) moveX = -1;
-    if (keys['ArrowRight'] || keys['KeyD'] || keys['d'] || keys['D']) moveX = 1;
-    if (keys['ArrowUp'] || keys['KeyW'] || keys['w'] || keys['W']) moveY = -1;
-    if (keys['ArrowDown'] || keys['KeyS'] || keys['s'] || keys['S']) moveY = 1;
-
-    if (moveX !== 0 || moveY !== 0) {
-        if (moveX > 0 && moveY === 0) avatar.angle = 90;      
-        else if (moveX < 0 && moveY === 0) avatar.angle = 270;  
-        else if (moveY < 0 && moveX === 0) avatar.angle = 0;    
-        else if (moveY > 0 && moveX === 0) avatar.angle = 180;  
-        else if (moveX > 0 && moveY < 0) avatar.angle = 45;     
-        else if (moveX < 0 && moveY < 0) avatar.angle = 315;    
-        else if (moveX > 0 && moveY > 0) avatar.angle = 135;    
-        else if (moveX < 0 && moveY > 0) avatar.angle = 225;    
-                
-        let dx = moveX * avatar.speed;
-        let dy = moveY * avatar.speed;
-                
-        let potentialX = avatar.x + dx;
-        let potentialY = avatar.y + dy;
-
-        if (checkAvatarBoundaries(potentialX, potentialY)) {
-            if (!checkCollisionAt(potentialX, avatar.y) && 
-                (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(potentialX, avatar.y))) {
-                avatar.x = potentialX;
-            }
-            if (!checkCollisionAt(avatar.x, potentialY) && 
-                (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(avatar.x, potentialY))) {
-                avatar.y = potentialY;
-            }
-        }
-                
-        avatar.moving = true;
-        if (moveX < 0) avatar.lastDir = 'left';
-        if (moveX > 0) avatar.lastDir = 'right';
-    } else { 
-        avatar.moving = false; 
-    }
-
-    updateAI();
-    updateAttentionBadgePosition(); 
-
-    // CRITICAL: Evaluates final frame changes to seamlessly toggle walking.mp3 state
-    updateAvatarMovementAudio();
-}
-function draw() {
-    if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
-        if (typeof currentStudentNumber === 'undefined' || !currentStudentNumber) {
-            currentStudentNumber = "DEBUG_USER_001";
-        }
-        if (typeof currentRoomCode === 'undefined' || !currentRoomCode) {
-            currentRoomCode = "DEBUG_ROOM";
-        }
-
-        isAuthenticated = true;
-        gameState = 'game';
-        isPaused = false;
-
-        const menuOverlay = document.getElementById('menu-overlay');
-        if (menuOverlay) menuOverlay.style.display = 'none';
-        
-        // --- DYNAMIC ENTRY PROGRESSION DETERMINATION ---
-        currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
-        const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
-
-        // UPDATED: Dynamically positions the AI Avatar properties based on configuration profile on skip
-        if (currentConfig.aiNPC) {
-            aiAvatar.x = currentConfig.aiNPC.x;
-            aiAvatar.y = currentConfig.aiNPC.y;
-            aiAvatar.angle = currentConfig.aiNPC.angle || 0;
-        }
-
-        avatar.x = currentConfig.spawnX;
-        avatar.y = currentConfig.spawnY;
-        
-        // Directly references the roomConfigurations schema to grab the context angle
-        avatar.angle = (roomConfigurations[currentRoomId]?.cutscene?.directionAngle !== undefined) 
-            ? roomConfigurations[currentRoomId].cutscene.directionAngle 
-            : 90;
-        
-        isCutsceneActive = true;
-        cutsceneStartTime = Date.now();
-        
-        const inst = document.getElementById('instructions');
-        if (inst) {
-            inst.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
-        }
-        
-        const badge = document.getElementById('ai-attention-badge');
-        if (badge) badge.style.display = 'block';
-
-        // Force position updates for the overlay element immediately over new coordinates
-        if (typeof updateAttentionBadgePosition === 'function') {
-            updateAttentionBadgePosition();
-        }
-    }
-
-    if (gameState === 'title') {
-        drawTitleScreen();
-        requestAnimationFrame(draw);
-        return;
-    }
-
-    ctx.clearRect(0, 0, 800, 600);
-        
-    const activeRoomConfig = roomConfigurations[currentRoomId];
-    const activeBgImage = images[activeRoomConfig.bgKey];
-
-    if (activeBgImage && activeBgImage.naturalWidth > 0) {
-        ctx.drawImage(activeBgImage, 0, 0, 800, 600);
-    }
-
-    const activePapers = activeRoomConfig?.papers || [];
-    activePapers.forEach(p => {
-        if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            if (p.angle) {
-                ctx.rotate(p.angle * Math.PI / 180);
-            }
-            ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
-            ctx.restore();
-        }
-                
-        const dx = (avatar.x + 35) - p.x;
-        const dy = (avatar.y + 35) - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < interactionDist) {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            if (p.angle) {
-                ctx.rotate(p.angle * Math.PI / 180);
-            }
-            ctx.strokeStyle = "yellow";
-            ctx.lineWidth = 3;
-            ctx.strokeRect(-55, -40, 110, 80);
-            ctx.restore();
-        }
-    });
-
-    // --- MULTIPLAYER RENDERING PIPELINE ---
-    if (typeof remotePlayers !== 'undefined' && remotePlayers) {
-        Object.keys(remotePlayers).forEach(id => {
-            if (id.trim().toUpperCase() === currentStudentNumber.trim().toUpperCase()) return; 
-            const peer = remotePlayers[id];
-            
-            if (peer.roomCode === currentRoomCode && peer.roomId === currentRoomId) {
-                ctx.save();
-                ctx.translate(peer.x + 35, peer.y + 35);
-                ctx.rotate((peer.angle || 0) * Math.PI / 180);
-                
-                let peerSprite = images.idle;
-                if (peer.moving) {
-                    peerSprite = (Math.floor(Date.now() / 150) % 2 === 0) ? images.walkLeft : images.walkRight;
-                }
-                
-                if (peerSprite && peerSprite.complete) {
-                    ctx.drawImage(peerSprite, -35, -35, 70, 70);
-                } else {
-                    ctx.fillStyle = '#9b59b6'; 
-                    ctx.fillRect(-25, -25, 50, 50);
-                }
-                ctx.restore();
-
-                // --- FIX: Dynamic Width and Shifted Completely Above The Head ---
-                ctx.font = "bold 9px Arial";
-                const textWidth = ctx.measureText(peer.studentNumber).width;
-                const paddingX = 8;
-                const boxWidth = textWidth + paddingX;
-                const boxHeight = 14;
-                
-                // Positioned cleanly clear of the 70px head frame at y - 26
-                ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-                ctx.fillRect(peer.x + 35 - (boxWidth / 2), peer.y - 26, boxWidth, boxHeight);
-                
-                ctx.fillStyle = "#52b788"; 
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(peer.studentNumber, peer.x + 35, peer.y - 26 + (boxHeight / 2));
-            }
-        });
-    }
-
-    let localNow = Date.now();
-    let img;
-
-    if (avatar.moving) {
-        let currentSpeed = avatar.speed || 4;
-        let dynamicInterval = Math.max(60, 600 / currentSpeed);
-
-        if (localNow - avatar.lastFrameSwap > dynamicInterval) {
-            if (typeof avatar.animStep === 'undefined') avatar.animStep = 0;
-            avatar.animStep = (avatar.animStep + 1) % 4;
-            avatar.lastFrameSwap = localNow;
-        }
-
-        if (avatar.animStep === 0) {
-            img = images.walkLeft;
-        } else if (avatar.animStep === 2) {
-            img = images.walkRight;
-        } else {
-            img = images.idle;
-        }
-    } else {
-        img = images.idle;
-    }
-        
-    if (img && img.naturalWidth > 0) {
-        ctx.save();                
-        ctx.translate(avatar.x + 35, avatar.y + 35);                
-        ctx.rotate(avatar.angle * Math.PI / 180);
-        ctx.drawImage(img, -35, -35, 70, 70);
-        ctx.restore();
-    }
-
-    if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
-        ctx.save();
-        ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
-        let correctedAngle = (aiAvatar.angle || 0) + 180;
-        ctx.rotate(correctedAngle * Math.PI / 180);
-        ctx.drawImage(images.aiNPC, -35, -35, 70, 70);
-        ctx.restore();
-    }
-
-    // --- LOCAL PLAYER NAME INDICATOR ---
-    if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber) {
-        ctx.font = "bold 9px Arial";
-        const localTextWidth = ctx.measureText(currentStudentNumber).width;
-        const localPaddingX = 8;
-        const localBoxWidth = localTextWidth + localPaddingX;
-        const localBoxHeight = 14;
-
-        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-        ctx.fillRect(avatar.x + 35 - (localBoxWidth / 2), avatar.y - 26, localBoxWidth, localBoxHeight);
-        
-        ctx.fillStyle = "#52b788"; 
-        ctx.font = "bold 9px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = 'middle';
-        ctx.fillText(currentStudentNumber, avatar.x + 35, avatar.y - 26 + (localBoxHeight / 2));
-    }
-
-    if (typeof debugMode !== 'undefined' && debugMode) {
-        ctx.lineWidth = 2;
-        const currentZones = activeRoomConfig?.collisionZones || [];
-        currentZones.forEach(z => {
-            ctx.save();
-            if (z.type === 'circle') {
-                ctx.beginPath();
-                ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2);
-                ctx.strokeStyle = "red";
-                ctx.stroke();
-                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
-                ctx.fill();
-            } else {
-                ctx.translate(z.x, z.y);
-                if (z.deg) {
-                    ctx.rotate(z.deg * Math.PI / 180);
-                }
-                ctx.strokeStyle = "red";
-                ctx.strokeRect(0, 0, z.w, z.h);
-                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
-                ctx.fillRect(0, 0, z.w, z.h);
-            }
-            ctx.restore();
-        });
-    }
-
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-    ctx.fillRect(580, 10, 210, 40);
-    ctx.strokeStyle = "#dcc23c";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(580, 10, 210, 40);
-
-    ctx.fillStyle = "white";
-    ctx.font = "bold 14px Arial";
-    ctx.textAlign = "left";
-    ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
-
-    const inst = document.getElementById('instructions');
-    if (inst) {
-        const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
-        if (inst.style.display !== structuralVisibility) {
-            inst.style.display = structuralVisibility;
-        }
-    }
-
-    if (!isPaused) {
-        update();
-    }
-
-    if (fadeState === 'out') {
-        fadeAlpha += 0.05;
-        if (fadeAlpha >= 1) {
-            fadeAlpha = 1;
-            executeRoomSwitch(targetRoomId);
-            fadeState = 'in';
-        }
-    } else if (fadeState === 'in') {
-        fadeAlpha -= 0.05;
-        if (fadeAlpha <= 0) {
-            fadeAlpha = 0;
-            fadeState = 'idle';
-            targetRoomId = null;
-        }
-    }
-
-    if (fadeAlpha > 0) {
-        ctx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
-        ctx.fillRect(0, 0, 800, 600);
-    }
-
-    requestAnimationFrame(draw);
-}
-function updateAttentionBadgePosition() {
-    const badge = document.getElementById('ai-attention-badge');
-    if (badge && badge.style.display !== 'none') {
-        const canvasWidth = 800;
-        const canvasHeight = 550;
-        
-        // Horizontal anchoring remains centered over the AI NPC width
-        const leftPercent = (((aiAvatar.x + 35) / canvasWidth) * 100);
-        
-        // CHANGED: Shifted from -45 to -75 to allocate clear vertical headroom above the sprite head
-        const topPercent = (((aiAvatar.y - 60) / canvasHeight) * 100); 
-        
-        badge.style.left = `${leftPercent}%`;
-        badge.style.top = `${topPercent}%`;
-    }
-}
-
-
-
 
 // Helper to check if a point hits any defined collision box or circle
 function isInsideCollisionZone(x, y, radius = 25) {
