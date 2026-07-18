@@ -1965,325 +1965,7 @@ const SHREDDER_HEIGHT = 80;     // Adjust to change Paper Shredder height (origi
 // Adjusted to restore correct wider aspect ratio as seen in the second image
 const PRINTER_WIDTH = 76;       // Made wider (from 65) to fix the squished look
 const PRINTER_HEIGHT = 60;      // Made slightly shorter to preserve native 4:3 style aspect ratio
-function draw() {
-    if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
-        if (typeof currentStudentNumber === 'undefined' || !currentStudentNumber) {
-            currentStudentNumber = "DEBUG_USER_001";
-        }
-        if (typeof currentRoomCode === 'undefined' || !currentRoomCode) {
-            currentRoomCode = "DEBUG_ROOM";
-        }
 
-        isAuthenticated = true;
-        gameState = 'game';
-        isPaused = false;
-
-        const menuOverlay = document.getElementById('menu-overlay');
-        if (menuOverlay) menuOverlay.style.display = 'none';
-        
-        currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
-        const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
-
-        if (currentConfig.aiNPC) {
-            aiAvatar.x = currentConfig.aiNPC.x;
-            aiAvatar.y = currentConfig.aiNPC.y;
-            aiAvatar.angle = currentConfig.aiNPC.angle || 0;
-        }
-
-        avatar.x = currentConfig.spawnX;
-        avatar.y = currentConfig.spawnY;
-        
-        avatar.angle = (roomConfigurations[currentRoomId]?.cutscene?.directionAngle !== undefined) 
-            ? roomConfigurations[currentRoomId].cutscene.directionAngle 
-            : 90;
-        
-        isCutsceneActive = true;
-        cutsceneStartTime = Date.now();
-        
-        const inst = document.getElementById('instructions');
-        if (inst) {
-            inst.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
-        }
-        
-        const badge = document.getElementById('ai-attention-badge');
-        if (badge) badge.style.display = 'block';
-
-        if (typeof updateAttentionBadgePosition === 'function') {
-            updateAttentionBadgePosition();
-        }
-    }
-
-    if (gameState === 'title') {
-        drawTitleScreen();
-        requestAnimationFrame(draw);
-        return;
-    }
-
-    ctx.clearRect(0, 0, 800, 600);
-        
-    const activeRoomConfig = roomConfigurations[currentRoomId];
-    const activeBgImage = images[activeRoomConfig.bgKey];
-
-    if (activeBgImage && activeBgImage.naturalWidth > 0) {
-        ctx.drawImage(activeBgImage, 0, 0, 800, 600);
-    }
-
-    // --- RENDER DYNAMIC PHYSICAL PRINTER & SHREDDER OBJECTS ---
-    if (activeRoomConfig?.printerDevice) {
-        const printer = activeRoomConfig.printerDevice;
-        const shredder = activeRoomConfig.shredderDevice;
-
-        // 1. Draw Paper Shredder
-        if (shredder && images.paper_shredder && images.paper_shredder.naturalWidth > 0) {
-            ctx.save();
-            ctx.translate(shredder.x, shredder.y);
-            if (shredder.angle) ctx.rotate(shredder.angle * Math.PI / 180);
-            ctx.drawImage(
-                images.paper_shredder, 
-                -SHREDDER_WIDTH / 2, 
-                -SHREDDER_HEIGHT / 2, 
-                SHREDDER_WIDTH, 
-                SHREDDER_HEIGHT
-            );
-            ctx.restore();
-        }
-
-        // 2. Draw Printer (Correct aspect ratio, paper.png overlay removed)
-        if (images.printer && images.printer.naturalWidth > 0) {
-            ctx.save();
-            ctx.translate(printer.x, printer.y);
-            if (printer.angle) ctx.rotate(printer.angle * Math.PI / 180);
-            ctx.drawImage(
-                images.printer, 
-                -PRINTER_WIDTH / 2, 
-                -PRINTER_HEIGHT / 2, 
-                PRINTER_WIDTH, 
-                PRINTER_HEIGHT
-            );
-            ctx.restore();
-        }
-
-        // Proximity Highlight & Prompt for Printer
-        const pDx = (avatar.x + 35) - printer.x;
-        const pDy = (avatar.y + 35) - printer.y;
-        const printerDist = Math.sqrt(pDx * pDx + pDy * pDy);
-
-        if (printerDist < interactionDist) {
-            ctx.save();
-            ctx.translate(printer.x, printer.y);
-            ctx.strokeStyle = "yellow";
-            ctx.lineWidth = 3;
-            ctx.strokeRect(
-                -(PRINTER_WIDTH / 2 + 5), 
-                -(PRINTER_HEIGHT / 2 + 5), 
-                PRINTER_WIDTH + 10, 
-                PRINTER_HEIGHT + 10
-            );
-            ctx.restore();
-        }
-    }
-
-    const activePapers = activeRoomConfig?.papers || [];
-    activePapers.forEach(p => {
-        if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            if (p.angle) {
-                ctx.rotate(p.angle * Math.PI / 180);
-            }
-            ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
-            ctx.restore();
-        }
-                
-        const dx = (avatar.x + 35) - p.x;
-        const dy = (avatar.y + 35) - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < interactionDist) {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            if (p.angle) {
-                ctx.rotate(p.angle * Math.PI / 180);
-            }
-            ctx.strokeStyle = "yellow";
-            ctx.lineWidth = 3;
-            ctx.strokeRect(-55, -40, 110, 80);
-            ctx.restore();
-        }
-    });
-
-    // --- MULTIPLAYER RENDERING PIPELINE ---
-    if (typeof remotePlayers !== 'undefined' && remotePlayers) {
-        Object.keys(remotePlayers).forEach(id => {
-            if (id.trim().toUpperCase() === currentStudentNumber.trim().toUpperCase()) return; 
-            const peer = remotePlayers[id];
-            
-            if (peer.roomCode === currentRoomCode && peer.roomId === currentRoomId) {
-                ctx.save();
-                ctx.translate(peer.x + 35, peer.y + 35);
-                ctx.rotate((peer.angle || 0) * Math.PI / 180);
-                
-                let peerSprite = images.idle;
-                if (peer.moving) {
-                    peerSprite = (Math.floor(Date.now() / 150) % 2 === 0) ? images.walkLeft : images.walkRight;
-                }
-                
-                if (peerSprite && peerSprite.complete) {
-                    ctx.drawImage(peerSprite, -35, -35, 70, 70);
-                } else {
-                    ctx.fillStyle = '#9b59b6'; 
-                    ctx.fillRect(-25, -25, 50, 50);
-                }
-                ctx.restore();
-
-                ctx.font = "bold 9px Arial";
-                const textWidth = ctx.measureText(peer.studentNumber).width;
-                const paddingX = 8;
-                const boxWidth = textWidth + paddingX;
-                const boxHeight = 14;
-                
-                ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-                ctx.fillRect(peer.x + 35 - (boxWidth / 2), peer.y - 26, boxWidth, boxHeight);
-                
-                ctx.fillStyle = "#52b788"; 
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(peer.studentNumber, peer.x + 35, peer.y - 26 + (boxHeight / 2));
-            }
-        });
-    }
-
-    let localNow = Date.now();
-    let img;
-
-    if (avatar.moving) {
-        let currentSpeed = avatar.speed || 4;
-        let dynamicInterval = Math.max(60, 600 / currentSpeed);
-
-        if (localNow - avatar.lastFrameSwap > dynamicInterval) {
-            if (typeof avatar.animStep === 'undefined') avatar.animStep = 0;
-            avatar.animStep = (avatar.animStep + 1) % 4;
-            avatar.lastFrameSwap = localNow;
-        }
-
-        if (avatar.animStep === 0) {
-            img = images.walkLeft;
-        } else if (avatar.animStep === 2) {
-            img = images.walkRight;
-        } else {
-            img = images.idle;
-        }
-    } else {
-        img = images.idle;
-    }
-        
-    if (img && img.naturalWidth > 0) {
-        ctx.save();                
-        ctx.translate(avatar.x + 35, avatar.y + 35);                
-        ctx.rotate(avatar.angle * Math.PI / 180);
-        ctx.drawImage(img, -35, -35, 70, 70);
-        ctx.restore();
-    }
-
-    if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
-        ctx.save();
-        ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
-        let correctedAngle = (aiAvatar.angle || 0) + 180;
-        ctx.rotate(correctedAngle * Math.PI / 180);
-        ctx.drawImage(images.aiNPC, -35, -35, 70, 70);
-        ctx.restore();
-    }
-
-    // --- LOCAL PLAYER NAME INDICATOR ---
-    if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber) {
-        ctx.font = "bold 9px Arial";
-        const localTextWidth = ctx.measureText(currentStudentNumber).width;
-        const localPaddingX = 8;
-        const localBoxWidth = localTextWidth + localPaddingX;
-        const localBoxHeight = 14;
-
-        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-        ctx.fillRect(avatar.x + 35 - (localBoxWidth / 2), avatar.y - 26, localBoxWidth, localBoxHeight);
-        
-        ctx.fillStyle = "#52b788"; 
-        ctx.font = "bold 9px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = 'middle';
-        ctx.fillText(currentStudentNumber, avatar.x + 35, avatar.y - 26 + (localBoxHeight / 2));
-    }
-
-    if (typeof debugMode !== 'undefined' && debugMode) {
-        ctx.lineWidth = 2;
-        const currentZones = activeRoomConfig?.collisionZones || [];
-        currentZones.forEach(z => {
-            ctx.save();
-            if (z.type === 'circle') {
-                ctx.beginPath();
-                ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2);
-                ctx.strokeStyle = "red";
-                ctx.stroke();
-                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
-                ctx.fill();
-            } else {
-                ctx.translate(z.x, z.y);
-                if (z.deg) {
-                    ctx.rotate(z.deg * Math.PI / 180);
-                }
-                ctx.strokeStyle = "red";
-                ctx.strokeRect(0, 0, z.w, z.h);
-                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
-                ctx.fillRect(0, 0, z.w, z.h);
-            }
-            ctx.restore();
-        });
-    }
-
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-    ctx.fillRect(580, 10, 210, 40);
-    ctx.strokeStyle = "#dcc23c";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(580, 10, 210, 40);
-
-    ctx.fillStyle = "white";
-    ctx.font = "bold 14px Arial";
-    ctx.textAlign = "left";
-    ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
-
-    const inst = document.getElementById('instructions');
-    if (inst) {
-        const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
-        if (inst.style.display !== structuralVisibility) {
-            inst.style.display = structuralVisibility;
-        }
-    }
-
-    if (!isPaused) {
-        update();
-    }
-
-    if (fadeState === 'out') {
-        fadeAlpha += 0.05;
-        if (fadeAlpha >= 1) {
-            fadeAlpha = 1;
-            executeRoomSwitch(targetRoomId);
-            fadeState = 'in';
-        }
-    } else if (fadeState === 'in') {
-        fadeAlpha -= 0.05;
-        if (fadeAlpha <= 0) {
-            fadeAlpha = 0;
-            fadeState = 'idle';
-            targetRoomId = null;
-        }
-    }
-
-    if (fadeAlpha > 0) {
-        ctx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
-        ctx.fillRect(0, 0, 800, 600);
-    }
-
-    requestAnimationFrame(draw);
-}
 function showEmailPopup(paper) {
     isPaused = true;
     currentPaper = paper;
@@ -2435,7 +2117,7 @@ function checkAvatarBoundaries(targetX, targetY) {
     const localCenterX = targetX + HALF_SIZE;
     const localCenterY = targetY + HALF_SIZE;
 
-    // 1. Check against the AI Avatar Bounding Box
+    // 1. Keep checking against the AI Avatar Bounding Box (Do not walk over AI)
     if (typeof aiAvatar !== 'undefined' && aiAvatar) {
         const aiCenterX = aiAvatar.x + HALF_SIZE;
         const aiCenterY = aiAvatar.y + HALF_SIZE;
@@ -2447,19 +2129,7 @@ function checkAvatarBoundaries(targetX, targetY) {
         }
     }
 
-    if (typeof remotePlayers !== 'undefined' && remotePlayers) {
-        for (let id in remotePlayers) {
-            const p = remotePlayers[id];
-            // --- FIX: Only calculate solid body collisions if the peer is in the exact same room window ---
-            if (p.roomCode !== currentRoomCode || p.roomId !== currentRoomId) continue;
-            
-            const peerCenterX = p.x + HALF_SIZE;
-            const peerCenterY = p.y + HALF_SIZE;
-            if (Math.abs(localCenterX - peerCenterX) < (HALF_SIZE + PADDING) && Math.abs(localCenterY - peerCenterY) < (HALF_SIZE + PADDING)) {
-                return false; // Blocks local translation from overlapping peer perimeters
-            }
-        }
-    }
+    // REMOVED: Remote players check loop from here to allow walking over them
 
     return true; // All clear!
 }
@@ -2482,21 +2152,11 @@ function checkAvatarBoundaries(targetX, targetY) {
         }
     });
 }
-
-    function drawTitleScreen() {
-        ctx.clearRect(0, 0, 800, 600);
-        
-        ctx.save();
-        ctx.globalAlpha = 0.50; 
-        if (images.background && images.background.naturalWidth > 0) {
-            ctx.drawImage(images.background, 0, 0, 800, 600);
-        }
-        
-        ctx.restore(); 
-
-        ctx.fillStyle = 'rgba(13, 14, 21, 0.4)'; 
-        ctx.fillRect(0, 0, 800, 600);
-    }
+// Prevent local avatar from stepping inside another student's perimeter
+function checkPeerPlayerCollisions(nextX, nextY) {
+    // Return false immediately to allow ghosting through remote peer players
+    return false; 
+}
 
 // Helper to check if a point hits any defined collision box or circle
 function isInsideCollisionZone(x, y, radius = 25) {
@@ -2517,6 +2177,349 @@ function isInsideCollisionZone(x, y, radius = 25) {
     }
     return false;
 }
+function draw() {
+    if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
+        if (typeof currentStudentNumber === 'undefined' || !currentStudentNumber) {
+            currentStudentNumber = "DEBUG_USER_001";
+        }
+        if (typeof currentRoomCode === 'undefined' || !currentRoomCode) {
+            currentRoomCode = "DEBUG_ROOM";
+        }
+
+        isAuthenticated = true;
+        gameState = 'game';
+        isPaused = false;
+
+        const menuOverlay = document.getElementById('menu-overlay');
+        if (menuOverlay) menuOverlay.style.display = 'none';
+        
+        currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
+        const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+
+        if (currentConfig.aiNPC) {
+            aiAvatar.x = currentConfig.aiNPC.x;
+            aiAvatar.y = currentConfig.aiNPC.y;
+            aiAvatar.angle = currentConfig.aiNPC.angle || 0;
+        }
+
+        avatar.x = currentConfig.spawnX;
+        avatar.y = currentConfig.spawnY;
+        
+        avatar.angle = (roomConfigurations[currentRoomId]?.cutscene?.directionAngle !== undefined) 
+            ? roomConfigurations[currentRoomId].cutscene.directionAngle 
+            : 90;
+        
+        isCutsceneActive = true;
+        cutsceneStartTime = Date.now();
+        
+        const inst = document.getElementById('instructions');
+        if (inst) {
+            inst.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
+        }
+        
+        const badge = document.getElementById('ai-attention-badge');
+        if (badge) badge.style.display = 'block';
+
+        if (typeof updateAttentionBadgePosition === 'function') {
+            updateAttentionBadgePosition();
+        }
+    }
+
+    if (gameState === 'title') {
+        drawTitleScreen();
+        requestAnimationFrame(draw);
+        return;
+    }
+
+    ctx.clearRect(0, 0, 800, 600);
+        
+    const activeRoomConfig = roomConfigurations[currentRoomId];
+    const activeBgImage = images[activeRoomConfig.bgKey];
+
+    if (activeBgImage && activeBgImage.naturalWidth > 0) {
+        ctx.drawImage(activeBgImage, 0, 0, 800, 600);
+    }
+
+    // --- RENDER DYNAMIC PHYSICAL PRINTER & SHREDDER OBJECTS ---
+    if (activeRoomConfig?.printerDevice) {
+        const printer = activeRoomConfig.printerDevice;
+        const shredder = activeRoomConfig.shredderDevice;
+
+        // 1. Draw Paper Shredder
+        if (shredder && images.paper_shredder && images.paper_shredder.naturalWidth > 0) {
+            ctx.save();
+            ctx.translate(shredder.x, shredder.y);
+            if (shredder.angle) ctx.rotate(shredder.angle * Math.PI / 180);
+            ctx.drawImage(
+                images.paper_shredder, 
+                -SHREDDER_WIDTH / 2, 
+                -SHREDDER_HEIGHT / 2, 
+                SHREDDER_WIDTH, 
+                SHREDDER_HEIGHT
+            );
+            ctx.restore();
+        }
+
+        // 2. Draw Printer
+        if (images.printer && images.printer.naturalWidth > 0) {
+            ctx.save();
+            ctx.translate(printer.x, printer.y);
+            if (printer.angle) ctx.rotate(printer.angle * Math.PI / 180);
+            ctx.drawImage(
+                images.printer, 
+                -PRINTER_WIDTH / 2, 
+                -PRINTER_HEIGHT / 2, 
+                PRINTER_WIDTH, 
+                PRINTER_HEIGHT
+            );
+            ctx.restore();
+        }
+
+        // Proximity Highlight & Prompt for Printer
+        const pDx = (avatar.x + 35) - printer.x;
+        const pDy = (avatar.y + 35) - printer.y;
+        const printerDist = Math.sqrt(pDx * pDx + pDy * pDy);
+
+        if (printerDist < interactionDist) {
+            ctx.save();
+            ctx.translate(printer.x, printer.y);
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(
+                -(PRINTER_WIDTH / 2 + 5), 
+                -(PRINTER_HEIGHT / 2 + 5), 
+                PRINTER_WIDTH + 10, 
+                PRINTER_HEIGHT + 10
+            );
+            ctx.restore();
+        }
+    }
+
+    const activePapers = activeRoomConfig?.papers || [];
+    activePapers.forEach(p => {
+        if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            if (p.angle) {
+                ctx.rotate(p.angle * Math.PI / 180);
+            }
+            ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
+            ctx.restore();
+        }
+                
+        const dx = (avatar.x + 35) - p.x;
+        const dy = (avatar.y + 35) - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < interactionDist) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            if (p.angle) {
+                ctx.rotate(p.angle * Math.PI / 180);
+            }
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-55, -40, 110, 80);
+            ctx.restore();
+        }
+    });
+
+    // =========================================================================
+    // LAYER 1: MULTIPLAYER RENDERING (Peers render underneath local player)
+    // =========================================================================
+    if (typeof remotePlayers !== 'undefined' && remotePlayers) {
+        Object.keys(remotePlayers).forEach(id => {
+            if (id.trim().toUpperCase() === currentStudentNumber.trim().toUpperCase()) return; 
+            const peer = remotePlayers[id];
+            
+            if (peer.roomCode === currentRoomCode && peer.roomId === currentRoomId) {
+                ctx.save();
+                ctx.translate(peer.x + 35, peer.y + 35);
+                ctx.rotate((peer.angle || 0) * Math.PI / 180);
+                
+                let peerSprite = images.idle;
+                if (peer.moving) {
+                    peerSprite = (Math.floor(Date.now() / 150) % 2 === 0) ? images.walkLeft : images.walkRight;
+                }
+                
+                if (peerSprite && peerSprite.complete) {
+                    ctx.drawImage(peerSprite, -35, -35, 70, 70);
+                } else {
+                    ctx.fillStyle = '#9b59b6'; 
+                    ctx.fillRect(-25, -25, 50, 50);
+                }
+                ctx.restore();
+
+                ctx.font = "bold 9px Arial";
+                const textWidth = ctx.measureText(peer.studentNumber).width;
+                const paddingX = 8;
+                const boxWidth = textWidth + paddingX;
+                const boxHeight = 14;
+                
+                ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+                ctx.fillRect(peer.x + 35 - (boxWidth / 2), peer.y - 26, boxWidth, boxHeight);
+                
+                ctx.fillStyle = "#52b788"; 
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(peer.studentNumber, peer.x + 35, peer.y - 26 + (boxHeight / 2));
+            }
+        });
+    }
+
+    // =========================================================================
+    // LAYER 2: LOCAL PLAYER AVATAR (Draws over remote peers for Ghost Mode)
+    // =========================================================================
+    let localNow = Date.now();
+    let img;
+
+    if (avatar.moving) {
+        let currentSpeed = avatar.speed || 4;
+        let dynamicInterval = Math.max(60, 600 / currentSpeed);
+
+        if (localNow - avatar.lastFrameSwap > dynamicInterval) {
+            if (typeof avatar.animStep === 'undefined') avatar.animStep = 0;
+            avatar.animStep = (avatar.animStep + 1) % 4;
+            avatar.lastFrameSwap = localNow;
+        }
+
+        if (avatar.animStep === 0) {
+            img = images.walkLeft;
+        } else if (avatar.animStep === 2) {
+            img = images.walkRight;
+        } else {
+            img = images.idle;
+        }
+    } else {
+        img = images.idle;
+    }
+        
+    if (img && img.naturalWidth > 0) {
+        ctx.save();                
+        ctx.translate(avatar.x + 35, avatar.y + 35);                
+        ctx.rotate(avatar.angle * Math.PI / 180);
+        ctx.drawImage(img, -35, -35, 70, 70);
+        ctx.restore();
+    }
+
+    // =========================================================================
+    // LAYER 3: AI NPC (Always on top layer with solid physical restrictions)
+    // =========================================================================
+    if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
+        ctx.save();
+        ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
+        let correctedAngle = (aiAvatar.angle || 0) + 180;
+        ctx.rotate(correctedAngle * Math.PI / 180);
+        ctx.drawImage(images.aiNPC, -35, -35, 70, 70);
+        ctx.restore();
+    }
+
+    // --- LOCAL PLAYER NAME INDICATOR ---
+    if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber) {
+        ctx.font = "bold 9px Arial";
+        const localTextWidth = ctx.measureText(currentStudentNumber).width;
+        const localPaddingX = 8;
+        const localBoxWidth = localTextWidth + localPaddingX;
+        const localBoxHeight = 14;
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+        ctx.fillRect(avatar.x + 35 - (localBoxWidth / 2), avatar.y - 26, localBoxWidth, localBoxHeight);
+        
+        ctx.fillStyle = "#52b788"; 
+        ctx.font = "bold 9px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = 'middle';
+        ctx.fillText(currentStudentNumber, avatar.x + 35, avatar.y - 26 + (localBoxHeight / 2));
+    }
+
+    if (typeof debugMode !== 'undefined' && debugMode) {
+        ctx.lineWidth = 2;
+        const currentZones = activeRoomConfig?.collisionZones || [];
+        currentZones.forEach(z => {
+            ctx.save();
+            if (z.type === 'circle') {
+                ctx.beginPath();
+                ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = "red";
+                ctx.stroke();
+                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
+                ctx.fill();
+            } else {
+                ctx.translate(z.x, z.y);
+                if (z.deg) {
+                    ctx.rotate(z.deg * Math.PI / 180);
+                }
+                ctx.strokeStyle = "red";
+                ctx.strokeRect(0, 0, z.w, z.h);
+                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
+                ctx.fillRect(0, 0, z.w, z.h);
+            }
+            ctx.restore();
+        });
+    }
+
+    // --- HUD RENDER ---
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(580, 10, 210, 40);
+    ctx.strokeStyle = "#dcc23c";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(580, 10, 210, 40);
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 14px Arial";
+    ctx.textAlign = "left";
+    ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
+
+    const inst = document.getElementById('instructions');
+    if (inst) {
+        const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
+        if (inst.style.display !== structuralVisibility) {
+            inst.style.display = structuralVisibility;
+        }
+    }
+
+    if (!isPaused) {
+        update();
+    }
+
+    if (fadeState === 'out') {
+        fadeAlpha += 0.05;
+        if (fadeAlpha >= 1) {
+            fadeAlpha = 1;
+            executeRoomSwitch(targetRoomId);
+            fadeState = 'in';
+        }
+    } else if (fadeState === 'in') {
+        fadeAlpha -= 0.05;
+        if (fadeAlpha <= 0) {
+            fadeAlpha = 0;
+            fadeState = 'idle';
+            targetRoomId = null;
+        }
+    }
+
+    if (fadeAlpha > 0) {
+        ctx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
+        ctx.fillRect(0, 0, 800, 600);
+    }
+
+    requestAnimationFrame(draw);
+}
+    function drawTitleScreen() {
+        ctx.clearRect(0, 0, 800, 600);
+        
+        ctx.save();
+        ctx.globalAlpha = 0.50; 
+        if (images.background && images.background.naturalWidth > 0) {
+            ctx.drawImage(images.background, 0, 0, 800, 600);
+        }
+        
+        ctx.restore(); 
+
+        ctx.fillStyle = 'rgba(13, 14, 21, 0.4)'; 
+        ctx.fillRect(0, 0, 800, 600);
+    }
+
 
 function getRandomSpawnPosition() {
     const baseSpawnX = 300; 
@@ -2574,32 +2577,7 @@ function getRandomSpawnPosition() {
     // Safe fall-back value if the entire row line is tightly packed
     return { x: baseSpawnX, y: baseSpawnY };
 }
-// Prevent local avatar from stepping inside another student's perimeter
-function checkPeerPlayerCollisions(nextX, nextY) {
-    if (typeof remotePlayers === 'undefined' || !remotePlayers) return false;
 
-    for (let id of Object.keys(remotePlayers)) {
-        // Skip comparing against yourself if your ID slips into the loop mapping
-        if (id === currentStudentNumber) continue;
-
-        const p = remotePlayers[id];
-        
-        // --- MULTI-ROOM VERIFICATION FILTER ---
-        // Only check collisions if the peer is in the exact same room structure matrix
-        if (p.roomCode === currentRoomCode && p.roomId === currentRoomId) {
-            const dx = nextX - p.x;
-            const dy = nextY - p.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-
-            // 40px boundary threshold (adjust based on sprite thickness layouts)
-            if (distance < 40) {
-                return true; // Collision detected, halt movement
-            }
-        }
-    }
-
-    return false; // Path clear
-}
     loadImages();
 </script>
 </body>
