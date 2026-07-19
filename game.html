@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,7 +21,6 @@
         max-width: 1000px;  
         aspect-ratio: 8 / 6; 
         overflow: hidden;
-        /* Establishes a scaling container query scope for all internal elements */
         container-type: size; 
         box-sizing: border-box;
     }
@@ -55,7 +51,6 @@
         padding: 4cqw;
     }
 
-    /* --- RESPONSIVE INTERFACE AUTH PORTAL --- */
     .portal-title {
         color: #dcc23c; 
         font-size: 4.8cqw; 
@@ -129,7 +124,6 @@
     .access-prompt-text { font-size: 2.2cqw; margin: 0; color: #cbd5e1; }
     .highlight-key { color: #dcc23c; font-weight: bold; }
 
-    /* --- DYNAMIC INTERACTION POPUPS (No Cutoff) --- */
     #popup-overlay {
         display: none; position: absolute; 
         top: 0; left: 0; width: 100%; height: 100%; 
@@ -137,7 +131,6 @@
         box-sizing: border-box;
     }
     
-    /* --- DYNAMIC INTERACTION POPUPS (No Cutoff) --- */
     #popup-content {
         background: #f7f7f7; 
         color: #3a3a3a; 
@@ -153,7 +146,6 @@
         line-height: 1.4;
     }
 
-    /* Class for centered workstation laptop modals remains untouched */
     .center-modal-mode {
         width: 48cqw !important;
         padding: 4cqh 4cqw !important;
@@ -163,23 +155,19 @@
         border-radius: 20px;
     }
 
-    /* CRITICAL FIX: Transforms the speech bubble into a clean, fixed bottom dialogue box */
     .dialogue-bubble-mode {
-        width: 94cqw !important;             /* Spans across the view safely with side padding */
-        height: 22cqh !important;            /* Fixed vertical thickness for readable text lines */
+        width: 94cqw !important;             
+        height: 22cqh !important;            
         padding: 2.5cqh 4cqw !important;
-        border-radius: 12px;                 /* Sleek geometric layout matching reference games */
+        border-radius: 12px;                 
         border: 3px solid #3a4759;
         background: rgba(247, 247, 247, 0.98); 
-        
-        /* Fixed structural anchoring to the bottom center of the container */
         left: 50% !important;
-        top: auto !important;                /* Breaks inline tracking overrides */
-        bottom: 3cqh !important;             /* Sits cleanly just above the container floor */
+        top: auto !important;                
+        bottom: 3cqh !important;             
         transform: translateX(-50%) !important; 
     }
 
-    /* CRITICAL FIX: Suppresses and eliminates the old floating triangle pointer completely */
     .dialogue-bubble-mode::after {
         display: none !important;
         content: none !important;
@@ -208,7 +196,6 @@
     .highlight-blue { color: #3498db; font-weight: bold; }
     .highlight-green { color: #2ecc71; font-weight: bold; }
 
-    /* --- EMAIL SCENARIO ELEMENTS --- */
     .email-container {
         background: #fff; border: 1px solid #ccc; text-align: left;
         border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -226,7 +213,7 @@
 
     .email-option.selected { border-color: #4285f4; background: #e8f0fe; }
     .popup-layout-wrapper { display: flex; flex-direction: column; width: 100%; }
-/* Background Dim Mask */
+
 #settings-overlay {
     display: none; 
     position: fixed; 
@@ -240,7 +227,6 @@
     align-items: center;
 }
 
-/* The Settings Window Card - Solid and distinct from the game viewport */
 .settings-modal {
     background: #ffffff; 
     padding: 2.5rem; 
@@ -368,9 +354,12 @@
     </div>
 <script>
 const API_BASE = window.location.origin;
-let userIsWindowInactive = false; // Tracks if tab is backgrounded
+let userIsWindowInactive = false; 
 
-// --- GLOBAL LISTENERS (Register instantly on script evaluation) ---
+let laptopAttempts = { room1: 0, room2: 0, room3: 0 };
+let printerAttempts = { room1: 0, room2: 0, room3: 0 };
+let aiDialogueMessageOverride = "";
+
 document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
         userIsWindowInactive = true;
@@ -387,7 +376,6 @@ document.addEventListener("visibilitychange", () => {
     }
 });
 
-// Clean slate exit execution helper
 function dispatchDisconnectBeacon() {
     if (typeof isAuthenticated === 'undefined' || !isAuthenticated || !currentStudentNumber) {
         return;
@@ -398,12 +386,9 @@ function dispatchDisconnectBeacon() {
         studentNumber: currentStudentNumber.trim().toUpperCase()
     });
     
-    // Beacon handles clean drops synchronously on page teardown/refresh.
-    // We send as a plain string payload to bypass preflight requests during fast teardown.
     if (navigator.sendBeacon) {
         navigator.sendBeacon(disconnectUrl, payload);
     } else {
-        // Fallback synchronous fetch
         fetch(disconnectUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
@@ -413,38 +398,30 @@ function dispatchDisconnectBeacon() {
     }
 }
 
-// Fire when page is closing, refreshed, or navigating away
 window.addEventListener("beforeunload", () => {
     dispatchDisconnectBeacon();
 });
 
-// Handle mobile browsers where beforeunload is unreliable
 window.addEventListener("pagehide", () => {
     dispatchDisconnectBeacon();
 });
 let isSafeCompleted = false;
 let isSavvyCompleted = false;
 let isSocialCompleted = false;
-
-// Global flag to indicate the entire suite of modules has been finished
 let hasCompletedAllTasks = false; 
 
-// --- DYNAMIC PROGRESSION ROUTING ---
 function getSpawnRoomByScore(score) {
     if (score >= 60) return 'room3';
     if (score >= 30) return 'room2';
     return 'room1';
 }
 
-// --- UI AND INITIALIZATION MECHANICS ---
 document.addEventListener("DOMContentLoaded", () => {
     const loginBtn = document.getElementById('login-submit-btn');
     const inputField = document.getElementById('student-number-input');
     const errorMsg = document.getElementById('login-error-msg');
     const loginContainer = document.getElementById('login-container');
     const startPrompt = document.getElementById('start-prompt');
-    
-    // Target the newly added exit button and settings container
     const exitGameBtn = document.getElementById('exit-game-btn');
     const settingsOverlay = document.getElementById('settings-overlay');
 
@@ -457,7 +434,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // STEP 1: Query credentials and load existing progress scores from Firebase first
         fetch(`${API_BASE}/api/auth`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -475,29 +451,21 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const record = authResult.data;
-            
-            // Sync divided scores to reconstruct the exact global telemetry score locally
             const safe = record.safe_score || 0;
             const savvy = record.savvy_score || 0;
             const social = record.social_score || 0;
             cyberknowledgeScore = safe + savvy + social;
 
-            // Sync and store completed flags from record or fallback to score limits
             isSafeCompleted = record.safe_completed === 1 || safe >= 20;
             isSavvyCompleted = record.savvy_completed === 1 || savvy >= 20;
             isSocialCompleted = record.social_completed === 1 || social >= 20;
 
-            // CRITICAL: Determine overall completion to bypass AI avatar's "fail/retry" checks
             if (isSafeCompleted && isSavvyCompleted && isSocialCompleted) {
                 hasCompletedAllTasks = true;
             } else {
                 hasCompletedAllTasks = false;
             }
 
-            console.log(`[CLOUD RECOVERY] Student authenticated! Syncing active scores -> Safe: ${safe}, Savvy: ${savvy}, Social: ${social} | Total Local: ${cyberknowledgeScore}`);
-            console.log(`[MODULE COMPLETIONS] Safe: ${isSafeCompleted}, Savvy: ${isSavvyCompleted}, Social: ${isSocialCompleted} | All Tasks Complete: ${hasCompletedAllTasks}`);
-
-            // STEP 2: Establish the multiplayer channel
             const roomSelection = prompt("Enter a Room Code to join or create (e.g., ROOM1):", "ROOM1");
             if (!roomSelection) {
                 alert("A room code is required for multiplayer mapping functionality.");
@@ -505,11 +473,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const targetRoomCode = roomSelection.trim().toUpperCase();
-            
-            // Calculate starting room dynamically using the synced score and new routing rules
             const temporaryRoomId = getSpawnRoomByScore(cyberknowledgeScore);
 
-            // STEP 3: Request session registration from active server shard matching calculated roomId
             return fetch(`${API_BASE}/api/multiplayer/join-room`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -526,44 +491,34 @@ document.addEventListener("DOMContentLoaded", () => {
                 return res.json();
             })
             .then(roomData => {
-                // SUCCESS: Synchronously align all active client coordinates and room states
                 currentStudentNumber = studentId;
                 currentRoomCode = targetRoomCode;
-                currentRoomId = roomData.roomId || temporaryRoomId; // Bind to server response room validation
+                currentRoomId = roomData.roomId || temporaryRoomId; 
 
                 const activeConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
                 
-                // --- CRITICAL POSITION SYNCHRONIZATION ---
-                // Sync Player Avatar position
                 avatar.x = activeConfig.spawnX; 
                 avatar.y = activeConfig.spawnY;
                 avatar.angle = activeConfig.cutscene?.directionAngle || 180;
 
-                // Sync AI NPC Avatar position (Forces correct config coordinates immediately on login load)
                 if (activeConfig.aiNPC) {
                     aiAvatar.x = activeConfig.aiNPC.x;
                     aiAvatar.y = activeConfig.aiNPC.y;
                     aiAvatar.angle = activeConfig.aiNPC.angle || 0;
                 }
                 
-                // Set interactive locking states based on completed modules
                 applyRoomCompletionStates(currentRoomId);
                 
                 isCutsceneActive = true;
                 cutsceneStartTime = Date.now();
-
-                // CRITICAL ENGINE REVEAL FLAG: Open telemetry pipelines
                 isAuthenticated = true; 
                 
                 errorMsg.style.display = 'none';
                 loginContainer.style.display = 'none';
                 startPrompt.style.display = 'block';
-
-                console.log(`Session authorized: ${currentStudentNumber} spawned inside ${currentRoomId} within room channel ${currentRoomCode}. AI NPC located at (${aiAvatar.x}, ${aiAvatar.y})`);
             });
         })
         .catch(err => {
-            // RESET ENGINE TARGETS ON ERROR
             currentStudentNumber = "";
             currentRoomCode = "";
             isAuthenticated = false;
@@ -573,7 +528,6 @@ document.addEventListener("DOMContentLoaded", () => {
             isSocialCompleted = false;
             hasCompletedAllTasks = false;
 
-            console.error("Multiplayer room admission rejected:", err);
             errorMsg.textContent = `⚠ ${err.message}`;
             errorMsg.style.display = 'block';
         });
@@ -583,17 +537,14 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.key === 'Enter') loginBtn.click();
     });
 
-    // --- EXPLICIT EXIT GAME BUTTON HANDLES ---
     if (exitGameBtn) {
         exitGameBtn.addEventListener('click', () => {
             if (!confirm("Are you sure you want to exit the current game session?")) {
                 return;
             }
 
-            // 1. Trigger the clean disconnect beacon immediately
             dispatchDisconnectBeacon();
 
-            // 2. Clear out client tracking states to stop ghost render objects
             isAuthenticated = false;
             currentStudentNumber = "";
             currentRoomCode = "";
@@ -603,52 +554,39 @@ document.addEventListener("DOMContentLoaded", () => {
             isSavvyCompleted = false;
             isSocialCompleted = false;
             hasCompletedAllTasks = false;
-            remotePlayers = {}; // Wipe local cache clones instantly
+            remotePlayers = {}; 
 
-            // 3. Reset game state mechanics
             gameState = 'menu';
             isPaused = false;
 
-            // 4. Interface visibility toggle updates
             if (settingsOverlay) settingsOverlay.style.display = 'none';
             if (startPrompt) startPrompt.style.display = 'none';
             
-            // Clean slate inputs for next participant
             if (inputField) inputField.value = "";
             if (errorMsg) errorMsg.style.display = 'none';
             if (loginContainer) loginContainer.style.display = 'block';
 
-            console.log("[SESSION CLOSED] Player left the shard room intentionally. Reloading...");
-            
-            // Force clean page refresh to purge Canvas memories, keys, and intervals completely
             window.location.reload();
         });
     }
 });
 
-// --- TRANSITION MANAGER ---
 function transitionToRoom(roomId) {
     if (fadeState !== 'idle') return;
 
-    // BRANCHING ROUTE LOGIC: Intercept progression if leaving Room 1
     if (currentRoomId === 'room1' && roomId === 'room2') {
-        // Evaluate score to determine path threshold (aligned to new milestones)
         if (cyberknowledgeScore >= 60) {
-            console.log(`[Branching Route]: Score is ${cyberknowledgeScore}. High proficiency path unlocked to Room 3.`);
             targetRoomId = 'room3';
         } else {
-            console.log(`[Branching Route]: Score is ${cyberknowledgeScore}. Baseline path routing to Room 2.`);
             targetRoomId = 'room2';
         }
     } else {
-        // Standard non-branching progression
         targetRoomId = roomId;
     }
 
     fadeState = 'out';
 }
 
-// --- NEW HELPER: APPLY LOCKS AND UPDATE NPC DIALOGUE BASED ON COMPLETED MODULES ---
 function applyRoomCompletionStates(roomId) {
     const config = roomConfigurations[roomId];
     if (!config) return;
@@ -659,24 +597,16 @@ function applyRoomCompletionStates(roomId) {
     if (roomId === 'room3' && isSocialCompleted) isCurrentModuleCompleted = true;
 
     if (isCurrentModuleCompleted) {
-        console.log(`[STATE LOCK] ${roomId} is already completed. Locking laptop and routing AI NPC to success dialogue.`);
-        
-        // 1. Lock the laptop interactions
         laptopLocked = true;
-
-        // 2. Clear out or mark papers in this room as already solved
         if (config.papers) {
             config.papers.forEach(paper => {
                 paper.answered = true;
                 paper.scoreProcessed = true;
-                paper.hasConsultedAI = true; // Set to true so completed rooms don't trigger blocks
+                paper.hasConsultedAI = true; 
             });
         }
-
-        // 3. Overwrite AI NPC's message state key to success dialog variants
         aiAvatar.messageType = `${roomId}_success`; 
     } else {
-        // --- SECURE WORKSTATION: Strictly lock the laptop on room entry ---
         laptopLocked = true; 
         aiAvatar.messageType = config.aiNPC.messageType;
         
@@ -684,13 +614,12 @@ function applyRoomCompletionStates(roomId) {
             config.papers.forEach(paper => {
                 paper.answered = false;
                 paper.scoreProcessed = false;
-                paper.hasConsultedAI = false; // Player must consult the AI in this level first
+                paper.hasConsultedAI = false; 
             });
         }
     }
 }
 
-// --- EXECUTE ROOM SWITCH ---
 function executeRoomSwitch(roomId) {
     currentRoomId = roomId;
     const config = roomConfigurations[roomId];
@@ -700,15 +629,12 @@ function executeRoomSwitch(roomId) {
         return;
     }
 
-    // 1. Force-sync AI Avatar coordinates to the configuration values
     aiAvatar.x = config.aiNPC.x;
     aiAvatar.y = config.aiNPC.y;
     aiAvatar.angle = config.aiNPC.angle || 0; 
     
-    // 2. Assess and apply dynamic lockouts or success message configurations
     applyRoomCompletionStates(roomId);
 
-    // 3. Force-sync User's Player Avatar coordinates to correct spawning configuration
     avatar.x = config.spawnX;
     avatar.y = config.spawnY;
     avatar.angle = config.cutscene?.directionAngle || 180;
@@ -716,7 +642,6 @@ function executeRoomSwitch(roomId) {
     isCutsceneActive = true;
     cutsceneStartTime = Date.now();
 
-    // 4. Coordinate telemetry alignment on environment floor map
     const badge = document.getElementById('ai-attention-badge');
     if (badge) {
         badge.style.display = 'block';
@@ -725,10 +650,8 @@ function executeRoomSwitch(roomId) {
     if (typeof updateAttentionBadgePosition === 'function') {
         updateAttentionBadgePosition();
     }
-
-    console.log(`[EXECUTE ROOM SWITCH COMPLETE] Routed to: ${roomId}. Player: (${avatar.x}, ${avatar.y}) | AI: (${aiAvatar.x}, ${aiAvatar.y}) | Laptop Locked: ${laptopLocked} | Message Key: ${aiAvatar.messageType}`);
 }
-// --- CORE NETWORKING ENGINE PIPELINE ---
+
 function syncPlayerCoordinates() {
     if (typeof isAuthenticated === 'undefined' || !isAuthenticated || !currentStudentNumber || !currentRoomCode) {
         return; 
@@ -746,7 +669,7 @@ function syncPlayerCoordinates() {
             angle: avatar.angle,
             moving: avatar.moving,
             animStep: avatar.frame || 0,
-            isInactive: userIsWindowInactive // Send dynamic status to server
+            isInactive: userIsWindowInactive 
         })
     })
     .then(res => {
@@ -761,7 +684,6 @@ function syncPlayerCoordinates() {
     .catch(err => console.error("Multiplayer heartbeat synchronization failed:", err));
 }
 
-// Telemetry dispatch loop: Fires updates every 150ms during active game loops
 setInterval(() => {
     if (gameState === 'game' && typeof isAuthenticated !== 'undefined' && isAuthenticated) {
         if (typeof syncPlayerCoordinates === 'function') {
@@ -769,126 +691,109 @@ setInterval(() => {
         }
     }
 }, 150);
+
 const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const popupOverlay = document.getElementById('popup-overlay');
-        
-    const images = {};
-    const imageFiles = {
-        background: 'room_background.jpg',
-        living: 'room_living.png',
-        kitchen: 'room_kitchen.png',
-        idle: 'avatar_idle.png',
-        walkLeft: 'avatar_walk_left.png',
-        walkRight: 'avatar_walk_right.png',
-        laptopEmail: 'Laptop-computer1.png',
-        printer: 'printer (2).png',
-        paper_shredder: 'paper_shredder.png',
-        paper: 'paper.png',
-        aiNPC: 'ai_helper_avatar.png'
-    };
-    let currentRoomCode = ""; 
-    var remotePlayers = {};
-    let skipTitleScreen = false;
-    let debugMode = false; 
-    let showGuideControls = false;
-    let imagesLoaded = 0;
-    const totalImages = Object.keys(imageFiles).length;
-    let gameState = 'title';
-    let isPaused = false;
-    let currentPaper = null;
-    let showingAIDialogue = false; 
-    const interactionDist = 80;
-    let isCutsceneActive = false;       
+const ctx = canvas.getContext('2d');
+const popupOverlay = document.getElementById('popup-overlay');
+    
+const images = {};
+const imageFiles = {
+    background: 'room_background.jpg',
+    living: 'room_living.png',
+    kitchen: 'room_kitchen.png',
+    idle: 'avatar_idle.png',
+    walkLeft: 'avatar_walk_left.png',
+    walkRight: 'avatar_walk_right.png',
+    laptopEmail: 'Laptop-computer1.png',
+    printer: 'printer.png',
+    paper_shredder: 'paper_shredder.png',
+    paper: 'paper.png',
+    aiNPC: 'ai_helper_avatar.png'
+};
+let currentRoomCode = ""; 
+var remotePlayers = {};
+let skipTitleScreen = false;
+let debugMode = false; 
+let showGuideControls = false;
+let imagesLoaded = 0;
+const totalImages = Object.keys(imageFiles).length;
+let gameState = 'title';
+let isPaused = false;
+let currentPaper = null;
+let showingAIDialogue = false; 
+const interactionDist = 80;
+let isCutsceneActive = false;       
 let cutsceneStartTime = 0;          
 
-// Global Audio Configuration Engine
 const sounds = {
-    walking: new Audio('walking.mp3')   // Your Walking Sound Effect file
+    walking: new Audio('walking.mp3')   
 };
 
-// Configure audio loop rules immediately upon loading
 sounds.walking.loop = true;
-
-// Set default fallback volumes (80% matching our slider defaults)
 sounds.walking.volume = 1;
-    // Global room identifiers
-    let currentRoomId = 'room1';
+let currentRoomId = 'room1';
 
-    // Screen Fade Control State Machine Hooks
-    let fadeAlpha = 0;
-    let fadeState = 'idle'; // Options: 'idle', 'out', 'in'
-    let targetRoomId = null;
-    function loadImages() {
-        for (let key in imageFiles) {
-            images[key] = new Image();
-            images[key].src = imageFiles[key];
-                    
-            images[key].onload = () => { 
-                 if (++imagesLoaded === totalImages) {
-                    draw(); 
-                } 
-             };
-            images[key].onerror = () => {
-                if (++imagesLoaded === totalImages) {
-                    draw(); 
-                }
-            };
-        }
+let fadeAlpha = 0;
+let fadeState = 'idle'; 
+let targetRoomId = null;
+
+function loadImages() {
+    for (let key in imageFiles) {
+        images[key] = new Image();
+        images[key].src = imageFiles[key];
+                
+        images[key].onload = () => { 
+             if (++imagesLoaded === totalImages) {
+                draw(); 
+            } 
+         };
+        images[key].onerror = () => {
+            if (++imagesLoaded === totalImages) {
+                draw(); 
+            }
+        };
     }
+}
 
-    const avatar = { 
-        x: 300, 
-        y: 380, 
-        width: 70, 
-        height: 70, 
-        speed: 4, 
-        moving: false, 
-        lastDir: 'right', 
-        angle: 0, 
-        frame: 0, 
-        lastFrameSwap: 0    
-    };
+const avatar = { 
+    x: 300, 
+    y: 380, 
+    width: 70, 
+    height: 70, 
+    speed: 4, 
+    moving: false, 
+    lastDir: 'right', 
+    angle: 0, 
+    frame: 0, 
+    lastFrameSwap: 0    
+};
 
-    const aiAvatar = {
-        x: 100,             
-        y: 240,             
-        width: 70,
-        height: 70,
-        angle: 180,         
-        radius: 45          
-    };
+const aiAvatar = {
+    x: 100,             
+    y: 240,             
+    width: 70,
+    height: 70,
+    angle: 180,         
+    radius: 45          
+};
 
-    const keys = {};
-
-    let cyberknowledgeScore = 30;
-
-
-    let selectedEmailOption = 0; 
-
-    var laptopLocked = true; 
-
-    // --- Identity and Access State Management ---
-    let currentStudentNumber = "";
-    let isAuthenticated = false;
-
-
+const keys = {};
+let cyberknowledgeScore = 0;
+let selectedEmailOption = 0; 
+var laptopLocked = true; 
+let currentStudentNumber = "";
+let isAuthenticated = false;
 
 function toggleDebugMode(isEnabled) {
     debugMode = isEnabled;
-    console.log("Debug Mode set to: " + debugMode);
 }
 
 function showSettingsMenu() {
     const settingsOverlay = document.getElementById('settings-overlay');
     
-    if (!settingsOverlay) {
-        console.warn("Settings overlay element not found.");
-        return;
-    }
+    if (!settingsOverlay) return;
 
     const isCurrentlyVisible = settingsOverlay.style.display === 'flex';
-    
     if (!isCurrentlyVisible) {
         isPaused = true;
         settingsOverlay.style.display = 'flex';
@@ -898,24 +803,17 @@ function showSettingsMenu() {
     }
 }
 
-/**
- * Updates all game audio asset tracks safely using standard values.
- * @param {string|number} value - The volume range input from 0 to 100.
- */
 function updateGameVolume(value) {
     const volumeValSpan = document.getElementById('volume-val');
     if (volumeValSpan) {
         volumeValSpan.innerText = value + '%';
     }
-    
-    // Convert 0-100 percentage scale down to standard HTML5 Audio 0.0-1.0 scale
     const volumeLevel = value / 100;
-    
-    // Dynamically adjust all global tracks instantly
     if (sounds && sounds.walking) {
         sounds.walking.volume = volumeLevel;
     }
 }
+
 const roomConfigurations = {
     room1: {
         bgKey: 'background', 
@@ -923,7 +821,6 @@ const roomConfigurations = {
         spawnY: 240,
         aiNPC: { x: 100, y: 240, messageType: 'room1_state', angle: 180 },
         cutscene: { duration: 500, directionAngle: 180 }, 
-        // New interactive physical devices
         printerDevice: { x: 240, y: 100, angle: 0 },
         shredderDevice: { x: 650, y: 100, angle: 0 },
         papers: [
@@ -959,7 +856,6 @@ const roomConfigurations = {
         spawnY: 315,
         aiNPC: { x: 440, y: 400, messageType: 'room2_state', angle: 90 },
         cutscene: { duration: 500, directionAngle: 90 }, 
-        // New interactive physical devices
         printerDevice: { x: 205, y: 500, angle: 180 },
         shredderDevice: { x: 130, y: 500, angle: 180 },
         papers: [
@@ -987,7 +883,7 @@ const roomConfigurations = {
             { x: 480, y: 60, w: 60, h: 100 },
             { x: 500, y: 100, w: 200, h: 40 },
             { x: 640, y: 180, w: 50, h: 225 },
-            { x: 700, y: 0, w: 40, h: 600 },
+            { x: 700, y: 40, w: 40, h: 600 },
             { type: 'circle', x: 385, y: 495, radius: 30 }
         ]
     },
@@ -1024,12 +920,12 @@ const roomConfigurations = {
     }
 };
 
-
 window.addEventListener('keyup', e => { 
     if (gameState === 'game') {
         keys[e.code] = false; 
     }
 });
+
 function updateEmailUI() {
     const opt0 = document.getElementById('opt-0');
     const opt1 = document.getElementById('opt-1');
@@ -1052,7 +948,6 @@ function updateEmailUI() {
         }
     }
 }
-
 
 function checkInteraction() {
     const activePapers = roomConfigurations[currentRoomId]?.papers || [];
@@ -1077,94 +972,11 @@ function checkInteraction() {
     }
 }
 
-function interactWithLaptop(paper) {
-    // Reset standard default selection index context when launching laptop interface modal
-    selectedEmailOption = 0;
 
-    // 1. If the terminal has been cleared/processed already
-    if (paper.scoreProcessed) {
-        isPaused = true;
-        const content = document.getElementById('popup-content');
-        
-        content.className = ''; 
-        content.classList.add('center-modal-mode');
 
-        if (paper.userWasCorrect) {
-            content.innerHTML = `
-                <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #333;">
-                    Workstation Secure
-                    <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
-                        Inbox clean. There are <b>no emails yet</b> for this terminal.
-                    </div>
-                </div>
-            `;
-        } else {
-            content.innerHTML = `
-                <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
-                     Terminal Access Locked
-                    <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
-                        Access to this station remains revoked due to an unverified transaction check rule bypass.
-                    </div>
-                </div>
-            `;
-        }
-        document.getElementById('popup-overlay').style.display = 'block';
-        return; 
-    }
+let selectedPrinterOption = 0; 
 
-    // 2. --- CRITICAL LOCK: Player answered the choice, but did not consult the AI yet ---
-    // If paper.hasConsultedAI is false or undefined, we trigger the lock
-    if (paper.answered && !paper.hasConsultedAI) {
-        isPaused = true;
-        const content = document.getElementById('popup-content');
-        
-        content.className = ''; 
-        content.classList.add('center-modal-mode');
-
-        content.innerHTML = `
-            <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
-                 Terminal Locked
-                <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
-                    This workstation terminal is currently locked.<br><br>
-                    <b>Please proceed to the AI Avatar to finish your evaluation first.</b>
-                </div>
-            </div>
-        `;
-        document.getElementById('popup-overlay').style.display = 'block';
-        return;
-    }
-
-    // 3. Initial state check when first starting the room (Forces player to talk to AI first)
-    if (typeof laptopLocked !== 'undefined' && laptopLocked) {
-        isPaused = true;
-        const content = document.getElementById('popup-content');
-        
-        content.className = ''; 
-        content.classList.add('center-modal-mode');
-
-        content.innerHTML = `
-            <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
-                 Terminal Access Locked
-                <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
-                    You must consult the <b>AI Avatar</b> first to clear incoming threat directives before logging in.
-                </div>
-            </div>
-        `;
-        document.getElementById('popup-overlay').style.display = 'block';
-        return; 
-    }
-
-    // 4. Open the interactive layout if all safety checks pass
-    showEmailPopup(paper);
-    updateEmailUI();
-}
-
-// --- STATE MANAGEMENT EXTENSIONS ---
-let selectedPrinterOption = 0; // Sync selection state tracker index globally
-
-// --- GLOBAL KEYBOARD CAPTURE HOOK ---
 window.addEventListener('keydown', e => {
-    // SECURITY FILTER: Suppress all character interactions if cutscene runs
     if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
         if (gameState !== 'title' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyS', 'KeyA', 'KeyD', 'Space'].includes(e.code)) {
             e.preventDefault();
@@ -1176,14 +988,12 @@ window.addEventListener('keydown', e => {
         if (e.code === 'Space' || e.code === 'Enter') {
             e.preventDefault();
 
-            // BLOCK ENTRY IF NOT AUTHENTICATED VIA THE PORTAL FORM YET
             if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
                 const inputField = document.getElementById('student-number-input');
                 if (inputField) {
                     inputField.focus();
                     inputField.style.borderColor = '#ff4a4a';
                 }
-                console.log("Access Denied: Complete student session initialization first.");
                 return;
             }
 
@@ -1209,13 +1019,10 @@ window.addEventListener('keydown', e => {
             if (badge) {
                 badge.style.display = 'block';
             }
-            
-            console.log(`[Scene Transition]: Initialization verified. Spawning into environment ${currentRoomId} based on scoring profile.`);
         }
         return;
     }
 
-    // Toggle Title Screen state with the 'T' key
     if (e.code === 'KeyT') {
         if (gameState === 'title') {
             if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) return;
@@ -1236,9 +1043,6 @@ window.addEventListener('keydown', e => {
             if (instElement) {
                 instElement.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
             }
-            if (typeof sounds !== 'undefined' && sounds.bgm) {
-                sounds.bgm.play().catch(err => console.log("Audio playback blocked."));
-            }
             const badge = document.getElementById('ai-attention-badge');
             if (badge) badge.style.display = 'block';
         } else if (gameState === 'game') {
@@ -1249,18 +1053,15 @@ window.addEventListener('keydown', e => {
             const badge = document.getElementById('ai-attention-badge');
             if (badge) badge.style.display = 'none';
         }
-        console.log("Game State toggled via T key. Current state:", gameState);
         return;
     }
 
-    // Toggle Guide Controls UI block with the 'G' key
     if (e.code === 'KeyG') {
         showGuideControls = !showGuideControls;
         const instructionsElement = document.getElementById('instructions');
         if (instructionsElement) {
             instructionsElement.style.display = (showGuideControls && gameState === 'game') ? 'block' : 'none';
         }
-        console.log("Guide Controls:", showGuideControls ? "VISIBLE" : "HIDDEN");
         return;
     }
 
@@ -1277,7 +1078,6 @@ window.addEventListener('keydown', e => {
             }
 
             if (currentPaper) {
-                // DIALOGUE ROUTINE INTERCEPT FOR PRINTER INTERACTIVE POPUP
                 if (currentPaper.type === 'printer_document') {
                     if (!currentPaper.answered) {
                         if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
@@ -1303,7 +1103,6 @@ window.addEventListener('keydown', e => {
                         }
                     }
                 } 
-                // STANDARD LAPTOP EMAIL DISPOSAL ROUTINE INTERCEPT
                 else {
                     if (!currentPaper.answered) {
                         if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
@@ -1346,11 +1145,9 @@ window.addEventListener('keydown', e => {
             }
         }
 
-        // ALLOW BOTH SPACE KEY AND E KEY FOR GENERAL INTERACTIONS
         if ((e.code === 'Space' || e.code === 'KeyE') && !isPaused) {
             e.preventDefault();
             
-            // Check printer distance proximity before calling generalized email interact triggers
             const activeRoomConfig = roomConfigurations[currentRoomId];
             if (activeRoomConfig && activeRoomConfig.printerDevice) {
                 const pX = activeRoomConfig.printerDevice.x;
@@ -1364,8 +1161,6 @@ window.addEventListener('keydown', e => {
                     return; 
                 }
             }
-
-            // Fallback to checking laptops/papers if not directly on top of printer device
             checkInteraction();
         }
 
@@ -1378,102 +1173,113 @@ window.addEventListener('keydown', e => {
     }
 });
 
-
-// --- PRINTER INTERACTION & PROGRESSION MANAGEMENT ---
 let hasCompletedPrinterTask = false;
 let printerTaskCorrect = false; 
-// New state trackers to prevent badge flickering and manage unread notifications
-let hasSeenRoomIntro = false; // <-- NEW: Tracks if player viewed the initial room greeting
+let hasSeenRoomIntro = false; 
 let hasSeenLaptopFeedback = false;
 let hasSeenPrinterFeedback = false;
-// --- PRINTER INTERACTION & PROGRESSION MANAGEMENT ---
 function interactWithPrinter() {
-    if (hasCompletedPrinterTask && currentPaper) {
-        isPaused = true;
-        const popupOverlay = document.getElementById('popup-overlay');
-        const popupContent = document.getElementById('popup-content');
-        
-        if (popupOverlay && popupContent) {
-            popupContent.className = ''; 
-            popupContent.classList.add('center-modal-mode');
-
-            if (currentPaper.userWasCorrect) {
-                popupContent.innerHTML = `
-                    <div style="font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 18px; font-weight: bold; width: 100%; text-align: center; color: #333; padding: 25px; box-sizing: border-box;">
-                        Workstation Secure
-                        <div style="font-size: 14px; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
-                            Inbox clean. There are <b>no emails yet</b> for this terminal.
-                        </div>
-                        <button onclick="closePopup()" style="margin-top: 20px; padding: 8px 20px; font-size: 13px; font-weight: bold; background: #0055cc; color: white; border: none; border-radius: 100px; cursor: pointer;">Acknowledge</button>
-                    </div>
-                `;
-            } else {
-                popupContent.innerHTML = `
-                    <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
-                         Terminal Access Locked
-                        <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
-                            You must consult the <b>AI Avatar</b> first to clear incoming threat directives before logging in.
-                        </div>
-                    </div>
-                `;
-            }
-            popupOverlay.style.display = 'block';
-        }
+    // If maximum retries hit or task completed, exit immediately without showing AI Avatar dialogue
+    if ((printerAttempts[currentRoomId] >= 3 && !printerTaskCorrect) || hasCompletedPrinterTask) {
         return;
     }
-    
-    if (cyberknowledgeScore < 20) {
+
+    const activeConfig = roomConfigurations[currentRoomId];
+    const laptopPaper = activeConfig?.papers ? activeConfig.papers[0] : null;
+
+    // 1. HARD LOCK: If laptop doesn't exist or isn't answered yet, trigger unpowered message
+    if (!laptopPaper || !laptopPaper.answered) {
+        showAIDialoguePopup("printer_unpowered");
+        return;
+    }
+
+    // 2. STAGE PROGRESSION LOCK: Even if answered, lock the printer if they haven't talked to the AI Avatar
+    // It is ONLY unlocked if (laptopPaper.answered === true && laptopPaper.hasConsultedAI === true)
+    if (!laptopPaper.hasConsultedAI || activeConfig.pendingLaptopRetry === true) {
         isPaused = true;
-        const popupOverlay = document.getElementById('popup-overlay');
-        const popupContent = document.getElementById('popup-content');
+        showingAIDialogue = true;
         
-        if (popupOverlay && popupContent) {
-            popupContent.className = ''; 
-            popupContent.classList.add('center-modal-mode');
-            popupContent.innerHTML = `
-                <div style="font-size: 2.5cqw; font-weight: bold; width: 100%; text-align: center; color: #cc3333;">
-                     Terminal Access Locked
-                    <div style="font-size: 1.8cqw; margin-top: 12px; font-weight: normal; color: #555; line-height: 1.4;">
-                        You must consult the <b>AI Avatar</b> first to clear incoming threat directives before logging in.
-                    </div>
+        const content = document.getElementById('popup-content');
+        if (content) {
+            content.className = ''; 
+            content.removeAttribute('style'); 
+            content.classList.add('dialogue-bubble-mode');
+            
+            content.innerHTML = `
+                <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
+                    <b>System Notification:</b><br>
+                    <span style="color: #ffaa00; font-weight: bold;">PRINTER ACCESS SUSPENDED:</span> 
+                    The system requires you to consult the AI Avatar first to process your recent workstation assessment before checking physical tray outputs!
                 </div>
             `;
+        }
+        const popupOverlay = document.getElementById('popup-overlay');
+        if (popupOverlay) {
             popupOverlay.style.display = 'block';
         }
-        return;
+        return; // Halt execution so the printer UI code below never fires
     }
 
-    if (currentRoomId === 'room1') {
-        currentPaper = {
+    let poolRoom1 = [
+        {
             type: 'printer_document',
             title: "Internal IP Network Diagram",
-            content: "CONFIDENTIAL INTERNAL IP NETWORK DIAGRAM\n\nGateway IP: 192.168.1.1\nDefault Admin User: admin\nDefault Admin Pass: Stu_Admin2026\n\nWarning: Unauthorized distribution or exposure of this network layout violates safety policies. Dispose of immediately after reading.",
-            correctOption: 1, 
-            answered: false,
-            scoreProcessed: false,
-            userWasCorrect: false
-        };
-    } else if (currentRoomId === 'room2') {
-        currentPaper = {
+            content: "CONFIDENTIAL INTERNAL IP NETWORK DIAGRAM\n\nGateway IP: 192.168.1.1\nDefault Admin User: admin\nDefault Admin Pass: Stu_Admin2026\n\nWarning: Distribution or exposure of this network layout violates safety policies. Dispose of immediately.",
+            correctOption: 1
+        },
+        {
+            type: 'printer_document',
+            title: "Executive Payroll Summary",
+            content: "CONFIDENTIAL PAYROLL ALLOCATION\n\nCEO Compensation Matrix & Asset Keys.\nClear physical files to prevent unencrypted visual exposures.",
+            correctOption: 1
+        },
+        {
+            type: 'printer_document',
+            title: "Shared Printer Test Page",
+            content: "PRINTER STATUS REPORT: OK\n\nStandard postscript configuration dump. No sensitive properties discovered.",
+            correctOption: 0
+        }
+    ];
+
+    let poolRoom2 = [
+        {
             type: 'printer_document',
             title: "Student Database Export",
-            content: "SENSITIVE STUDENT DATABASE EXPORT\n\nRecord Count: 142 students\nFields: [Full Name, Date of Birth, Home Address, Parents' Email]\n\nNote: For physical filing purposes only. Do not leave exposed on office equipment.",
-            correctOption: 1, 
-            answered: false,
-            scoreProcessed: false,
-            userWasCorrect: false
-        };
+            content: "SENSITIVE STUDENT DATABASE EXPORT\n\nRecord Count: 142 students\nFields: [Full Name, Date of Birth, Home Address]\n\nNote: Physical filing purposes only. Do not leave exposed.",
+            correctOption: 1
+        },
+        {
+            type: 'printer_document',
+            title: "Wi-Fi Pre-Shared Security Keys",
+            content: "ENTERPRISE SECURITY CREDENTIALS\n\nSSID: Corporate_Main_Secure\nWPA3 Key: 984hfsdkjhSFD7382\n\nDispose securely immediately.",
+            correctOption: 1
+        },
+        {
+            type: 'printer_document',
+            title: "Office Lunch Menu Printout",
+            content: "DAILY SPECIALS TRACKER\n\nMonday: Tacos\nTuesday: Pasta\nWednesday: Sandwiches\nNo sensitive records found.",
+            correctOption: 0
+        }
+    ];
+
+    let attemptIndex = Math.min(printerAttempts[currentRoomId] || 0, 2);
+
+    if (currentRoomId === 'room1') {
+        currentPaper = poolRoom1[attemptIndex];
+    } else if (currentRoomId === 'room2') {
+        currentPaper = poolRoom2[attemptIndex];
     } else {
         currentPaper = {
             type: 'printer_document',
             title: "Unidentified Print Job",
             content: "CONFIDENTIAL CORPORATE DATA\n\nContains operational keys and private records. Ensure secure disposal.",
-            correctOption: 1,
-            answered: false,
-            scoreProcessed: false,
-            userWasCorrect: false
+            correctOption: 1
         };
     }
+
+    currentPaper.answered = false;
+    currentPaper.scoreProcessed = false;
+    currentPaper.userWasCorrect = false;
 
     showingAIDialogue = false; 
     isPaused = true;
@@ -1491,23 +1297,34 @@ function interactWithPrinter() {
 
             currentPaper.answered = true;
             currentPaper.userWasCorrect = (optionIndex === currentPaper.correctOption);
+            printerAttempts[currentRoomId] = (printerAttempts[currentRoomId] || 0) + 1;
 
             if (currentPaper.type === 'printer_document') {
                 printerTaskCorrect = currentPaper.userWasCorrect;
-                hasCompletedPrinterTask = true;
-                // Reset printer feedback seen state so it triggers the AI badge alert
-                hasSeenPrinterFeedback = false; 
+                if (printerTaskCorrect || printerAttempts[currentRoomId] >= 3) {
+                    hasCompletedPrinterTask = true;
+                }
+            }
+
+            // Set dynamic message signaling flags on the current configuration if incorrect
+            if (!currentPaper.userWasCorrect && printerAttempts[currentRoomId] < 3) {
+                const currentConfig = roomConfigurations[currentRoomId];
+                if (currentConfig) {
+                    currentConfig.pendingPrinterRetry = true;
+                }
             }
 
             document.getElementById('popup-content').className = ''; 
             document.getElementById('popup-overlay').style.display = 'none';
             isPaused = false;
 
-            // Instantly activate and update the badge since the AI has points/feedback ready to show
+            // Turn on attention badge indicating a new message is waiting
             const badge = document.getElementById('ai-attention-badge');
             if (badge) {
                 badge.style.display = 'block';
-                updateAttentionBadgePosition();
+                if (typeof updateAttentionBadgePosition === "function") {
+                    updateAttentionBadgePosition();
+                }
             }
         };
 
@@ -1553,16 +1370,319 @@ function interactWithPrinter() {
         window.updatePrinterUI();
     }
 }
-function showAIDialoguePopup() {
+function interactWithLaptop(paper) {
+    selectedEmailOption = 0;
+
+    if (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect) {
+        isPaused = true;
+        showingAIDialogue = true;
+        const content = document.getElementById('popup-content');
+        
+        content.className = ''; 
+        content.removeAttribute('style'); 
+        content.classList.add('dialogue-bubble-mode');
+        
+        content.innerHTML = `
+            <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
+                <b>System Notification:</b><br>
+                <span style="color: #e63946; font-weight: bold;">TERMINAL LOCKED PERMANENTLY:</span> Maximum retry threshold reached (3/3 tries exhausted). Hardware access interface completely locked out.
+            </div>
+        `;
+        document.getElementById('popup-overlay').style.display = 'block';
+        return;
+    }
+
+    if (paper.scoreProcessed) {
+        isPaused = true;
+        showingAIDialogue = true;
+        const content = document.getElementById('popup-content');
+        
+        content.className = ''; 
+        content.removeAttribute('style'); 
+        content.classList.add('dialogue-bubble-mode');
+
+        let textToShow = "";
+        if (paper.userWasCorrect) {
+            textToShow = `<b>System Notification:</b><br><span style="color: #52b788; font-weight: bold;">WORKSTATION SECURE:</span> Queue cleared. There are no pending incoming transmissions for this terminal.`;
+        } else {
+            textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">ACCESS REVOKED:</span> Terminal framework remains offline due to ongoing verification loops.`;
+        }
+        
+        content.innerHTML = `
+            <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
+                ${textToShow}
+            </div>
+        `;
+        document.getElementById('popup-overlay').style.display = 'block';
+        return; 
+    }
+
+    if (paper.answered && !paper.hasConsultedAI) {
+        isPaused = true;
+        showingAIDialogue = true;
+        const content = document.getElementById('popup-content');
+        
+        content.className = ''; 
+        content.removeAttribute('style'); 
+        content.classList.add('dialogue-bubble-mode');
+        
+        content.innerHTML = `
+            <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
+                <b>System Notification:</b><br>
+                <span style="color: #ffaa00; font-weight: bold;">TERMINAL STANDBY:</span> Workstation link interrupted. Please redirect to the AI Avatar interface to process active appraisal sequence first.
+            </div>
+        `;
+        document.getElementById('popup-overlay').style.display = 'block';
+        return;
+    }
+
+    if (typeof laptopLocked !== 'undefined' && laptopLocked) {
+        isPaused = true;
+        showingAIDialogue = true;
+        const content = document.getElementById('popup-content');
+        
+        content.className = ''; 
+        content.removeAttribute('style'); 
+        content.classList.add('dialogue-bubble-mode');
+        
+        content.innerHTML = `
+            <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
+                <b>System Notification:</b><br>
+                <span style="color: #e63946; font-weight: bold;">SECURITY LOCK:</span> Threat directives intercepted. Interrogate the AI Avatar system node to bypass firewalls before logging in.
+            </div>
+        `;
+        document.getElementById('popup-overlay').style.display = 'block';
+        return; 
+    }
+
+    showEmailPopup(paper);
+    updateEmailUI();
+}
+function showEmailPopup(paper) {
+    // Exit early if tries are exhausted or already locked without forwarding to the AI Avatar
+    if (paper && (paper.locked || (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect))) {
+        return;
+    }
+
+    isPaused = true;
+    currentPaper = paper;
+    currentPaper.type = 'email'; 
+    showingAIDialogue = false;
+    
+    const content = document.getElementById('popup-content');
+    content.className = ''; 
+    content.classList.add('center-modal-mode');
+
+    let emailPool = {
+        room1: [
+            {
+                sender: "HR Dept",
+                address: "hr@internal-security-system.local",
+                subject: "Action Required: Update Your Credentials Immediately",
+                body: "Your network access password expires within 24 hours. Choose an option to proceed with your credential update.",
+                correctOption: 1
+            },
+            {
+                sender: "Security Alert",
+                address: "security-foyer@critical-alert.net",
+                subject: "WARNING: Unauthorized Entry Attempt Logs",
+                body: "We noted suspicious activity on your host framework node. Select RESPOND TO EMAIL to verify your active authorization token index.",
+                correctOption: 1
+            },
+            {
+                sender: "IT Notice",
+                address: "admin@internal-security-system.local",
+                subject: "Scheduled Server Migration Information",
+                body: "This is a general advisory that internal storage arrays are migrating this Sunday. No action is required from you.",
+                correctOption: 0
+            }
+        ],
+        room2: [
+            {
+                sender: "IT Support Desk",
+                address: "support@urgent-security-update.com",
+                subject: "CRITICAL: Urgent Security Firewall Patch Required",
+                body: "We have detected unauthorized bypass attempts on your workstation segment. Click 'RESPOND TO EMAIL' to download and install the repair package.",
+                correctOption: 1
+            },
+            {
+                sender: "Accounts Payable",
+                address: "billing@external-verify-portal.org",
+                subject: "Overdue Workstation Rental Invoice Attached",
+                body: "Your hardware assignment metrics match an outstanding balance ledger sheet. Click RESPOND TO EMAIL to upload transaction proofs immediately.",
+                correctOption: 1
+            },
+            {
+                sender: "Company Portal",
+                address: "newsletter@company.corp",
+                subject: "Monthly System Performance Newsletter Update",
+                body: "Here is your standard textual tracking wrap-up summary for the month. No authorization values or link downloads are embedded.",
+                correctOption: 0
+            }
+        ],
+        room3: [
+            {
+                sender: "Office Manager", 
+                address: "Admin@company.corp",
+                subject: "Building Maintenance Notice",
+                body: "Please be advised that the main office elevator will be under maintenance on Tuesday. Please use the north side stairs.",
+                correctOption: 0
+            },
+            {
+                sender: "Delivery Service",
+                address: "postmaster@courier-tracking-routing.net",
+                subject: "Package Delivery Alert: Failed Transfer Hold Node",
+                body: "A parcel addressed to your account matrix space cannot spawn delivery updates. Open the confirmation layout module to fix.",
+                correctOption: 1
+            },
+            {
+                sender: "CEO Update",
+                address: "exec-office@company.corp",
+                subject: "Annual Strategic Goals Performance Report",
+                body: "Please review the updated general corporate guidelines for the coming system operations semester.",
+                correctOption: 0
+            }
+        ]
+    };
+
+    let attemptIndex = Math.min(laptopAttempts[currentRoomId] || 0, 2);
+    let selectedScenario = emailPool[currentRoomId][attemptIndex];
+
+    let emailSender = selectedScenario.sender;
+    let emailAddress = selectedScenario.address;
+    let emailSubject = selectedScenario.subject;
+    let emailBody = selectedScenario.body;
+    let correctOption = selectedScenario.correctOption;
+
+    window.handleEmailSubmission = function(chosenOption) {
+    if (!currentPaper) return;
+
+    laptopAttempts[currentRoomId] = (laptopAttempts[currentRoomId] || 0) + 1;
+    
+    if (chosenOption === correctOption) {
+        currentPaper.userWasCorrect = true;
+        currentPaper.answered = true;
+        currentPaper.locked = true; 
+        currentPaper.hasConsultedAI = false; 
+        
+        closePopup();
+    } else {
+        currentPaper.userWasCorrect = false;
+        
+        if (laptopAttempts[currentRoomId] >= 3) {
+            currentPaper.answered = true;
+            currentPaper.locked = true; 
+            currentPaper.hasConsultedAI = false;
+            
+            closePopup();
+        } else {
+            currentPaper.answered = false;
+            currentPaper.locked = false;
+            currentPaper.hasConsultedAI = false;
+            
+            // Set dynamic message signaling flags on the current configuration
+            const currentConfig = roomConfigurations[currentRoomId];
+            if (currentConfig) {
+                currentConfig.pendingLaptopRetry = true;
+            }
+            
+            closePopup();
+        }
+    }
+
+    // Turn on attention badge indicating a new message is waiting
+    const badge = document.getElementById('ai-attention-badge');
+    if (badge) {
+        badge.style.display = 'block';
+        if (typeof updateAttentionBadgePosition === "function") {
+            updateAttentionBadgePosition();
+        }
+    }
+};
+
+    content.innerHTML = `
+    <div class="popup-layout-wrapper" style="font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 1.6cqw; font-weight: normal; background-color: #ffffff; color: #202124; box-sizing: border-box; width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column;">
+        
+        <div class="email-action-bar" style="display: flex; gap: 2.5cqw; align-items: center; border-bottom: 1px solid #f1f3f4; padding: 1.5cqh 3cqw; color: #5f6368; font-size: 1.8cqw;">
+            <span style="cursor: pointer; font-weight: bold;" onclick="closePopup()">←</span>
+            <span style="cursor: pointer;">📥</span>
+            <span style="cursor: pointer;">⚠️</span>
+            <span style="cursor: pointer;" onclick="window.handleEmailSubmission(1)">🗑️</span>
+            <span style="cursor: pointer; margin-left: auto;">✉️</span>
+            <span style="cursor: pointer;">🕒</span>
+            <span style="cursor: pointer; margin-left: 1cqw;">⋮</span>
+        </div>
+
+        <div style="padding: 3cqh 4cqw; flex-grow: 1;">
+            <div style="display: flex; align-items: center; gap: 1cqw; margin-bottom: 3cqh;">
+                <h2 style="margin: 0; font-size: 2.4cqw; font-weight: 400; color: #202124;">
+                    ${emailSubject}
+                </h2>
+                <span style="background-color: #e8eaed; color: #5f6368; font-size: 1.2cqw; padding: 2px 6px; border-radius: 4px; font-weight: 500;">
+                    Inbox
+                </span>
+            </div>
+
+            <div class="email-meta-row" style="display: flex; align-items: flex-start; margin-bottom: 4cqh; position: relative;">
+                <div style="width: 5cqw; height: 5cqw; border-radius: 50%; background-color: #007791; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 2cqw; margin-right: 2cqw; flex-shrink: 0;">
+                    ${emailSender.substring(0, 2).toUpperCase()}
+                </div>
+                
+                <div style="flex-grow: 1; min-width: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%;">
+                        <div>
+                            <span style="font-weight: bold; color: #202124; font-size: 1.6cqw; margin-right: 0.5cqw;">${emailSender}</span>
+                            <span style="color: #5f6368; font-size: 1.4cqw;">&lt;${emailAddress}&gt;</span>
+                        </div>
+                        <div style="color: #5f6368; font-size: 1.3cqw; white-space: nowrap; margin-left: 2cqw;">
+                            Just now
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="email-body" style="font-size: 1.6cqw; line-height: 1.5; color: #202124; padding-left: 7cqw; margin-bottom: 6cqh; min-height: 12cqh;">
+                ${emailBody}
+            </div>
+
+            <div id="email-options" style="display: flex; gap: 1.5cqw; padding-left: 7cqw; border-top: 1px solid #f1f3f4; padding-top: 3cqh;">
+                <div class="email-option" id="opt-0" onclick="window.handleEmailSubmission(0)" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f7f8f9'" onmouseout="this.style.backgroundColor='transparent'">
+                    ↩️ RESPOND TO EMAIL
+                </div>
+                <div class="email-option" id="opt-1" onclick="window.handleEmailSubmission(1)" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f7f8f9'" onmouseout="this.style.backgroundColor='transparent'">
+                    ➡️ IGNORE / TRASH
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+
+    document.getElementById('popup-overlay').style.display = 'block';
+}
+function showAIDialoguePopup(state) {
     isPaused = true;
     showingAIDialogue = true;
     
     const content = document.getElementById('popup-content');
-    const activePapers = roomConfigurations[currentRoomId]?.papers || [];
+    const currentConfig = roomConfigurations[currentRoomId];
+    const activePapers = currentConfig?.papers || [];
     const terminalState = activePapers[0]; 
-    
-    if (!hasCompletedPrinterTask) {
-        currentPaper = terminalState;
+
+    // --- PROGRESSION ENFORCEMENT ---
+    // Mark the workstation task as "consulted" now that the player is interacting with the AI Avatar.
+    // This allows the interactWithPrinter() function to bypass its gate.
+    if (terminalState && terminalState.answered) {
+        terminalState.hasConsultedAI = true;
+    }
+    // -------------------------------
+
+    // Route state variables dynamically based on explicit custom component signals
+    if (state === undefined && currentConfig) {
+        if (currentConfig.pendingLaptopRetry) {
+            state = "laptop_retry";
+        } else if (currentConfig.pendingPrinterRetry) {
+            state = "printer_retry";
+        }
     }
     
     let textToShow = "";
@@ -1576,38 +1696,52 @@ function showAIDialoguePopup() {
     if (badge) {
         badge.style.display = 'none';
     }
-
-    const currentConfig = roomConfigurations[currentRoomId];
     
-    // Initialize room-specific tracking states if they don't exist yet
-    if (currentConfig.hasSeenRoomIntro === undefined) currentConfig.hasSeenRoomIntro = false;
-    if (currentConfig.hasSeenLaptopFeedback === undefined) currentConfig.hasSeenLaptopFeedback = false;
-    if (currentConfig.hasSeenPrinterFeedback === undefined) currentConfig.hasSeenPrinterFeedback = false;
+    if (currentConfig) {
+        if (currentConfig.hasSeenRoomIntro === undefined) currentConfig.hasSeenRoomIntro = false;
+        if (currentConfig.hasSeenLaptopFeedback === undefined) currentConfig.hasSeenLaptopFeedback = false;
+        if (currentConfig.hasSeenPrinterFeedback === undefined) currentConfig.hasSeenPrinterFeedback = false;
+    }
 
-    // =========================================================================
-    // LIVE SCORE ENGINE
-    // =========================================================================
     const scoreElement = document.getElementById('score-display');
     const currentScore = scoreElement ? parseInt(scoreElement.textContent.replace(/\D/g, '')) || 0 : cyberknowledgeScore;
 
     // =========================================================================
-    // ROOM 1 FLOW (Bedroom)
+    // EXPLICIT STATE ROUTING OVERRIDES (Checked First)
     // =========================================================================
-    if (currentConfig.aiNPC.messageType === 'room1_state') {
+    if (state === "printer_unpowered") {
+        textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">PRINTER OFFLINE:</span> The printer is currently not powered on. You must resolve security tasks on the workstation laptop first to restore power infrastructure configurations!`;
+    }
+    else if (state === "laptop_exhausted_room3" || (currentRoomId === 'room3' && state === undefined && laptopAttempts[currentRoomId] >= 3 && !terminalState?.userWasCorrect)) {
+        textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">EVALUATION ENDED:</span> Laptop tries exhausted. Keep practicing to become a certified cybersecurity defender!`;
+    }
+    else if (state === "device_secure_success") {
+        textToShow = `<b>AI Guard [System]:</b><br><span style="color: #52b788; font-weight: bold;">Action Success!</span> The device parameters have been correctly configured and secured.`;
+    }
+    else if (state === "laptop_retry") {
+        textToShow = `<b>AI Guard [System]:</b><br><span style="color: #e63946; font-weight: bold;">Security Discrepancy:</span> That choice exposed the infrastructure! The system has logged the event. Try adjusting your approach on the next attempt.`;
+    }
+    else if (state === "printer_retry") {
+        textToShow = `<b>AI Guard [System]:</b><br><span style="color: #e63946; font-weight: bold;">Data Security Risk:</span> The documents are still exposed to unauthorized viewers! Re-examine the contents and try again.`;
+    }
+    // =========================================================================
+    // STANDARD ROOM 1 FLOW (Bedroom)
+    // =========================================================================
+    else if (currentConfig?.aiNPC?.messageType === 'room1_state') {
         if (hasCompletedPrinterTask && (currentScore === 20 || currentScore === 30)) {
             textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Room Secured!</span> You've already processed the workstation and checked the printer assets here. Head through the doorway to advance to the next challenge!`;
         }
         else if (terminalState && terminalState.answered && !hasCompletedPrinterTask) {
-            currentConfig.hasSeenLaptopFeedback = true; // Scoped to Room 1
+            currentConfig.hasSeenLaptopFeedback = true; 
             textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Great eye!</span> You handled that phishing email perfectly. Now, look over at the <span class="highlight-blue">Printer</span>. Someone left a printout sitting out in the open—go decide how to secure it!`;
         }
         else if (!hasCompletedPrinterTask && (!terminalState || !terminalState.answered)) {
-            currentConfig.hasSeenRoomIntro = true; // Scoped to Room 1
+            currentConfig.hasSeenRoomIntro = true; 
             textToShow = `<b>AI Guard [Bedroom]:</b><br>Welcome to the Entry Foyer. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
             laptopLocked = false; 
         } 
         else if (hasCompletedPrinterTask) {
-            currentConfig.hasSeenPrinterFeedback = true; // Scoped to Room 1
+            currentConfig.hasSeenPrinterFeedback = true; 
             if (printerTaskCorrect) {
                 textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRINTER HYGIENE!</span> Shredding that network diagram was the perfect decision. Leaving default passwords and system IPs in a physical tray is a major physical-security risk. You've earned your points—let's move on to Room 2!`;
             } else {
@@ -1616,23 +1750,23 @@ function showAIDialoguePopup() {
         }
     } 
     // =========================================================================
-    // ROOM 2 FLOW (Living Room)
+    // STANDARD ROOM 2 FLOW (Living Room)
     // =========================================================================
-    else if (currentConfig.aiNPC.messageType === 'room2_state') {
+    else if (currentConfig?.aiNPC?.messageType === 'room2_state') {
         if (hasCompletedPrinterTask && (currentScore === 40 || currentScore === 50)) {
             textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Area Monitored!</span> Network traffic analysis and physical document checks for this room are complete. Head over to the Kitchen when ready!`;
         }
         else if (terminalState && terminalState.answered && !hasCompletedPrinterTask) {
-            currentConfig.hasSeenLaptopFeedback = true; // Scoped to Room 2
+            currentConfig.hasSeenLaptopFeedback = true; 
             textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Nice defense!</span> Rejecting fake support links keeps our networks clean. Now, run over to the <span class="highlight-blue">Printer</span>. We have a physical data privacy decision waiting for you there.`;
         }
         else if (!hasCompletedPrinterTask && (!terminalState || !terminalState.answered)) {
-            currentConfig.hasSeenRoomIntro = true; // Scoped to Room 2
+            currentConfig.hasSeenRoomIntro = true; 
             textToShow = `<b>AI Guard [Living Room]:</b><br>Alert! Someone is attempting to trick users on our local network segment. Head over to the floor terminal right away to verify what's coming in!`;
             laptopLocked = false;
         } 
         else if (hasCompletedPrinterTask) {
-            currentConfig.hasSeenPrinterFeedback = true; // Scoped to Room 2
+            currentConfig.hasSeenPrinterFeedback = true; 
             if (printerTaskCorrect) {
                 textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">PRIVACY PROTECTED!</span> Superb job shredding that student export document. Leaving full names, home addresses, and phone directories exposed violates privacy policies. You handled that like a true security analyst! Let's enter Room 3!`;
             } else {
@@ -1641,17 +1775,17 @@ function showAIDialoguePopup() {
         }
     } 
     // =========================================================================
-    // ROOM 3 FLOW (Kitchen)
+    // STANDARD ROOM 3 FLOW (Kitchen)
     // =========================================================================
-    else if (currentConfig.aiNPC.messageType === 'room3_state') {
+    else if (currentConfig?.aiNPC?.messageType === 'room3_state') {
         laptopLocked = false; 
 
         if (terminalState && terminalState.answered) {
-            currentConfig.hasSeenLaptopFeedback = true; // Scoped to Room 3
+            currentConfig.hasSeenLaptopFeedback = true; 
             textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">Security Mastered!</span> You saw right through that attack. You’ve successfully protected the system integrity. You've officially proven you've got the skills to navigate the digital world safely!`;
         } 
         else {
-            currentConfig.hasSeenRoomIntro = true; // Scoped to Room 3
+            currentConfig.hasSeenRoomIntro = true; 
             textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to the Kitchen! We've got a suspicious request for admin credentials sitting in the inbox. Stay sharp—this is your final test!`;
         }
     }
@@ -1675,15 +1809,18 @@ function updateAttentionBadgePosition() {
     const activePapers = currentConfig.papers || [];
     const terminalState = activePapers[0];
 
-    // Mirror initialization checks to prevent baseline undefined issues
     if (currentConfig.hasSeenRoomIntro === undefined) currentConfig.hasSeenRoomIntro = false;
     if (currentConfig.hasSeenLaptopFeedback === undefined) currentConfig.hasSeenLaptopFeedback = false;
     if (currentConfig.hasSeenPrinterFeedback === undefined) currentConfig.hasSeenPrinterFeedback = false;
 
     let shouldShowBadge = false;
 
-    // Check progress milestones using the room-scoped configuration states
-    if (!terminalState || !terminalState.answered) {
+    // Check custom explicit signal properties set by our handling handlers
+    if (currentConfig.pendingLaptopRetry || currentConfig.pendingPrinterRetry) {
+        shouldShowBadge = true;
+    } 
+    // Fallback normal layout tracking structures
+    else if (!terminalState || !terminalState.answered) {
         if (!currentConfig.hasSeenRoomIntro) shouldShowBadge = true;
     } else if (terminalState && terminalState.answered && !hasCompletedPrinterTask) {
         if (!currentConfig.hasSeenLaptopFeedback) shouldShowBadge = true;
@@ -1707,46 +1844,64 @@ function updateAttentionBadgePosition() {
     badge.style.left = `${leftPercent}%`;
     badge.style.top = `${topPercent}%`;
 }
+
 function closePopup() {
     if (showingAIDialogue) {
-        const activePapers = roomConfigurations[currentRoomId]?.papers || [];
+        const currentConfig = roomConfigurations[currentRoomId];
+        const activePapers = currentConfig?.papers || [];
         const activeLaptopPaper = activePapers[0];
 
-        // Ensure the game registers the introductory dialogue has been fully processed
         hasSeenRoomIntro = true;
+        if (currentConfig) {
+            currentConfig.hasSeenRoomIntro = true;
+        }
 
-        // 1. Process Laptop/Email scoring if not run yet
+        // =========================================================================
+        // SIGNAL FLUSH SYSTEM
+        // =========================================================================
+        // Clear retry tracking variables so that updateAttentionBadgePosition turns off.
+        if (currentConfig) {
+            currentConfig.pendingLaptopRetry = false;
+            currentConfig.pendingPrinterRetry = false;
+        }
+
         if (activeLaptopPaper && activeLaptopPaper.answered && !activeLaptopPaper.scoreProcessed) {
-            let earnedPoints = activeLaptopPaper.userWasCorrect ? 20 : 0;
-            cyberknowledgeScore += earnedPoints;
-            activeLaptopPaper.scoreProcessed = true;
-            
-            // Player closed dialogue, so they've officially read the laptop feedback
-            hasSeenLaptopFeedback = true; 
+            if (activeLaptopPaper.userWasCorrect || laptopAttempts[currentRoomId] >= 3) {
+                let earnedPoints = activeLaptopPaper.userWasCorrect ? 20 : 0;
+                cyberknowledgeScore += earnedPoints;
+                activeLaptopPaper.scoreProcessed = true;
+                hasSeenLaptopFeedback = true; 
+                if (currentConfig) currentConfig.hasSeenLaptopFeedback = true;
 
-            // Direct progress synchronization
-            if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
-                let activeModule = 'safe'; 
-                if (currentRoomId === 'room2') activeModule = 'savvy';
-                else if (currentRoomId === 'room3') activeModule = 'social';
+                if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+                    let activeModule = 'safe'; 
+                    if (currentRoomId === 'room2') activeModule = 'savvy';
+                    else if (currentRoomId === 'room3') activeModule = 'social';
 
-                fetch(`/api/save-progress`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        studentNumber: currentStudentNumber,
-                        module: activeModule,
-                        score: earnedPoints, 
-                        completed: earnedPoints > 0
+                    fetch(`/api/save-progress`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            studentNumber: currentStudentNumber,
+                            module: activeModule,
+                            score: earnedPoints, 
+                            completed: earnedPoints > 0
+                        })
                     })
-                })
-                .then(res => res.json())
-                .then(data => console.log(`[SYSTEM] Sync successful for email. Score payload: +${earnedPoints}`, data))
-                .catch(err => console.error("Database sync failed:", err));
+                    .then(res => res.json())
+                    .catch(err => console.error("Database sync failed:", err));
+                }
+
+                if (currentRoomId === 'room3') {
+                    hasCompletedPrinterTask = true;
+                    printerTaskCorrect = false; 
+                    if (currentConfig) {
+                        currentConfig.hasSeenPrinterFeedback = true;
+                    }
+                }
             }
         }
         
-        // 2. Process Printer document score metrics
         if (hasCompletedPrinterTask && currentPaper && currentPaper.type === 'printer_document' && !currentPaper.scoreProcessed) {
             let earnedPoints = 0;
             if (currentPaper.userWasCorrect) {
@@ -1755,11 +1910,9 @@ function closePopup() {
             }
             
             currentPaper.scoreProcessed = true;
-            
-            // Player closed dialogue, so they've officially read the printer feedback
             hasSeenPrinterFeedback = true;
+            if (currentConfig) currentConfig.hasSeenPrinterFeedback = true;
 
-            // Direct progress synchronization
             if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
                 let activeModule = 'safe'; 
                 if (currentRoomId === 'room2') activeModule = 'savvy';
@@ -1776,29 +1929,21 @@ function closePopup() {
                     })
                 })
                 .then(res => res.json())
-                .then(data => console.log(`[SYSTEM] Sync successful for printer_document. Score payload: +${earnedPoints}`, data))
                 .catch(err => console.error("Database sync failed:", err));
             }
         }
 
-        // --- MARK ALL FEEDBACK AS SEEN ---
-        // This ensures the badge conditions in updateAttentionBadgePosition() 
-        // return false immediately upon closing.
         hasSeenRoomIntro = true;
         hasSeenLaptopFeedback = true;
         hasSeenPrinterFeedback = true;
 
-        // --- EXPLICITLY HIDE ATTENTION BADGE ON CLOSE ---
         const badge = document.getElementById('ai-attention-badge');
         if (badge) {
             badge.style.display = 'none';
         }
 
-        // Force-evaluate state immediately to ensure UI reflects the new "seen" status
         updateAttentionBadgePosition();
 
-        // --- ROOM PROGRESSION CHECKS ---
-        // Only trigger room transitions if the user hasn't finished the entire game
         if (!hasCompletedAllTasks) {
             if (cyberknowledgeScore >= 60 && currentRoomId === 'room2') {
                 setTimeout(() => {
@@ -1830,20 +1975,14 @@ function closePopup() {
     isPaused = false;
     currentPaper = null; 
 }
-
-
 function update() {
-    // --- EMBEDDED WALKING AUDIO MANAGER ENGINE ---
     function updateAvatarMovementAudio() {
         const cutsceneActive = (typeof isCutsceneActive !== 'undefined' && isCutsceneActive);
-        
-        if (typeof sounds === 'undefined' || !sounds || !sounds.walking) {
-            return; 
-        }
+        if (typeof sounds === 'undefined' || !sounds || !sounds.walking) return; 
 
         if ((gameState === 'game' || cutsceneActive) && !isPaused && avatar.moving) {
             if (sounds.walking.paused) {
-                sounds.walking.play().catch(err => console.log("Audio waiting for first input interaction."));
+                sounds.walking.play().catch(() => {});
             }
         } else {
             if (!sounds.walking.paused) {
@@ -1857,7 +1996,6 @@ function update() {
 
     if (isPaused || gameState !== 'game') return;
 
-    // --- TIMED INTERCEPT ROUTINE ---
     if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
         let now = Date.now();
         const activeConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
@@ -1883,7 +2021,6 @@ function update() {
         } else {
             isCutsceneActive = false;
             avatar.moving = false;
-            console.log(`[Cutscene Complete]: Room-specific structural automation sequence over. Controls unlocked.`);
         }
 
         updateAI();
@@ -1892,7 +2029,6 @@ function update() {
         return; 
     }
 
-    // --- STANDARD PLAYER MANUAL CONTROLS ---
     let moveX = 0, moveY = 0;
         
     if (keys['ArrowLeft'] || keys['KeyA'] || keys['a'] || keys['A']) moveX = -1;
@@ -1934,7 +2070,6 @@ function update() {
         avatar.moving = false; 
     }
 
-    // --- PRINTER INTERACTION INTERCEPT KEY (E Key) ---
     if (keys['KeyE'] || keys['e'] || keys['E']) {
         const activeRoomConfig = roomConfigurations[currentRoomId];
         if (activeRoomConfig && activeRoomConfig.printerDevice) {
@@ -1944,9 +2079,7 @@ function update() {
             const dy = (avatar.y + 35) - pY;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
-            // Trigger printer workflow if player is standing near the printer
             if (dist < interactionDist) {
-                // Instantly clear keypress to prevent rapid firing
                 keys['KeyE'] = false;
                 keys['e'] = false;
                 keys['E'] = false;
@@ -1959,186 +2092,44 @@ function update() {
     updateAttentionBadgePosition(); 
     updateAvatarMovementAudio();
 }
-// --- DYNAMIC ASSET DIMENSION CONFIGURATION ---
-const SHREDDER_WIDTH = 75;      // Adjust to change Paper Shredder width (original: 50)
-const SHREDDER_HEIGHT = 80;     // Adjust to change Paper Shredder height (original: 50)
-// Adjusted to restore correct wider aspect ratio as seen in the second image
-const PRINTER_WIDTH = 76;       // Made wider (from 65) to fix the squished look
-const PRINTER_HEIGHT = 60;      // Made slightly shorter to preserve native 4:3 style aspect ratio
 
-function showEmailPopup(paper) {
-    isPaused = true;
-    currentPaper = paper;
-    
-    // FORCE TYPE TO 'EMAIL': This guarantees closePopup() evaluates this as a 20-point task
-    currentPaper.type = 'email'; 
-    
-    showingAIDialogue = false;
-    
-    const content = document.getElementById('popup-content');
-    content.className = ''; 
-    content.classList.add('center-modal-mode');
+const SHREDDER_WIDTH = 75;      
+const SHREDDER_HEIGHT = 80;     
+const PRINTER_WIDTH = 76;       
+const PRINTER_HEIGHT = 60;      
 
-    // 1. Establish room-specific phishing scenarios dynamically
-    let emailSender = "HR Dept";
-    let emailAddress = "hr@internal-security-system.local";
-    let emailSubject = "Action Required: Update Your Credentials Immediately";
-    let emailBody = "Your network access password is scheduled to expire within the next 24 hours. To ensure uninterrupted access to internal company servers and workstations, please choose an option below to proceed with your credential update.";
-    let correctOption = 1; // Default correct option is IGNORE / TRASH (1)
 
-    if (currentRoomId === 'room2') {
-        emailSender = "IT Support Desk";
-        emailAddress = "support@urgent-security-update.com";
-        emailSubject = "CRITICAL: Urgent Security Firewall Patch Required";
-        emailBody = "We have detected unauthorized bypass attempts on your workstation segment. Click 'RESPOND TO EMAIL' to download and install the critical network repair utility package immediately.";
-        correctOption = 1; 
-    } else if (currentRoomId === 'room3') {
-        emailSender = "Office Manager"; 
-        emailAddress = "Admin@company.corp";
-        emailSubject = "Building Maintenance Notice";
-        emailBody = "Please be advised that the main office elevator will be under maintenance on Tuesday. Please use the north side stairs.";
-        correctOption = 0; // CORRECT ACTION IS RESPOND (0)
-    }   
-
-    // 2. Inline answer processor helper executed right inside the click events
-    window.handleEmailSubmission = function(chosenOption) {
-        if (!currentPaper) return;
-
-        // Evaluate validation logic
-        if (chosenOption === correctOption) {
-            currentPaper.userWasCorrect = true;
-        } else {
-            currentPaper.userWasCorrect = false;
-        }
-
-        currentPaper.answered = true;
-        currentPaper.locked = true; // Engage local station lock
-        
-        // Ensure they must talk to AI avatar to unlock evaluation progression
-        currentPaper.hasConsultedAI = false; 
-
-        // Reveal the floating AI attention badge icon on the environment floor map
-        const badge = document.getElementById('ai-attention-badge');
-        if (badge) {
-            badge.style.display = 'block';
-        }
-
-        // Instantly shut down the active interface modal window
-        closePopup();
-    };
-
-    // 3. Inject rendering UI markup with operational click triggers
-    content.innerHTML = `
-    <div class="popup-layout-wrapper" style="font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 1.6cqw; font-weight: normal; background-color: #ffffff; color: #202124; box-sizing: border-box; width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column;">
-        
-        <div class="email-action-bar" style="display: flex; gap: 2.5cqw; align-items: center; border-bottom: 1px solid #f1f3f4; padding: 1.5cqh 3cqw; color: #5f6368; font-size: 1.8cqw;">
-            <span style="cursor: pointer; font-weight: bold;" onclick="closePopup()">←</span>
-            <span style="cursor: pointer;">📥</span>
-            <span style="cursor: pointer;">⚠️</span>
-            <span style="cursor: pointer;" onclick="window.handleEmailSubmission(1)">🗑️</span>
-            <span style="cursor: pointer; margin-left: auto;">✉️</span>
-            <span style="cursor: pointer;">🕒</span>
-            <span style="cursor: pointer;" onclick="window.handleEmailSubmission(1)"></span>
-            <span style="cursor: pointer; margin-left: 1cqw;">⋮</span>
-        </div>
-
-        <div style="padding: 3cqh 4cqw; flex-grow: 1;">
-            <div style="display: flex; align-items: center; gap: 1cqw; margin-bottom: 3cqh;">
-                <h2 style="margin: 0; font-size: 2.4cqw; font-weight: 400; color: #202124;">
-                    ${emailSubject}
-                </h2>
-                <span style="background-color: #e8eaed; color: #5f6368; font-size: 1.2cqw; padding: 2px 6px; border-radius: 4px; font-weight: 500;">
-                    Inbox
-                </span>
-            </div>
-
-            <div class="email-meta-row" style="display: flex; align-items: flex-start; margin-bottom: 4cqh; position: relative;">
-                <div style="width: 5cqw; height: 5cqw; border-radius: 50%; background-color: #007791; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 2cqw; margin-right: 2cqw; flex-shrink: 0;">
-                    ${emailSender.substring(0, 2).toUpperCase()}
-                </div>
-                
-                <div style="flex-grow: 1; min-width: 0;">
-                    <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%;">
-                        <div>
-                            <span style="font-weight: bold; color: #202124; font-size: 1.6cqw; margin-right: 0.5cqw;">${emailSender}</span>
-                            <span style="color: #5f6368; font-size: 1.4cqw;">&lt;${emailAddress}&gt;</span>
-                        </div>
-                        <div style="color: #5f6368; font-size: 1.3cqw; white-space: nowrap; margin-left: 2cqw;">
-                            Just now
-                        </div>
-                    </div>
-                    
-                    <div style="color: #5f6368; font-size: 1.4cqw; margin-top: 0.5cqh; display: flex; align-items: center; gap: 0.5cqw;">
-                        to me 
-                        <span style="font-size: 1cqw; color: #5f6368; cursor: pointer;">▼</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="email-body" style="font-size: 1.6cqw; line-height: 1.5; color: #202124; padding-left: 7cqw; margin-bottom: 6cqh; min-height: 12cqh;">
-                ${emailBody}
-            </div>
-
-            <div id="email-options" style="display: flex; gap: 1.5cqw; padding-left: 7cqw; border-top: 1px solid #f1f3f4; padding-top: 3cqh;">
-                <div class="email-option" id="opt-0" onclick="window.handleEmailSubmission(0)" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f7f8f9'" onmouseout="this.style.backgroundColor='transparent'">
-                    ↩️ RESPOND TO EMAIL
-                </div>
-                <div class="email-option" id="opt-1" onclick="window.handleEmailSubmission(1)" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f7f8f9'" onmouseout="this.style.backgroundColor='transparent'">
-                    ➡️ IGNORE / TRASH
-                </div>
-            </div>
-        </div>
-    </div>
-    `;
-
-    document.getElementById('popup-overlay').style.display = 'block';
+function updateAI() {
+    if (isPaused || gameState !== 'game') return;
+    const dx = (avatar.x + 35) - (aiAvatar.x + 35);
+    const dy = (avatar.y + 35) - (aiAvatar.y + 35);
+    aiAvatar.angle = Math.atan2(dy, dx) * (180 / Math.PI) - 90;
 }
 
-
-    function updateAI() {
-        if (isPaused || gameState !== 'game') return;
-
-        const dx = (avatar.x + 35) - (aiAvatar.x + 35);
-        const dy = (avatar.y + 35) - (aiAvatar.y + 35);
-        
-        aiAvatar.angle = Math.atan2(dy, dx) * (180 / Math.PI) - 90;
-    }
-
-/**
- * Verifies that a target movement coordinate does not violate the physical 
- * boundary boxes of other players or the AI NPC.
- * Returns true if the path is clear.
- */
 function checkAvatarBoundaries(targetX, targetY) {
-    const HALF_SIZE = 35; // Avatar center offset
-    const PADDING = 18;   // Minimum distance inside boundaries before collision triggers
+    const HALF_SIZE = 35; 
+    const PADDING = 18;   
 
-    // Local player center coordinates
     const localCenterX = targetX + HALF_SIZE;
     const localCenterY = targetY + HALF_SIZE;
 
-    // 1. Keep checking against the AI Avatar Bounding Box (Do not walk over AI)
     if (typeof aiAvatar !== 'undefined' && aiAvatar) {
         const aiCenterX = aiAvatar.x + HALF_SIZE;
         const aiCenterY = aiAvatar.y + HALF_SIZE;
 
-        // Check AABB Overlap between local player and AI boundaries
         if (Math.abs(localCenterX - aiCenterX) < (HALF_SIZE + PADDING) &&
             Math.abs(localCenterY - aiCenterY) < (HALF_SIZE + PADDING)) {
-            return false; // Collision detected: Too close to AI Avatar
+            return false; 
         }
     }
-
-    // REMOVED: Remote players check loop from here to allow walking over them
-
-    return true; // All clear!
+    return true; 
 }
-    function checkCollisionAt(tx, ty) {
+
+function checkCollisionAt(tx, ty) {
     const playerCenterX = tx + 35;
     const playerCenterY = ty + 35;
     const playerRadius = 25; 
 
-    // Pull from the dynamic room configuration schema structure directly
     const currentZones = roomConfigurations[currentRoomId]?.collisionZones || [];
 
     return currentZones.some(z => {
@@ -2152,15 +2143,12 @@ function checkAvatarBoundaries(targetX, targetY) {
         }
     });
 }
-// Prevent local avatar from stepping inside another student's perimeter
+
 function checkPeerPlayerCollisions(nextX, nextY) {
-    // Return false immediately to allow ghosting through remote peer players
     return false; 
 }
 
-// Helper to check if a point hits any defined collision box or circle
 function isInsideCollisionZone(x, y, radius = 25) {
-    // FIX: Pull collision zones dynamically based on active room ID
     const activeZones = roomConfigurations[currentRoomId]?.collisionZones || [];
     
     for (let z of activeZones) {
@@ -2177,6 +2165,7 @@ function isInsideCollisionZone(x, y, radius = 25) {
     }
     return false;
 }
+
 function draw() {
     if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
         if (typeof currentStudentNumber === 'undefined' || !currentStudentNumber) {
@@ -2204,18 +2193,12 @@ function draw() {
 
         avatar.x = currentConfig.spawnX;
         avatar.y = currentConfig.spawnY;
-        
         avatar.angle = (roomConfigurations[currentRoomId]?.cutscene?.directionAngle !== undefined) 
             ? roomConfigurations[currentRoomId].cutscene.directionAngle 
             : 90;
         
         isCutsceneActive = true;
         cutsceneStartTime = Date.now();
-        
-        const inst = document.getElementById('instructions');
-        if (inst) {
-            inst.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
-        }
         
         const badge = document.getElementById('ai-attention-badge');
         if (badge) badge.style.display = 'block';
@@ -2240,12 +2223,10 @@ function draw() {
         ctx.drawImage(activeBgImage, 0, 0, 800, 600);
     }
 
-    // --- RENDER DYNAMIC PHYSICAL PRINTER & SHREDDER OBJECTS ---
     if (activeRoomConfig?.printerDevice) {
         const printer = activeRoomConfig.printerDevice;
         const shredder = activeRoomConfig.shredderDevice;
 
-        // 1. Draw Paper Shredder
         if (shredder && images.paper_shredder && images.paper_shredder.naturalWidth > 0) {
             ctx.save();
             ctx.translate(shredder.x, shredder.y);
@@ -2260,7 +2241,6 @@ function draw() {
             ctx.restore();
         }
 
-        // 2. Draw Printer
         if (images.printer && images.printer.naturalWidth > 0) {
             ctx.save();
             ctx.translate(printer.x, printer.y);
@@ -2275,7 +2255,6 @@ function draw() {
             ctx.restore();
         }
 
-        // Proximity Highlight & Prompt for Printer
         const pDx = (avatar.x + 35) - printer.x;
         const pDy = (avatar.y + 35) - printer.y;
         const printerDist = Math.sqrt(pDx * pDx + pDy * pDy);
@@ -2324,9 +2303,6 @@ function draw() {
         }
     });
 
-    // =========================================================================
-    // LAYER 1: MULTIPLAYER RENDERING (Peers render underneath local player)
-    // =========================================================================
     if (typeof remotePlayers !== 'undefined' && remotePlayers) {
         Object.keys(remotePlayers).forEach(id => {
             if (id.trim().toUpperCase() === currentStudentNumber.trim().toUpperCase()) return; 
@@ -2367,9 +2343,6 @@ function draw() {
         });
     }
 
-    // =========================================================================
-    // LAYER 2: LOCAL PLAYER AVATAR (Draws over remote peers for Ghost Mode)
-    // =========================================================================
     let localNow = Date.now();
     let img;
 
@@ -2402,9 +2375,6 @@ function draw() {
         ctx.restore();
     }
 
-    // =========================================================================
-    // LAYER 3: AI NPC (Always on top layer with solid physical restrictions)
-    // =========================================================================
     if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
         ctx.save();
         ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
@@ -2414,7 +2384,6 @@ function draw() {
         ctx.restore();
     }
 
-    // --- LOCAL PLAYER NAME INDICATOR ---
     if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber) {
         ctx.font = "bold 9px Arial";
         const localTextWidth = ctx.measureText(currentStudentNumber).width;
@@ -2458,7 +2427,6 @@ function draw() {
         });
     }
 
-    // --- HUD RENDER ---
     ctx.fillStyle = "rgba(0,0,0,0.7)";
     ctx.fillRect(580, 10, 210, 40);
     ctx.strokeStyle = "#dcc23c";
@@ -2505,38 +2473,31 @@ function draw() {
 
     requestAnimationFrame(draw);
 }
-    function drawTitleScreen() {
-        ctx.clearRect(0, 0, 800, 600);
-        
-        ctx.save();
-        ctx.globalAlpha = 0.50; 
-        if (images.background && images.background.naturalWidth > 0) {
-            ctx.drawImage(images.background, 0, 0, 800, 600);
-        }
-        
-        ctx.restore(); 
 
-        ctx.fillStyle = 'rgba(13, 14, 21, 0.4)'; 
-        ctx.fillRect(0, 0, 800, 600);
+function drawTitleScreen() {
+    ctx.clearRect(0, 0, 800, 600);
+    ctx.save();
+    ctx.globalAlpha = 0.50; 
+    if (images.background && images.background.naturalWidth > 0) {
+        ctx.drawImage(images.background, 0, 0, 800, 600);
     }
-
+    ctx.restore(); 
+    ctx.fillStyle = 'rgba(13, 14, 21, 0.4)'; 
+    ctx.fillRect(0, 0, 800, 600);
+}
 
 function getRandomSpawnPosition() {
     const baseSpawnX = 300; 
     const baseSpawnY = 380;
-    const horizontalStep = 45; // Shifts players past the 40px collision threshold
+    const horizontalStep = 45; 
     
     let currentX = baseSpawnX;
     let stepCount = 1;
-    let direction = 1; // 1 = shift right, -1 = shift left
+    let direction = 1; 
     let attempts = 0;
 
-    // Keep checking positions until an open, non-colliding spot is found
     while (attempts < 50) {
-        // 1. Check if the current position collides with map bounds or static zone items
         let environmentCollision = isInsideCollisionZone(currentX + 35, baseSpawnY + 35, 20);
-        
-        // 2. Check if this position overlaps with another peer student already in the room
         let peerCollision = false;
         if (typeof remotePlayers !== 'undefined' && remotePlayers) {
             for (let id of Object.keys(remotePlayers)) {
@@ -2548,7 +2509,7 @@ function getRandomSpawnPosition() {
                     const dy = baseSpawnY - p.y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
                     
-                    if (distance < 40) { // Matches your 40px bounding threshold
+                    if (distance < 40) { 
                         peerCollision = true;
                         break;
                     }
@@ -2556,29 +2517,22 @@ function getRandomSpawnPosition() {
             }
         }
 
-        // If the spot is clear of environmental obstacles and peer players, use it!
         if (!environmentCollision && !peerCollision) {
             return { x: currentX, y: baseSpawnY };
         }
-
-        // Alternate shifting sides outward: (300 + 45), (300 - 45), (300 + 90), (300 - 90)...
         currentX = baseSpawnX + (direction * stepCount * horizontalStep);
-        
         if (direction === 1) {
-            direction = -1; // Flip to left side next loop
+            direction = -1; 
         } else {
-            direction = 1;  // Flip to right side next loop
-            stepCount++;    // Increase distance threshold for subsequent step pairs
+            direction = 1;  
+            stepCount++;    
         }
-        
         attempts++;
     }
-
-    // Safe fall-back value if the entire row line is tightly packed
     return { x: baseSpawnX, y: baseSpawnY };
 }
 
-    loadImages();
+loadImages();
 </script>
 </body>
 </html>
