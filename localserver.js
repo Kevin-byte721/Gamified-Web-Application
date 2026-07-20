@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose(); 
 
-const HOST = '192.168.1.12';
+const HOST = '10.40.12.181';
 
 // =========================================================================
 // SQLITE LOCAL STORAGE ENGINE CONFIGURATION (cybergame.db)
@@ -32,8 +32,6 @@ const localDb = new sqlite3.Database(dbPath, (err) => {
 // FACTORY ENGINE: GENERATES INDEPENDENT SHARDS DYNAMICALLY
 // =========================================================================
 function createGameShard(portNumber, minStudentNum, maxStudentNum) {
-    
-
     const app = express();
 
     app.use(cors());
@@ -42,10 +40,11 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
 
     // Each individual port keeps its own unique in-memory real-time tracking instance
     const activePlayers = {};
-// Allow client-side dashboard to discover the host dynamically
+
     app.get('/api/config', (req, res) => {
         res.json({ host: HOST });
     });
+
     // --- MULTIPLAYER CONNECTION LOGGING ---
     app.get('/game.html', (req, res, next) => {
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -62,7 +61,7 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
     });
 
     // =========================================================================
-    // LOCAL SQLITE AUTHENTICATION & SEEDING ROUTE (3-MODULE SCHEMA)
+    // LOCAL SQLITE AUTHENTICATION & SEEDING ROUTE (EXPLICIT 3-MODULE SCHEMA)
     // =========================================================================
     app.post('/api/auth', (req, res) => {
         const { studentNumber } = req.body;
@@ -74,7 +73,7 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
         
         localDb.get(`SELECT * FROM students WHERE student_number = ?`, [normalizedKey], (err, row) => {
             if (err) {
-                console.error("[LOCAL DB ERROR]:", err.message);
+                console.error(`[LOCAL DB ERROR - SHARD ${portNumber}]:`, err.message);
                 return res.status(500).json({ error: "Local database tracking fault." });
             }
 
@@ -82,7 +81,7 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
                 return res.json({ authenticated: true, data: row });
             } else {
                 const newRecord = {
-                    student_number: normalizedKey,
+                    student_number: studentNumber,
                     safe_score: 0,
                     savvy_score: 0,
                     social_score: 0,
@@ -97,7 +96,7 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
                     [normalizedKey, newRecord.last_active], 
                     (insertErr) => {
                         if (insertErr) {
-                            console.error("[LOCAL DB INSERT ERROR]:", insertErr.message);
+                            console.error(`[LOCAL DB INSERT ERROR - SHARD ${portNumber}]:`, insertErr.message);
                             return res.status(500).json({ error: "Local seeding process crashed." });
                         }
                         return res.json({ authenticated: true, data: newRecord });
@@ -108,7 +107,20 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
     });
 
     // =========================================================================
-    // AUTOMATIC PROGRESSION ROUTING ON ROOM ENTRANCE
+    // TEACHER RECORDS FETCH ROUTE (SQLITE EXCLUSIVE READ)
+    // =========================================================================
+    app.get('/api/teacher/records', (req, res) => {
+        localDb.all(`SELECT * FROM students ORDER BY student_number ASC`, [], (err, rows) => {
+            if (err) {
+                console.error(`[TEACHER FETCH ERROR - SHARD ${portNumber}]:`, err.message);
+                return res.status(500).json({ error: "Failed to read student database." });
+            }
+            res.json({ success: true, players: rows });
+        });
+    });
+
+    // =========================================================================
+    // AUTOMATIC LOCAL PROGRESSION ROUTING ON ROOM ENTRANCE
     // =========================================================================
     app.post('/api/multiplayer/join-room', (req, res) => {
         const { studentNumber, roomCode, roomId } = req.body;
@@ -132,19 +144,24 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
 
         localDb.get(`SELECT * FROM students WHERE student_number = ?`, [normalizedId], (err, row) => {
             if (!err && row) {
-                const safe = row.safe_score || 0;
-                const savvy = row.savvy_score || 0;
-                const social = row.social_score || 0;
+                // CASE-INSENSITIVE FALLBACK READS:
+                const safe = row.safe_score || row.Safe_score || row.SAFE_SCORE || 0;
+                const savvy = row.savvy_score || row.Savvy_score || row.SAVVY_SCORE || 0;
+                const social = row.social_score || row.Social_score || row.SOCIAL_SCORE || 0;
                 const totalScore = safe + savvy + social;
 
-                if (totalScore >= 40) {
+                // Score thresholds matched completely to server.js
+                if (totalScore >= 60) {
                     calculatedRoomId = 'room3';
-                } else if (totalScore >= 20) {
+                } else if (totalScore >= 30) {
                     calculatedRoomId = 'room2';
                 } else {
                     calculatedRoomId = 'room1';
                 }
-                console.log(`[SPAWN ROUTER LOCAL - SHARD ${portNumber}] Student #${studentNumber} Score: ${totalScore}. Routed to: ${calculatedRoomId}`);
+                console.log(`[SPAWN ROUTER LOCAL - SHARD ${portNumber}] Recalled Student #${studentNumber} (Scores -> Safe: ${safe}, Savvy: ${savvy}, Social: ${social} | Total: ${totalScore}). Routed to: ${calculatedRoomId}`);
+            } else {
+                console.log(`[SPAWN ROUTER LOCAL - SHARD ${portNumber}] No record found yet for ${studentNumber}. Defaulting spawn to room1.`);
+                calculatedRoomId = 'room1';
             }
             completeJoinRoom();
         });
@@ -246,9 +263,7 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
         }
 
         const { studentNumber } = payload;
-        if (!studentNumber) {
-            return res.status(400).json({ error: "Missing identity sequence argument." });
-        }
+        if (!studentNumber) return res.status(400).json({ error: "Missing identity sequence argument." });
 
         const normalizedId = studentNumber.trim().toUpperCase();
 
@@ -264,8 +279,9 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
 
         res.json({ success: true });
     });
+
     // =========================================================================
-    // LOCAL PROGRESS SAVING ROUTE (SQLITE EXCLUSIVE WRITE)
+    // LOCAL PROGRESS SAVING ROUTE (SQLITE EXCLUSIVE WRITE - ACCUMULATIVE INCREMENT)
     // =========================================================================
     app.post('/api/save-progress', (req, res) => {
         const { studentNumber, module, score, completed } = req.body;
@@ -275,32 +291,30 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
         }
 
         const normalizedKey = studentNumber.trim().toUpperCase();
+        const normalizedModule = module.trim().toLowerCase();
 
-        console.log(`[LOCAL PROGRESS SAVE] Committing ${score} pts to ${module}_score inside cybergame.db`);
-        
-        // Query current score first to perform incremental updates safely
         localDb.get(`SELECT * FROM students WHERE student_number = ?`, [normalizedKey], (err, row) => {
-            if (err || !row) {
-                return res.status(500).json({ error: "Failed to locate local database identity row." });
-            }
+            if (err || !row) return res.status(500).json({ error: "Failed to locate database identity." });
 
-            const currentScore = row[`${module}_score`] || 0;
+            // Mimics Firestores incremental update locally
+            const currentScore = row[`${normalizedModule}_score`] || 0;
             const updatedScore = currentScore + score;
             const completedVal = completed ? 1 : 0;
             const nowStr = new Date().toISOString();
 
             localDb.run(`UPDATE students SET 
-                ${module}_score = ?, 
-                ${module}_completed = ?, 
+                ${normalizedModule}_score = ?, 
+                ${normalizedModule}_completed = ?, 
                 last_active = ? 
                 WHERE student_number = ?`,
                 [updatedScore, completedVal, nowStr, normalizedKey],
                 function(updateErr) {
                     if (updateErr) {
-                        console.error("[LOCAL UPDATE ERROR]:", updateErr.message);
+                        console.error(`[LOCAL PROGRESS SAVE ERROR - SHARD ${portNumber}]:`, updateErr.message);
                         return res.status(500).json({ error: "Local state write failure." });
                     }
-                    res.json({ success: true, localDbChanges: this.changes });
+                    console.log(`[LOCAL PROGRESS RECORDED]: Added ${score} points to ${normalizedModule}_score for Student #${studentNumber}.`);
+                    res.json({ success: true, changes: this.changes });
                 }
             );
         });
@@ -323,18 +337,6 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
     app.listen(portNumber, HOST, () => {
         console.log(`[GAME SHARD] http://${HOST}:${portNumber} Active (STU_${String(minStudentNum).padStart(3, '0')} - STU_${String(maxStudentNum).padStart(3, '0')})`);
     });
-    // =========================================================================
-    // TEACHER RECORDS FETCH ROUTE (SQLITE EXCLUSIVE)
-    // =========================================================================
-    app.get('/api/teacher/records', (req, res) => {
-        localDb.all(`SELECT * FROM students ORDER BY student_number ASC`, [], (err, rows) => {
-            if (err) {
-                console.error("[TEACHER FETCH ERROR]:", err.message);
-                return res.status(500).json({ error: "Failed to read student database." });
-            }
-            res.json({ success: true, players: rows });
-        });
-    });
 }
 
 // =========================================================================
@@ -342,4 +344,4 @@ function createGameShard(portNumber, minStudentNum, maxStudentNum) {
 // =========================================================================
 createGameShard(3000, 1, 20);  // Server Shard 1: Tracks STU_001 through STU_020
 createGameShard(3001, 21, 40); // Server Shard 2: Tracks STU_021 through STU_040
-createGameShard(3002, 41, 60); // Server Sh0ard 3: Tracks STU_041 through STU_060
+createGameShard(3002, 41, 60); // Server Shard 3: Tracks STU_041 through STU_060
