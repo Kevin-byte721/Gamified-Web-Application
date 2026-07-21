@@ -717,8 +717,8 @@ const imageFiles = {
 
 let currentRoomCode = ""; 
 var remotePlayers = {};
-let skipTitleScreen = false;
-let debugMode = false; 
+//let skipTitleScreen = true;
+//let debugMode = true; 
 let showGuideControls = false;
 let imagesLoaded = 0;
 const totalImages = Object.keys(imageFiles).length;
@@ -783,7 +783,7 @@ const aiAvatar = {
 };
 
 const keys = {};
-let cyberknowledgeScore = 0;
+let cyberknowledgeScore = 60;
 let selectedEmailOption = 0; 
 var laptopLocked = true; 
 let currentStudentNumber = "";
@@ -1348,9 +1348,9 @@ function interactWithLaptop(paper) {
 
         let textToShow = "";
         if (paper.userWasCorrect) {
-            textToShow = `<b>System Notification:</b><br><span style="color: #52b788; font-weight: bold;">WORKSTATION SECURE:</span> Router configuration updated and active.`;
+            textToShow = `<b>System Notification:</b><br><span style="color: #52b788; font-weight: bold;">WORKSTATION SECURE:</span> Messaging protocol completed safely.`;
         } else {
-            textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">ACCESS REVOKED:</span> Terminal framework remains offline due to failed password verification.`;
+            textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">SECURITY BREACH:</span> Unsafe messaging conduct detected on workstation.`;
         }
         
         content.innerHTML = `
@@ -1374,7 +1374,7 @@ function interactWithLaptop(paper) {
         content.innerHTML = `
             <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
                 <b>System Notification:</b><br>
-                <span style="color: #ffaa00; font-weight: bold;">TERMINAL STANDBY:</span> Workstation link interrupted. Please redirect to the AI Avatar interface to process active appraisal sequence first.
+                <span style="color: #ffaa00; font-weight: bold;">TERMINAL STANDBY:</span> Message appraisal pending. Speak with the AI Avatar to review your communication before continuing.
             </div>
         `;
         document.getElementById('popup-overlay').style.display = 'block';
@@ -1393,22 +1393,183 @@ function interactWithLaptop(paper) {
         content.innerHTML = `
             <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
                 <b>System Notification:</b><br>
-                <span style="color: #e63946; font-weight: bold;">SECURITY LOCK:</span> Threat directives intercepted. Interrogate the AI Avatar system node to bypass firewalls before logging in.
+                <span style="color: #e63946; font-weight: bold;">SECURITY LOCK:</span> Interrogate the AI Avatar system node to unlock workstation access.
             </div>
         `;
         document.getElementById('popup-overlay').style.display = 'block';
         return; 
     }
 
+    // Routing by Room
     if (currentRoomId === 'room2') {
         showRouterPasswordPopup(paper);
+    } else if (currentRoomId === 'room3') {
+        showChatPopup(paper);
     } else {
         showEmailPopup(paper);
         if (typeof updateEmailUI === "function") updateEmailUI();
     }
 }
 
+// Global tracking state for Room 3 messaging phases
+if (typeof room3ChatState === 'undefined') {
+    var room3ChatState = {
+        phase: 1, // Phase 1: Stranger, Phase 2: Known Contact
+        phase1Completed: false,
+        phase2Completed: false
+    };
+}
 
+function showChatPopup(paper) {
+    if (paper && (paper.locked || (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect))) {
+        return;
+    }
+
+    isPaused = true;
+    currentPaper = paper;
+    currentPaper.type = 'chat';
+    showingAIDialogue = false;
+
+    const content = document.getElementById('popup-content');
+    content.className = '';
+    content.classList.add('center-modal-mode');
+
+    let chatData = {};
+
+    if (room3ChatState.phase === 1) {
+        chatData = {
+            title: "Chat App — Direct Message",
+            contactName: "Unknown_User99 (Stranger)",
+            avatarBg: "#e63946",
+            initialMessage: "Hey! I lost my access code and login credentials for the school server. Can you quickly send me your account details or password so I can log in?",
+            options: [
+                {
+                    text: "I cannot share login credentials or private information with anyone.",
+                    isSafe: true
+                },
+                {
+                    text: "Sure, here is my password and student ID info.",
+                    isSafe: false
+                }
+            ]
+        };
+    } else {
+        chatData = {
+            title: "Chat App — Select Contact",
+            contactName: "Alex (Classmate)",
+            avatarBg: "#2563eb",
+            initialMessage: "Hey, I was having trouble understanding today's cybersecurity lesson and felt a bit lost. How did you find it?",
+            options: [
+                {
+                    text: "Haha you're so bad at this, you should just quit class lol.",
+                    isSafe: false
+                },
+                {
+                    text: "Don't worry, it's tricky at first! Let me know if you want to study together or review notes.",
+                    isSafe: true
+                }
+            ]
+        };
+    }
+
+    window.submitChatMessage = function(optionIndex) {
+    if (!currentPaper) return;
+
+    const selectedOption = chatData.options[optionIndex];
+    const currentConfig = roomConfigurations[currentRoomId];
+
+    laptopAttempts[currentRoomId] = (laptopAttempts[currentRoomId] || 0) + 1;
+
+    if (selectedOption.isSafe) {
+        currentPaper.userWasCorrect = true;
+        currentPaper.answered = true;
+        currentPaper.locked = true;
+        currentPaper.hasConsultedAI = false;
+
+        // CRITICAL FIX: Flag success state so AI Avatar knows an action occurred
+        if (currentConfig) {
+            currentConfig.pendingLaptopSuccess = true;
+        }
+    } else {
+        currentPaper.userWasCorrect = false;
+        if (laptopAttempts[currentRoomId] >= 3) {
+            currentPaper.answered = true;
+            currentPaper.locked = true;
+            currentPaper.hasConsultedAI = false;
+            
+            // Flag exhausted state if attempts reach max
+            if (currentConfig) {
+                currentConfig.pendingLaptopExhausted = true;
+            }
+        } else {
+            currentPaper.answered = false;
+            currentPaper.locked = false;
+            currentPaper.hasConsultedAI = false;
+
+            if (currentConfig) {
+                currentConfig.pendingLaptopRetry = true;
+            }
+        }
+    }
+
+    // Clear old cached message so the AI Avatar calculates fresh feedback
+    if (currentConfig) {
+        currentConfig.lastDialogueMessage = null;
+    }
+
+    closePopup();
+
+    // Trigger AI Attention Badge
+    const badge = document.getElementById('ai-attention-badge');
+    if (badge) {
+        badge.style.display = 'block';
+        if (typeof updateAttentionBadgePosition === "function") updateAttentionBadgePosition();
+    }
+};
+
+    content.innerHTML = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; width: 100%; max-width: 700px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
+        
+        <!-- Header -->
+        <div style="background: #1f2937; color: #ffffff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background-color: ${chatData.avatarBg}; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; color: #ffffff;">
+                    ${chatData.contactName.substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                    <div style="font-weight: bold; font-size: 1.1rem;">${chatData.contactName}</div>
+                    <div style="font-size: 0.8rem; color: #9ca3af;">● Online</div>
+                </div>
+            </div>
+            <button onclick="closePopup()" style="background: transparent; border: none; color: #ffffff; font-size: 1.4rem; cursor: pointer;">✕</button>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 20px; background: #f9fafb; min-height: 200px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="align-self: flex-start; max-width: 80%; background: #ffffff; border: 1px solid #e5e7eb; padding: 12px 16px; border-radius: 12px 12px 12px 0px; color: #1f2937; font-size: 0.95rem; line-height: 1.4;">
+                ${chatData.initialMessage}
+            </div>
+        </div>
+
+        <!-- Selection Panel -->
+        <div style="padding: 16px; background: #ffffff; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: #6b7280; font-weight: 600;">SELECT YOUR MESSAGE RESPONSE:</p>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                ${chatData.options.map((opt, idx) => `
+                    <button onclick="window.submitChatMessage(${idx})" 
+                        style="text-align: left; background: #f3f4f6; border: 1px solid #d1d5db; padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; color: #1f2937; cursor: pointer; transition: all 0.2s ease;"
+                        onmouseover="this.style.background='#e5e7eb'" 
+                        onmouseout="this.style.background='#f3f4f6'">
+                        💬 ${opt.text}
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    </div>
+    `;
+
+    document.getElementById('popup-overlay').style.display = 'block';
+}
 function showEmailPopup(paper) {
     if (paper && (paper.locked || (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect))) {
         return;
@@ -1634,36 +1795,91 @@ function showRouterPasswordPopup(paper) {
     let remainingTries = 3 - laptopAttempts[currentRoomId];
 
     content.innerHTML = `
-    <div class="popup-layout-wrapper" style="font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 1.6cqw; background-color: #ffffff; color: #202124; box-sizing: border-box; width: 100%; max-width: 700px; margin: 0 auto; padding: 3cqh 4cqw; border-radius: 12px; display: flex; flex-direction: column; gap: 2cqh;">
+    <div class="popup-layout-wrapper" style="
+        font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+        font-size: 1.5cqw;
+        background: #ffffff;
+        color: #1f2937;
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 3.5cqh 3.5cqw;
+        border-radius: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 2.5cqh;
+    ">
         
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e8eaed; padding-bottom: 1.5cqh;">
-            <h2 style="margin: 0; font-size: 2.2cqw; color: #1a73e8; display: flex; align-items: center; gap: 0.8cqw;">
-                ⚙️ Router Security Config
-            </h2>
-            <span style="cursor: pointer; font-size: 2cqw; color: #5f6368;" onclick="closePopup()">✖</span>
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 1.8cqh;">
+            <div style="display: flex; align-items: center; gap: 0.8cqw;">
+                <span style="font-size: 2cqw;">⚙️</span>
+                <h2 style="margin: 0; font-size: 2cqw; font-weight: 700; color: #1e40af; letter-spacing: -0.02em;">
+                    Router Security Configuration
+                </h2>
+            </div>
+            <span style="cursor: pointer; font-size: 1.8cqw; color: #9ca3af; transition: color 0.2s;" 
+                  onmouseover="this.style.color='#111827'" 
+                  onmouseout="this.style.color='#9ca3af'" 
+                  onclick="closePopup()">✖</span>
         </div>
 
-        <div id="router-avatar-instruction" style="background-color: #f1f3f4; border-left: 5px solid #1a73e8; padding: 2cqh 2.5cqw; border-radius: 4px; font-size: 1.6cqw; line-height: 1.4; color: #202124;">
-            <b>System Interface:</b><br>
-            Warning! The router is currently using a weak default password (<code>admin123</code>). 
-            Please enter a strong new password in the input field below and press <b>SPACE BAR</b> on your keyboard to submit.
+        <!-- Instruction Card -->
+        <div style="
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #2563eb;
+            padding: 2cqh 2.2cqw;
+            border-radius: 8px;
+            font-size: 1.4cqw;
+            line-height: 1.5;
+            color: #334155;
+        ">
+            <strong style="color: #1e293b; display: block; margin-bottom: 0.4cqh;">System Status: Vulnerable</strong>
+            The router is currently running with default credentials (<code style="background: #e2e8f0; padding: 0.2cqh 0.5cqw; border-radius: 4px; font-family: monospace; color: #0f172a;">admin123</code>). 
+            Enter a strong password below and press <kbd style="background: #e2e8f0; padding: 0.2cqh 0.6cqw; border-radius: 4px; font-size: 1.2cqw;">SPACE BAR</kbd> to apply updates.
         </div>
 
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5cqh; margin-top: 1cqh;">
+        <!-- Form Area -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1.8cqh; margin-top: 0.5cqh;">
             <input 
                 type="text" 
                 id="router-password-input" 
                 placeholder="Enter new strong password..." 
                 autocomplete="off"
-                style="width: 80%; padding: 1.2cqh 1.8cqw; font-size: 1.6cqw; border: 2px solid #dadce0; border-radius: 8px; outline: none; text-align: center; font-family: monospace;"
+                style="
+                    width: 85%;
+                    padding: 1.4cqh 2cqw;
+                    font-size: 1.5cqw;
+                    border: 2px solid #cbd5e1;
+                    border-radius: 10px;
+                    outline: none;
+                    text-align: center;
+                    font-family: 'Courier New', Courier, monospace;
+                    letter-spacing: 0.05em;
+                    transition: border-color 0.2s, box-shadow 0.2s;
+                    background: #f8fafc;
+                "
+                onfocus="this.style.borderColor='#2563eb'; this.style.backgroundColor='#ffffff'; this.style.boxShadow='0 0 0 4px rgba(37, 99, 235, 0.1)';"
+                onblur="this.style.borderColor='#cbd5e1'; this.style.backgroundColor='#f8fafc'; this.style.boxShadow='none';"
             />
             
-            <div id="router-tries-count" style="font-size: 1.4cqw; color: #5f6368; font-weight: 500;">
-                Attempts remaining: <span id="tries-num" style="color: #e63946; font-weight: bold;">${remainingTries}</span> / 3
+            <div style="display: flex; align-items: center; gap: 0.5cqw; font-size: 1.3cqw; color: #64748b; font-weight: 500;">
+                Attempts remaining: 
+                <span id="tries-num" style="
+                    background: #fef2f2; 
+                    color: #dc2626; 
+                    padding: 0.2cqh 0.8cqw; 
+                    border-radius: 12px; 
+                    font-weight: 700;
+                    border: 1px solid #fecaca;
+                ">${remainingTries} / 3</span>
             </div>
 
-            <div style="font-size: 1.2cqw; color: #70757a; font-style: italic;">
-                (Press <b>SPACE BAR</b> to submit password)
+            <div style="font-size: 1.1cqw; color: #94a3b8; font-style: italic;">
+                Press <b style="color: #64748b;">SPACE BAR</b> on your keyboard to submit
             </div>
         </div>
     </div>
@@ -1687,13 +1903,11 @@ function showRouterPasswordPopup(paper) {
     window.handleRouterPasswordSubmit = function(enteredPassword) {
         if (!currentPaper || laptopAttempts[currentRoomId] >= 3) return;
 
+        const currentConfig = roomConfigurations[currentRoomId];
         const isStrong = enteredPassword.length >= 8 && 
                          /[A-Z]/.test(enteredPassword) && 
                          /[0-9]/.test(enteredPassword) && 
                          /[^A-Za-z0-9]/.test(enteredPassword);
-
-        const instructionBox = document.getElementById('router-avatar-instruction');
-        const triesNumEl = document.getElementById('tries-num');
 
         if (isStrong) {
             laptopAttempts[currentRoomId] += 1;
@@ -1702,42 +1916,21 @@ function showRouterPasswordPopup(paper) {
             currentPaper.locked = true;
             currentPaper.hasConsultedAI = false;
 
-            if (instructionBox) {
-                instructionBox.style.borderLeftColor = "#52b788";
-                instructionBox.style.backgroundColor = "#e8f5e9";
-                instructionBox.innerHTML = `
-                    <b>System Interface:</b><br>
-                    <span style="color: #2e7d32; font-weight: bold;">PASS!</span> Excellent job! You created a strong, complex password. The router is now secured against unauthorized access.
-                `;
+            if (currentConfig) {
+                currentConfig.pendingLaptopRetry = false;
+                currentConfig.pendingLaptopSuccess = true;
             }
 
-            if (inputEl) inputEl.disabled = true;
-
-            setTimeout(() => {
-                closePopup();
-            }, 1800);
+            // Standard close without triggering AI dialogue automatically
+            closePopup();
 
         } else {
             laptopAttempts[currentRoomId] += 1;
             let triesLeft = 3 - laptopAttempts[currentRoomId];
 
-            if (triesNumEl) {
-                triesNumEl.textContent = triesLeft;
-            }
-
             if (triesLeft > 0) {
-                if (instructionBox) {
-                    instructionBox.style.borderLeftColor = "#e63946";
-                    instructionBox.style.backgroundColor = "#ffebee";
-                    instructionBox.innerHTML = `
-                        <b>System Interface:</b><br>
-                        <span style="color: #c62828; font-weight: bold;">TRY AGAIN!</span> Password too weak. Ensure it is at least 8 characters long, contains an uppercase letter, a number, and a special character (!@#$).
-                    `;
-                }
-
-                if (inputEl) {
-                    inputEl.value = '';
-                    inputEl.focus();
+                if (currentConfig) {
+                    currentConfig.pendingLaptopRetry = true;
                 }
             } else {
                 currentPaper.userWasCorrect = false;
@@ -1745,25 +1938,17 @@ function showRouterPasswordPopup(paper) {
                 currentPaper.locked = true;
                 currentPaper.hasConsultedAI = false;
 
-                if (instructionBox) {
-                    instructionBox.style.borderLeftColor = "#c62828";
-                    instructionBox.style.backgroundColor = "#ffebee";
-                    instructionBox.innerHTML = `
-                        <b>System Interface:</b><br>
-                        <span style="color: #c62828; font-weight: bold;">ACCESS DENIED!</span> You have exhausted all 3 attempts. Terminal locked out.
-                    `;
+                if (currentConfig) {
+                    currentConfig.pendingLaptopRetry = false;
+                    currentConfig.pendingLaptopExhausted = true;
                 }
-
-                if (inputEl) inputEl.disabled = true;
-
-                setTimeout(() => {
-                    closePopup();
-                }, 2000);
             }
+
+            // Standard close without triggering AI dialogue automatically
+            closePopup();
         }
     };
 }
-
 function showAIDialoguePopup(state) {
     isPaused = true;
     showingAIDialogue = true;
@@ -1777,13 +1962,53 @@ function showAIDialoguePopup(state) {
         terminalState.hasConsultedAI = true;
     }
 
-    // Resolve state flags cleanly
+    // Determine current score dynamically
+    const scoreElement = document.getElementById('score-display');
+    const currentScore = scoreElement ? parseInt(scoreElement.textContent.replace(/\D/g, '')) || 0 : cyberknowledgeScore;
+
+    // Room completion benchmarks
+    const hasPassedRoom1Laptop = currentRoomId === 'room1' && currentScore >= 20;
+    const hasPassedRoom2Laptop = currentRoomId === 'room2' && currentScore >= 50;
+    const hasPassedRoom3Laptop = currentRoomId === 'room3' && currentScore >= 80;
+
+    // 1. Check for pending state flags triggered by actions
+    let hasPendingFlag = false;
     if (state === undefined && currentConfig) {
         if (currentConfig.pendingLaptopRetry) {
             state = "laptop_retry";
+            currentConfig.pendingLaptopRetry = false; 
+            hasPendingFlag = true;
+        } else if (currentConfig.pendingLaptopSuccess) {
+            state = "device_secure_success";
+            currentConfig.pendingLaptopSuccess = false;
+            hasPendingFlag = true;
+        } else if (currentConfig.pendingLaptopExhausted) {
+            state = currentRoomId === 'room3' ? "laptop_exhausted_room3" : "laptop_exhausted_room2";
+            currentConfig.pendingLaptopExhausted = false;
+            hasPendingFlag = true;
         } else if (currentConfig.pendingPrinterRetry) {
             state = "printer_retry";
+            currentConfig.pendingPrinterRetry = false;
+            hasPendingFlag = true;
         }
+    }
+
+    // 2. If no new action state was passed/flagged, and a last message exists, keep displaying it
+    if (state === undefined && !hasPendingFlag && currentConfig?.lastDialogueMessage) {
+        content.className = ''; 
+        content.removeAttribute('style'); 
+        content.classList.add('dialogue-bubble-mode');
+
+        const badge = document.getElementById('ai-attention-badge');
+        if (badge) badge.style.display = 'none';
+
+        content.innerHTML = `
+            <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
+                ${currentConfig.lastDialogueMessage}
+            </div>
+        `;
+        document.getElementById('popup-overlay').style.display = 'block';
+        return;
     }
     
     let textToShow = "";
@@ -1803,24 +2028,40 @@ function showAIDialoguePopup(state) {
         if (currentConfig.hasSeenPrinterFeedback === undefined) currentConfig.hasSeenPrinterFeedback = false;
     }
 
-    const scoreElement = document.getElementById('score-display');
-    const currentScore = scoreElement ? parseInt(scoreElement.textContent.replace(/\D/g, '')) || 0 : cyberknowledgeScore;
+    const triesLeft = Math.max(0, 3 - (laptopAttempts[currentRoomId] || 0));
 
+    // --- State Mapping ---
     if (state === "printer_unpowered") {
         textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">PRINTER OFFLINE:</span> The printer is currently not powered on. You must resolve security tasks on the workstation laptop first to restore power infrastructure configurations!`;
     }
     else if (state === "laptop_exhausted_room2" || (currentRoomId === 'room2' && state === "laptop_exhausted")) {
         textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #c62828; font-weight: bold;">ACCESS DENIED!</span> You've exhausted all 3 attempts to set a strong router password. Terminal locked out. Head over to the <span class="highlight-blue">Printer</span> for the next task!`;
     }
-    else if (state === "laptop_exhausted_room3" || (currentRoomId === 'room3' && state === undefined && laptopAttempts[currentRoomId] >= 3 && !terminalState?.userWasCorrect)) {
-        textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">EVALUATION ENDED:</span> Laptop tries exhausted. Keep practicing to become a certified cybersecurity defender!`;
+    else if (state === "laptop_exhausted_room3" || (currentRoomId === 'room3' && state === "laptop_exhausted")) {
+        textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">EVALUATION ENDED:</span> You exhausted all chat response attempts. Be cautious when communicating online!`;
     }
     else if (state === "device_secure_success") {
-        textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">PASS!</span> Excellent job! You created a strong, complex password. The router is now secured against unauthorized access. Next, head over to the <span class="highlight-blue">Printer</span> to complete the next task.`;
+        if (currentRoomId === 'room2') {
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">PASS!</span> Excellent job! You created a strong, complex password. The router is now secured against unauthorized access. Next, head over to the <span class="highlight-blue">Printer</span> to complete the next task.`;
+        } else if (currentRoomId === 'room3') {
+            if (room3ChatState.phase === 1) {
+                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRIVACY DEFENSE! (+20 Points)</span> You kept credentials safe.<br>Now reopen the chat and message a classmate!`;
+            } else {
+                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">GREAT DIGITAL NETIQUETTE! (+20 Points)</span> You communicated kindly and supported your classmate without cyberbullying or scamming!`;
+            }
+        } else {
+            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">PASS!</span> Phishing email spotted and reported successfully!`;
+        }
     }
     else if (state === "laptop_retry") {
         if (currentRoomId === 'room2') {
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #c62828; font-weight: bold;">TRY AGAIN!</span> That password is too weak. Make sure it has at least 8 characters, an uppercase letter, a number, and a special symbol (!@#$).`;
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #c62828; font-weight: bold;">TRY AGAIN! (${triesLeft} ${triesLeft === 1 ? 'attempt' : 'attempts'} left)</span><br>That password is too weak. Make sure it has at least 8 characters, an uppercase letter, a number, and a special symbol (!@#$).`;
+        } else if (currentRoomId === 'room3') {
+            if (room3ChatState.phase === 1) {
+                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">PRIVACY RISK DETECTED:</span> Never share confidential passwords, access codes, or private details with strangers! Read the options carefully and try again.`;
+            } else {
+                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">NETIQUETTE VIOLATION:</span> Cyberbullying or sending mean messages violates digital citizenship safety! Try a supportive response instead.`;
+            }
         } else {
             textToShow = `<b>AI Guard [System]:</b><br><span style="color: #e63946; font-weight: bold;">Security Discrepancy:</span> That choice is weak or exposed the infrastructure! Read the hints carefully and try again.`;
         }
@@ -1828,19 +2069,20 @@ function showAIDialoguePopup(state) {
     else if (state === "printer_retry") {
         textToShow = `<b>AI Guard [System]:</b><br><span style="color: #e63946; font-weight: bold;">Data Security Risk:</span> The documents are still exposed to unauthorized viewers! Re-examine the contents and try again.`;
     }
+    // Room 1 Sequence
     else if (currentConfig?.aiNPC?.messageType === 'room1_state') {
-        if (hasCompletedPrinterTask && (currentScore === 20 || currentScore === 30)) {
+        if (hasCompletedPrinterTask && currentScore >= 20) {
             textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Room Secured!</span> You've already processed the workstation and checked the printer assets here. Head through the doorway to advance to the next challenge!`;
         }
-        else if (terminalState && terminalState.answered && terminalState.userWasCorrect && !hasCompletedPrinterTask) {
+        else if ((hasPassedRoom1Laptop || (terminalState && terminalState.answered && terminalState.userWasCorrect)) && !hasCompletedPrinterTask) {
             currentConfig.hasSeenLaptopFeedback = true; 
             textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Great eye!</span> You handled that phishing email perfectly. Now, look over at the <span class="highlight-blue">Printer</span>. Someone left a printout sitting out in the open—go decide how to secure it!`;
         }
-        else if (terminalState && terminalState.answered && !terminalState.userWasCorrect && !hasCompletedPrinterTask) {
+        else if (terminalState && terminalState.answered && !terminalState.userWasCorrect && !hasPassedRoom1Laptop && !hasCompletedPrinterTask) {
             currentConfig.hasSeenLaptopFeedback = true; 
             textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #c62828; font-weight: bold;">TASK FAILED:</span> You fell for the phishing email attack! Be extra cautious next time. Now, move over to the <span class="highlight-blue">Printer</span> to complete the next task.`;
         }
-        else if (!hasCompletedPrinterTask && (!terminalState || !terminalState.answered)) {
+        else if (!hasCompletedPrinterTask && (!terminalState || !terminalState.answered) && !hasPassedRoom1Laptop) {
             currentConfig.hasSeenRoomIntro = true; 
             textToShow = `<b>AI Guard [Bedroom]:</b><br>Welcome to the Entry Foyer. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
             laptopLocked = false; 
@@ -1854,21 +2096,20 @@ function showAIDialoguePopup(state) {
             }
         }
     } 
+    // Room 2 Sequence
     else if (currentConfig?.aiNPC?.messageType === 'room2_state') {
-        if (hasCompletedPrinterTask && (currentScore === 40 || currentScore === 50)) {
+        if (hasCompletedPrinterTask && currentScore >= 50) {
             textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Area Monitored!</span> Network traffic analysis and physical document checks for this room are complete. Head over to the Kitchen when ready!`;
         }
-        // Success case: Only show if the user actually set a strong password successfully
-        else if (terminalState && terminalState.answered && terminalState.userWasCorrect && !hasCompletedPrinterTask) {
+        else if ((hasPassedRoom2Laptop || (terminalState && terminalState.answered && terminalState.userWasCorrect)) && !hasCompletedPrinterTask) {
             currentConfig.hasSeenLaptopFeedback = true; 
             textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Nice defense!</span> You secured the router with a strong password! Now, run over to the <span class="highlight-blue">Printer</span>. We have a physical data privacy decision waiting for you there.`;
         }
-        // Failure case: All attempts exhausted without a strong password
-        else if (terminalState && terminalState.answered && !terminalState.userWasCorrect && !hasCompletedPrinterTask) {
+        else if (terminalState && terminalState.answered && !terminalState.userWasCorrect && !hasPassedRoom2Laptop && !hasCompletedPrinterTask) {
             currentConfig.hasSeenLaptopFeedback = true; 
             textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #c62828; font-weight: bold;">ACCESS DENIED!</span> You've exhausted all 3 attempts to set a strong router password. The router configuration is locked. Head over to the <span class="highlight-blue">Printer</span> to complete the physical data security check.`;
         }
-        else if (!hasCompletedPrinterTask && (!terminalState || !terminalState.answered)) {
+        else if (!hasCompletedPrinterTask && (!terminalState || !terminalState.answered) && !hasPassedRoom2Laptop) {
             currentConfig.hasSeenRoomIntro = true; 
             textToShow = `<b>AI Guard [Living Room]:</b><br>Alert! The router in this room is using a weak default password! Head over to the floor terminal right away and change it to a strong password!`;
             laptopLocked = false;
@@ -1882,21 +2123,37 @@ function showAIDialoguePopup(state) {
             }
         }
     } 
+    // Room 3 Sequence (General fallback)
     else if (currentConfig?.aiNPC?.messageType === 'room3_state') {
         laptopLocked = false; 
 
-        if (terminalState && terminalState.answered && terminalState.userWasCorrect) {
-            currentConfig.hasSeenLaptopFeedback = true; 
-            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">Security Mastered!</span> You saw right through that attack. You’ve successfully protected the system integrity. You've officially proven you've got the skills to navigate the digital world safely!`;
-        } 
-        else if (terminalState && terminalState.answered && !terminalState.userWasCorrect) {
-            currentConfig.hasSeenLaptopFeedback = true; 
-            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #c62828; font-weight: bold;">EVALUATION ENDED:</span> You failed to defend against the credential harvesting attack. Keep practicing your digital security skills!`;
-        }
-        else {
+        if (terminalState && terminalState.answered) {
+            currentConfig.hasSeenLaptopFeedback = true;
+            if (terminalState.userWasCorrect) {
+                if (room3ChatState.phase === 1) {
+                    textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRIVACY DEFENSE!</span> You refused to share confidential credentials with a stranger.<br><br>Now open the messaging chat again on the laptop and select a known classmate to message!`;
+                } else {
+                    textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">GREAT DIGITAL NETIQUETTE!</span> You communicated kindly and supported your classmate without cyberbullying or scamming!`;
+                }
+            } else {
+                if (room3ChatState.phase === 1) {
+                    textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #c62828; font-weight: bold;">PRIVACY BREACH!</span> You shared confidential information with an unverified stranger. Stay vigilant!`;
+                } else {
+                    textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #c62828; font-weight: bold;">EVALUATION ENDED:</span> Negative or abusive communication violates online safety guidelines.`;
+                }
+            }
+        } else {
             currentConfig.hasSeenRoomIntro = true; 
-            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to the Kitchen! We've got a suspicious request for admin credentials sitting in the inbox. Stay sharp—this is your final test!`;
+            if (room3ChatState.phase === 1) {
+                textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to Room 3! Check the messaging application on the laptop. Be careful with who you communicate with and what info you share!`;
+            } else {
+                textToShow = `<b>AI Guard [Kitchen]:</b><br>Great work on Phase 1! Now return to the workstation chat and select a message response for your classmate Alex.`;
+            }
         }
+    }
+
+    if (currentConfig && textToShow) {
+        currentConfig.lastDialogueMessage = textToShow;
     }
 
     content.innerHTML = `
@@ -1904,51 +2161,8 @@ function showAIDialoguePopup(state) {
             ${textToShow}
         </div>
     `;
-        
+            
     document.getElementById('popup-overlay').style.display = 'block';
-}
-function updateAttentionBadgePosition() {
-    const badge = document.getElementById('ai-attention-badge');
-    if (!badge) return;
-
-    const currentConfig = roomConfigurations[currentRoomId];
-    if (!currentConfig) return;
-
-    const activePapers = currentConfig.papers || [];
-    const terminalState = activePapers[0];
-
-    if (currentConfig.hasSeenRoomIntro === undefined) currentConfig.hasSeenRoomIntro = false;
-    if (currentConfig.hasSeenLaptopFeedback === undefined) currentConfig.hasSeenLaptopFeedback = false;
-    if (currentConfig.hasSeenPrinterFeedback === undefined) currentConfig.hasSeenPrinterFeedback = false;
-
-    let shouldShowBadge = false;
-
-    if (currentConfig.pendingLaptopRetry || currentConfig.pendingPrinterRetry) {
-        shouldShowBadge = true;
-    } 
-    else if (!terminalState || !terminalState.answered) {
-        if (!currentConfig.hasSeenRoomIntro) shouldShowBadge = true;
-    } else if (terminalState && terminalState.answered && !hasCompletedPrinterTask) {
-        if (!currentConfig.hasSeenLaptopFeedback) shouldShowBadge = true;
-    } else if (hasCompletedPrinterTask) {
-        if (!currentConfig.hasSeenPrinterFeedback) shouldShowBadge = true;
-    }
-
-    if (!shouldShowBadge) {
-        badge.style.display = 'none';
-        return;
-    }
-
-    badge.style.display = 'block';
-
-    const canvasWidth = 800;
-    const canvasHeight = 550;
-    
-    const leftPercent = (((aiAvatar.x + 35) / canvasWidth) * 100);
-    const topPercent = (((aiAvatar.y - 60) / canvasHeight) * 100); 
-    
-    badge.style.left = `${leftPercent}%`;
-    badge.style.top = `${topPercent}%`;
 }
 
 function closePopup() {
@@ -1960,9 +2174,6 @@ function closePopup() {
         hasSeenRoomIntro = true;
         if (currentConfig) {
             currentConfig.hasSeenRoomIntro = true;
-        }
-
-        if (currentConfig) {
             currentConfig.pendingLaptopRetry = false;
             currentConfig.pendingPrinterRetry = false;
         }
@@ -1971,10 +2182,18 @@ function closePopup() {
             if (activeLaptopPaper.userWasCorrect || laptopAttempts[currentRoomId] >= 3) {
                 let earnedPoints = activeLaptopPaper.userWasCorrect ? 20 : 0;
                 cyberknowledgeScore += earnedPoints;
+                
+                // Update score display DOM
+                const scoreElement = document.getElementById('score-display');
+                if (scoreElement) {
+                    scoreElement.textContent = `Cyberknowledge: ${cyberknowledgeScore}`;
+                }
+
                 activeLaptopPaper.scoreProcessed = true;
                 hasSeenLaptopFeedback = true; 
                 if (currentConfig) currentConfig.hasSeenLaptopFeedback = true;
 
+                // Sync with server
                 if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
                     let activeModule = 'safe'; 
                     if (currentRoomId === 'room2') activeModule = 'savvy';
@@ -1994,11 +2213,28 @@ function closePopup() {
                     .catch(err => console.error("Database sync failed:", err));
                 }
 
+                // Handle Room 3 Phase Progression upon claiming score
                 if (currentRoomId === 'room3') {
-                    hasCompletedPrinterTask = true;
-                    printerTaskCorrect = false; 
-                    if (currentConfig) {
-                        currentConfig.hasSeenPrinterFeedback = true;
+                    if (room3ChatState.phase === 1 && activeLaptopPaper.userWasCorrect) {
+                        // Advance to Phase 2 (Known Contact Chat)
+                        room3ChatState.phase1Completed = true;
+                        room3ChatState.phase = 2;
+
+                        // Reset laptop paper state for Phase 2 attempt
+                        activeLaptopPaper.answered = false;
+                        activeLaptopPaper.locked = false;
+                        activeLaptopPaper.scoreProcessed = false;
+                        activeLaptopPaper.userWasCorrect = false;
+                        activeLaptopPaper.hasConsultedAI = false;
+                        laptopAttempts['room3'] = 0; // reset attempts for Phase 2
+                    } else {
+                        // Phase 2 completed or laptop attempts exhausted
+                        room3ChatState.phase2Completed = true;
+                        hasCompletedPrinterTask = true;
+                        printerTaskCorrect = false; 
+                        if (currentConfig) {
+                            currentConfig.hasSeenPrinterFeedback = true;
+                        }
                     }
                 }
             }
@@ -2009,6 +2245,11 @@ function closePopup() {
             if (currentPaper.userWasCorrect) {
                 earnedPoints = currentRoomId === 'room3' ? 20 : 10;
                 cyberknowledgeScore += earnedPoints;
+
+                const scoreElement = document.getElementById('score-display');
+                if (scoreElement) {
+                    scoreElement.textContent = `Cyberknowledge: ${cyberknowledgeScore}`;
+                }
             }
             
             currentPaper.scoreProcessed = true;
@@ -2079,9 +2320,53 @@ function closePopup() {
     isPaused = false;
     currentPaper = null; 
 }
+function updateAttentionBadgePosition() {
+    const badge = document.getElementById('ai-attention-badge');
+    if (!badge) return;
+
+    const currentConfig = roomConfigurations[currentRoomId];
+    if (!currentConfig) return;
+
+    const activePapers = currentConfig.papers || [];
+    const terminalState = activePapers[0];
+
+    if (currentConfig.hasSeenRoomIntro === undefined) currentConfig.hasSeenRoomIntro = false;
+    if (currentConfig.hasSeenLaptopFeedback === undefined) currentConfig.hasSeenLaptopFeedback = false;
+    if (currentConfig.hasSeenPrinterFeedback === undefined) currentConfig.hasSeenPrinterFeedback = false;
+
+    let shouldShowBadge = false;
+
+    if (currentConfig.pendingLaptopRetry || currentConfig.pendingPrinterRetry) {
+        shouldShowBadge = true;
+    } 
+    else if (!terminalState || !terminalState.answered) {
+        if (!currentConfig.hasSeenRoomIntro) shouldShowBadge = true;
+    } else if (terminalState && terminalState.answered && !hasCompletedPrinterTask) {
+        if (!currentConfig.hasSeenLaptopFeedback) shouldShowBadge = true;
+    } else if (hasCompletedPrinterTask) {
+        if (!currentConfig.hasSeenPrinterFeedback) shouldShowBadge = true;
+    }
+
+    if (!shouldShowBadge) {
+        badge.style.display = 'none';
+        return;
+    }
+
+    badge.style.display = 'block';
+
+    const canvasWidth = 800;
+    const canvasHeight = 550;
+    
+    const leftPercent = (((aiAvatar.x + 35) / canvasWidth) * 100);
+    const topPercent = (((aiAvatar.y - 60) / canvasHeight) * 100); 
+    
+    badge.style.left = `${leftPercent}%`;
+    badge.style.top = `${topPercent}%`;
+}
+
+
 
 let selectedPrinterOption = 0; 
-
 window.addEventListener('keydown', e => {
     if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
         if (gameState !== 'title' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyS', 'KeyA', 'KeyD', 'Space'].includes(e.code)) {
@@ -2186,16 +2471,19 @@ window.addEventListener('keydown', e => {
             if (currentPaper) {
                 if (currentPaper.type === 'printer_document') {
                     if (!currentPaper.answered) {
+                        // Move Selection Down
                         if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
                             e.preventDefault();
                             selectedPrinterOption = 1; 
                             if (typeof window.updatePrinterUI === 'function') window.updatePrinterUI(); 
                         }
+                        // Move Selection Up
                         if (e.code === 'ArrowUp' || e.code === 'KeyW') { 
                             e.preventDefault();
                             selectedPrinterOption = 0; 
                             if (typeof window.updatePrinterUI === 'function') window.updatePrinterUI(); 
                         }
+                        // Confirm Answer with Space (or Enter)
                         if (e.code === 'Space' || e.code === 'Enter') {
                             e.preventDefault();
                             if (typeof window.handlePrinterSubmission === 'function') {
@@ -2209,18 +2497,49 @@ window.addEventListener('keydown', e => {
                         }
                     }
                 } 
+                else if (currentPaper.type === 'chat') {
+                    if (!currentPaper.answered) {
+                        // Move Selection Down
+                        if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
+                            e.preventDefault();
+                            selectedChatOption = 1; 
+                            if (typeof updateChatUI === 'function') updateChatUI(); 
+                        }
+                        // Move Selection Up
+                        if (e.code === 'ArrowUp' || e.code === 'KeyW') { 
+                            e.preventDefault();
+                            selectedChatOption = 0; 
+                            if (typeof updateChatUI === 'function') updateChatUI(); 
+                        }
+                        // Confirm Answer with Space (or Enter)
+                        if (e.code === 'Space' || e.code === 'Enter') {
+                            e.preventDefault();
+                            if (typeof window.submitChatMessage === 'function') {
+                                window.submitChatMessage(selectedChatOption);
+                            }
+                        }
+                    } else {
+                        if (e.code === 'Space' || e.code === 'Escape' || e.code === 'Enter') {
+                            e.preventDefault();
+                            closePopup();
+                        }
+                    }
+                }
                 else {
                     if (!currentPaper.answered) {
+                        // Move Selection Down
                         if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
                             e.preventDefault();
                             selectedEmailOption = 1; 
-                            updateEmailUI(); 
+                            if (typeof updateEmailUI === 'function') updateEmailUI(); 
                         }
+                        // Move Selection Up
                         if (e.code === 'ArrowUp' || e.code === 'KeyW') { 
                             e.preventDefault();
                             selectedEmailOption = 0; 
-                            updateEmailUI(); 
+                            if (typeof updateEmailUI === 'function') updateEmailUI(); 
                         }
+                        // Confirm Answer with Space (or Enter)
                         if (e.code === 'Space' || e.code === 'Enter') {
                             e.preventDefault();
                             if (typeof window.handleEmailSubmission === 'function') {
@@ -2251,6 +2570,7 @@ window.addEventListener('keydown', e => {
             }
         }
 
+        // Interact with Object (Printer / Workstation) using Space or KeyE
         if ((e.code === 'Space' || e.code === 'KeyE') && !isPaused) {
             e.preventDefault();
             
