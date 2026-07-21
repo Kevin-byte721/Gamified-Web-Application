@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -710,8 +711,10 @@ const imageFiles = {
     printer: 'printer.png',
     paper_shredder: 'paper_shredder.png',
     paper: 'paper.png',
+    router: 'router.png', // <-- Added router image path
     aiNPC: 'ai_helper_avatar.png'
 };
+
 let currentRoomCode = ""; 
 var remotePlayers = {};
 let skipTitleScreen = false;
@@ -816,6 +819,355 @@ function updateGameVolume(value) {
     }
 }
 
+function draw() {
+    if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
+        if (typeof currentStudentNumber === 'undefined' || !currentStudentNumber) {
+            currentStudentNumber = "DEBUG_USER_001";
+        }
+        if (typeof currentRoomCode === 'undefined' || !currentRoomCode) {
+            currentRoomCode = "DEBUG_ROOM";
+        }
+
+        isAuthenticated = true;
+        gameState = 'game';
+        isPaused = false;
+
+        const menuOverlay = document.getElementById('menu-overlay');
+        if (menuOverlay) menuOverlay.style.display = 'none';
+        
+        currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
+        const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+
+        if (currentConfig.aiNPC) {
+            aiAvatar.x = currentConfig.aiNPC.x;
+            aiAvatar.y = currentConfig.aiNPC.y;
+            aiAvatar.angle = currentConfig.aiNPC.angle || 0;
+        }
+
+        avatar.x = currentConfig.spawnX;
+        avatar.y = currentConfig.spawnY;
+        avatar.angle = (roomConfigurations[currentRoomId]?.cutscene?.directionAngle !== undefined) 
+            ? roomConfigurations[currentRoomId].cutscene.directionAngle 
+            : 90;
+        
+        isCutsceneActive = true;
+        cutsceneStartTime = Date.now();
+        
+        const badge = document.getElementById('ai-attention-badge');
+        if (badge) badge.style.display = 'block';
+
+        if (typeof updateAttentionBadgePosition === 'function') {
+            updateAttentionBadgePosition();
+        }
+    }
+
+    if (gameState === 'title') {
+        drawTitleScreen();
+        requestAnimationFrame(draw);
+        return;
+    }
+
+    ctx.clearRect(0, 0, 800, 600);
+        
+    const activeRoomConfig = roomConfigurations[currentRoomId];
+    const activeBgImage = images[activeRoomConfig?.bgKey];
+
+    if (activeBgImage && activeBgImage.naturalWidth > 0) {
+        ctx.drawImage(activeBgImage, 0, 0, 800, 600);
+    }
+
+    // --- PRINTER DEVICE DRAWING & INTERACTION ---
+    if (activeRoomConfig?.printerDevice) {
+        const printer = activeRoomConfig.printerDevice;
+
+        if (images.printer && images.printer.naturalWidth > 0) {
+            ctx.save();
+            ctx.translate(printer.x, printer.y);
+            if (printer.angle) ctx.rotate(printer.angle * Math.PI / 180);
+            ctx.drawImage(
+                images.printer, 
+                -PRINTER_WIDTH / 2, 
+                -PRINTER_HEIGHT / 2, 
+                PRINTER_WIDTH, 
+                PRINTER_HEIGHT
+            );
+            ctx.restore();
+        }
+
+        const pDx = (avatar.x + 35) - printer.x;
+        const pDy = (avatar.y + 35) - printer.y;
+        const printerDist = Math.sqrt(pDx * pDx + pDy * pDy);
+
+        if (printerDist < interactionDist) {
+            ctx.save();
+            ctx.translate(printer.x, printer.y);
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(
+                -(PRINTER_WIDTH / 2 + 5), 
+                -(PRINTER_HEIGHT / 2 + 5), 
+                PRINTER_WIDTH + 10, 
+                PRINTER_HEIGHT + 10
+            );
+            ctx.restore();
+        }
+    }
+
+    // --- SHREDDER DEVICE DRAWING ---
+    if (activeRoomConfig?.shredderDevice) {
+        const shredder = activeRoomConfig.shredderDevice;
+
+        if (images.paper_shredder && images.paper_shredder.naturalWidth > 0) {
+            ctx.save();
+            ctx.translate(shredder.x, shredder.y);
+            if (shredder.angle) ctx.rotate(shredder.angle * Math.PI / 180);
+            ctx.drawImage(
+                images.paper_shredder, 
+                -SHREDDER_WIDTH / 2, 
+                -SHREDDER_HEIGHT / 2, 
+                SHREDDER_WIDTH, 
+                SHREDDER_HEIGHT
+            );
+            ctx.restore();
+        }
+    }
+
+    // --- ROUTER DEVICES DRAWING & INTERACTION ---
+    const activeRouters = activeRoomConfig?.routers || (activeRoomConfig?.routerDevice ? [activeRoomConfig.routerDevice] : []);
+    activeRouters.forEach(router => {
+        if (images.router && images.router.naturalWidth > 0) {
+            ctx.save();
+            ctx.translate(router.x, router.y);
+            if (router.angle) {
+                ctx.rotate(router.angle * Math.PI / 180);
+            }
+            ctx.drawImage(
+                images.router, 
+                -ROUTER_WIDTH / 2, 
+                -ROUTER_HEIGHT / 2, 
+                ROUTER_WIDTH, 
+                ROUTER_HEIGHT
+            );
+            ctx.restore();
+        }
+
+        // Router proximity highlight
+        const rDx = (avatar.x + 35) - router.x;
+        const rDy = (avatar.y + 35) - router.y;
+        const routerDist = Math.sqrt(rDx * rDx + rDy * rDy);
+    });
+
+    // --- PAPERS / LAPTOPS ---
+    const activePapers = activeRoomConfig?.papers || [];
+    activePapers.forEach(p => {
+        if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            if (p.angle) {
+                ctx.rotate(p.angle * Math.PI / 180);
+            }
+            ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
+            ctx.restore();
+        }
+                
+        const dx = (avatar.x + 35) - p.x;
+        const dy = (avatar.y + 35) - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < interactionDist) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            if (p.angle) {
+                ctx.rotate(p.angle * Math.PI / 180);
+            }
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-55, -40, 110, 80);
+            ctx.restore();
+        }
+    });
+
+    // --- REMOTE PLAYERS ---
+    if (typeof remotePlayers !== 'undefined' && remotePlayers) {
+        Object.keys(remotePlayers).forEach(id => {
+            if (id.trim().toUpperCase() === currentStudentNumber.trim().toUpperCase()) return; 
+            const peer = remotePlayers[id];
+            
+            if (peer.roomCode === currentRoomCode && peer.roomId === currentRoomId) {
+                ctx.save();
+                ctx.translate(peer.x + 35, peer.y + 35);
+                ctx.rotate((peer.angle || 0) * Math.PI / 180);
+                
+                let peerSprite = images.idle;
+                if (peer.moving) {
+                    peerSprite = (Math.floor(Date.now() / 150) % 2 === 0) ? images.walkLeft : images.walkRight;
+                }
+                
+                if (peerSprite && peerSprite.complete) {
+                    ctx.drawImage(peerSprite, -35, -35, 70, 70);
+                } else {
+                    ctx.fillStyle = '#9b59b6'; 
+                    ctx.fillRect(-25, -25, 50, 50);
+                }
+                ctx.restore();
+
+                ctx.font = "bold 9px Arial";
+                const textWidth = ctx.measureText(peer.studentNumber).width;
+                const paddingX = 8;
+                const boxWidth = textWidth + paddingX;
+                const boxHeight = 14;
+                
+                ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+                ctx.fillRect(peer.x + 35 - (boxWidth / 2), peer.y - 26, boxWidth, boxHeight);
+                
+                ctx.fillStyle = "#52b788"; 
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(peer.studentNumber, peer.x + 35, peer.y - 26 + (boxHeight / 2));
+            }
+        });
+    }
+
+    // --- LOCAL PLAYER ANIMATION ---
+    let localNow = Date.now();
+    let img;
+
+    if (avatar.moving) {
+        let currentSpeed = avatar.speed || 4;
+        let dynamicInterval = Math.max(60, 600 / currentSpeed);
+
+        if (localNow - avatar.lastFrameSwap > dynamicInterval) {
+            if (typeof avatar.animStep === 'undefined') avatar.animStep = 0;
+            avatar.animStep = (avatar.animStep + 1) % 4;
+            avatar.lastFrameSwap = localNow;
+        }
+
+        if (avatar.animStep === 0) {
+            img = images.walkLeft;
+        } else if (avatar.animStep === 2) {
+            img = images.walkRight;
+        } else {
+            img = images.idle;
+        }
+    } else {
+        img = images.idle;
+    }
+        
+    if (img && img.naturalWidth > 0) {
+        ctx.save();                
+        ctx.translate(avatar.x + 35, avatar.y + 35);                
+        ctx.rotate(avatar.angle * Math.PI / 180);
+        ctx.drawImage(img, -35, -35, 70, 70);
+        ctx.restore();
+    }
+
+    // --- AI NPC ---
+    if (activeRoomConfig?.aiNPC && images.aiNPC && images.aiNPC.naturalWidth > 0) {
+        ctx.save();
+        ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
+        let correctedAngle = (aiAvatar.angle || 0) + 180;
+        ctx.rotate(correctedAngle * Math.PI / 180);
+        ctx.drawImage(images.aiNPC, -35, -35, 70, 70);
+        ctx.restore();
+    }
+
+    // --- STUDENT NUMBER OVERLAY ---
+    if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber) {
+        ctx.font = "bold 9px Arial";
+        const localTextWidth = ctx.measureText(currentStudentNumber).width;
+        const localPaddingX = 8;
+        const localBoxWidth = localTextWidth + localPaddingX;
+        const localBoxHeight = 14;
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+        ctx.fillRect(avatar.x + 35 - (localBoxWidth / 2), avatar.y - 26, localBoxWidth, localBoxHeight);
+        
+        ctx.fillStyle = "#52b788"; 
+        ctx.font = "bold 9px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = 'middle';
+        ctx.fillText(currentStudentNumber, avatar.x + 35, avatar.y - 26 + (localBoxHeight / 2));
+    }
+
+    // --- DEBUG COLLISION ZONES ---
+    if (typeof debugMode !== 'undefined' && debugMode) {
+        ctx.lineWidth = 2;
+        const currentZones = activeRoomConfig?.collisionZones || [];
+        currentZones.forEach(z => {
+            ctx.save();
+            if (z.type === 'circle') {
+                ctx.beginPath();
+                ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = "red";
+                ctx.stroke();
+                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
+                ctx.fill();
+            } else {
+                ctx.translate(z.x, z.y);
+                if (z.deg) {
+                    ctx.rotate(z.deg * Math.PI / 180);
+                }
+                ctx.strokeStyle = "red";
+                ctx.strokeRect(0, 0, z.w, z.h);
+                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
+                ctx.fillRect(0, 0, z.w, z.h);
+            }
+            ctx.restore();
+        });
+    }
+
+    // --- SCORE OVERLAY ---
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(580, 10, 210, 40);
+    ctx.strokeStyle = "#dcc23c";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(580, 10, 210, 40);
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 14px Arial";
+    ctx.textAlign = "left";
+    ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
+
+    const inst = document.getElementById('instructions');
+    if (inst) {
+        const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
+        if (inst.style.display !== structuralVisibility) {
+            inst.style.display = structuralVisibility;
+        }
+    }
+
+    if (!isPaused) {
+        update();
+    }
+
+    // --- ROOM TRANSITION FADE ---
+    if (fadeState === 'out') {
+        fadeAlpha += 0.05;
+        if (fadeAlpha >= 1) {
+            fadeAlpha = 1;
+            executeRoomSwitch(targetRoomId);
+            fadeState = 'in';
+        }
+    } else if (fadeState === 'in') {
+        fadeAlpha -= 0.05;
+        if (fadeAlpha <= 0) {
+            fadeAlpha = 0;
+            fadeState = 'idle';
+            targetRoomId = null;
+        }
+    }
+
+    if (fadeAlpha > 0) {
+        ctx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
+        ctx.fillRect(0, 0, 800, 600);
+    }
+
+    requestAnimationFrame(draw);
+}
+
+const ROUTER_WIDTH = 60;  // Adjust dimensions as needed
+const ROUTER_HEIGHT = 60;
+
 const roomConfigurations = {
     room1: {
         bgKey: 'background', 
@@ -860,6 +1212,7 @@ const roomConfigurations = {
         cutscene: { duration: 500, directionAngle: 90 }, 
         printerDevice: { x: 205, y: 500, angle: 180 },
         shredderDevice: { x: 130, y: 500, angle: 180 },
+        routerDevice: { x: 653, y: 390, angle: 90 },
         papers: [
             { 
                 x: 480, 
@@ -895,6 +1248,7 @@ const roomConfigurations = {
         spawnY: 210,
         aiNPC: { x: 330, y: 430, messageType: 'room3_state', angle: 270 },
         cutscene: { duration: 500, directionAngle: 270 }, 
+        routerDevice: { x: 100, y: 450, angle: 0 }, // <-- Router added here
         papers: [
             { 
                 x: 320, 
@@ -968,13 +1322,763 @@ function checkInteraction() {
     const aiDx = (avatar.x + 35) - (aiAvatar.x + 35);
     const aiDy = (avatar.y + 35) - (aiAvatar.y + 35);
     const distanceToAI = Math.sqrt(aiDx * aiDx + aiDy * aiDy);
-   
+    
     if (distanceToAI < 100) {
         showAIDialoguePopup();
     }
 }
 
+function interactWithLaptop(paper) {
+    selectedEmailOption = 0;
 
+    // Check if max retry threshold reached for current room
+    if (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect) {
+        showAIDialoguePopup(currentRoomId === 'room2' ? 'laptop_exhausted_room2' : 'laptop_exhausted');
+        return;
+    }
+
+    if (paper.scoreProcessed) {
+        isPaused = true;
+        showingAIDialogue = true;
+        const content = document.getElementById('popup-content');
+        
+        content.className = ''; 
+        content.removeAttribute('style'); 
+        content.classList.add('dialogue-bubble-mode');
+
+        let textToShow = "";
+        if (paper.userWasCorrect) {
+            textToShow = `<b>System Notification:</b><br><span style="color: #52b788; font-weight: bold;">WORKSTATION SECURE:</span> Router configuration updated and active.`;
+        } else {
+            textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">ACCESS REVOKED:</span> Terminal framework remains offline due to failed password verification.`;
+        }
+        
+        content.innerHTML = `
+            <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
+                ${textToShow}
+            </div>
+        `;
+        document.getElementById('popup-overlay').style.display = 'block';
+        return; 
+    }
+
+    if (paper.answered && !paper.hasConsultedAI) {
+        isPaused = true;
+        showingAIDialogue = true;
+        const content = document.getElementById('popup-content');
+        
+        content.className = ''; 
+        content.removeAttribute('style'); 
+        content.classList.add('dialogue-bubble-mode');
+        
+        content.innerHTML = `
+            <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
+                <b>System Notification:</b><br>
+                <span style="color: #ffaa00; font-weight: bold;">TERMINAL STANDBY:</span> Workstation link interrupted. Please redirect to the AI Avatar interface to process active appraisal sequence first.
+            </div>
+        `;
+        document.getElementById('popup-overlay').style.display = 'block';
+        return;
+    }
+
+    if (typeof laptopLocked !== 'undefined' && laptopLocked) {
+        isPaused = true;
+        showingAIDialogue = true;
+        const content = document.getElementById('popup-content');
+        
+        content.className = ''; 
+        content.removeAttribute('style'); 
+        content.classList.add('dialogue-bubble-mode');
+        
+        content.innerHTML = `
+            <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
+                <b>System Notification:</b><br>
+                <span style="color: #e63946; font-weight: bold;">SECURITY LOCK:</span> Threat directives intercepted. Interrogate the AI Avatar system node to bypass firewalls before logging in.
+            </div>
+        `;
+        document.getElementById('popup-overlay').style.display = 'block';
+        return; 
+    }
+
+    if (currentRoomId === 'room2') {
+        showRouterPasswordPopup(paper);
+    } else {
+        showEmailPopup(paper);
+        if (typeof updateEmailUI === "function") updateEmailUI();
+    }
+}
+
+
+function showEmailPopup(paper) {
+    if (paper && (paper.locked || (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect))) {
+        return;
+    }
+
+    isPaused = true;
+    currentPaper = paper;
+    currentPaper.type = 'email'; 
+    showingAIDialogue = false;
+    
+    const content = document.getElementById('popup-content');
+    content.className = ''; 
+    content.classList.add('center-modal-mode');
+
+    let emailPool = {
+        room1: [
+            {
+                sender: "HR Dept",
+                address: "hr@internal-security-system.local",
+                subject: "Action Required: Update Your Credentials Immediately",
+                body: "Your network access password expires within 24 hours. Choose an option to proceed with your credential update.",
+                correctOption: 1
+            },
+            {
+                sender: "Security Alert",
+                address: "security-foyer@critical-alert.net",
+                subject: "WARNING: Unauthorized Entry Attempt Logs",
+                body: "We noted suspicious activity on your host framework node. Select RESPOND TO EMAIL to verify your active authorization token index.",
+                correctOption: 1
+            },
+            {
+                sender: "IT Notice",
+                address: "admin@internal-security-system.local",
+                subject: "Scheduled Server Migration Information",
+                body: "This is a general advisory that internal storage arrays are migrating this Sunday. No action is required from you.",
+                correctOption: 0
+            }
+        ],
+        room2: [
+            {
+                sender: "IT Support Desk",
+                address: "support@urgent-security-update.com",
+                subject: "CRITICAL: Urgent Security Firewall Patch Required",
+                body: "We have detected unauthorized bypass attempts on your workstation segment. Click 'RESPOND TO EMAIL' to download and install the repair package.",
+                correctOption: 1
+            },
+            {
+                sender: "Accounts Payable",
+                address: "billing@external-verify-portal.org",
+                subject: "Overdue Workstation Rental Invoice Attached",
+                body: "Your hardware assignment metrics match an outstanding balance ledger sheet. Click RESPOND TO EMAIL to upload transaction proofs immediately.",
+                correctOption: 1
+            },
+            {
+                sender: "Company Portal",
+                address: "newsletter@company.corp",
+                subject: "Monthly System Performance Newsletter Update",
+                body: "Here is your standard textual tracking wrap-up summary for the month. No authorization values or link downloads are embedded.",
+                correctOption: 0
+            }
+        ],
+        room3: [
+            {
+                sender: "Office Manager", 
+                address: "Admin@company.corp",
+                subject: "Building Maintenance Notice",
+                body: "Please be advised that the main office elevator will be under maintenance on Tuesday. Please use the north side stairs.",
+                correctOption: 0
+            },
+            {
+                sender: "Delivery Service",
+                address: "postmaster@courier-tracking-routing.net",
+                subject: "Package Delivery Alert: Failed Transfer Hold Node",
+                body: "A parcel addressed to your account matrix space cannot spawn delivery updates. Open the confirmation layout module to fix.",
+                correctOption: 1
+            },
+            {
+                sender: "CEO Update",
+                address: "exec-office@company.corp",
+                subject: "Annual Strategic Goals Performance Report",
+                body: "Please review the updated general corporate guidelines for the coming system operations semester.",
+                correctOption: 0
+            }
+        ]
+    };
+
+    let attemptIndex = Math.min(laptopAttempts[currentRoomId] || 0, 2);
+    let selectedScenario = emailPool[currentRoomId] ? emailPool[currentRoomId][attemptIndex] : emailPool.room1[0];
+
+    let emailSender = selectedScenario.sender;
+    let emailAddress = selectedScenario.address;
+    let emailSubject = selectedScenario.subject;
+    let emailBody = selectedScenario.body;
+    let correctOption = selectedScenario.correctOption;
+
+    window.handleEmailSubmission = function(chosenOption) {
+        if (!currentPaper) return;
+
+        laptopAttempts[currentRoomId] = (laptopAttempts[currentRoomId] || 0) + 1;
+        
+        if (chosenOption === correctOption) {
+            currentPaper.userWasCorrect = true;
+            currentPaper.answered = true;
+            currentPaper.locked = true; 
+            currentPaper.hasConsultedAI = false; 
+            
+            closePopup();
+        } else {
+            currentPaper.userWasCorrect = false;
+            
+            if (laptopAttempts[currentRoomId] >= 3) {
+                currentPaper.answered = true;
+                currentPaper.locked = true; 
+                currentPaper.hasConsultedAI = false;
+                
+                closePopup();
+            } else {
+                currentPaper.answered = false;
+                currentPaper.locked = false;
+                currentPaper.hasConsultedAI = false;
+                
+                const currentConfig = roomConfigurations[currentRoomId];
+                if (currentConfig) {
+                    currentConfig.pendingLaptopRetry = true;
+                }
+                
+                closePopup();
+            }
+        }
+
+        const badge = document.getElementById('ai-attention-badge');
+        if (badge) {
+            badge.style.display = 'block';
+            if (typeof updateAttentionBadgePosition === "function") {
+                updateAttentionBadgePosition();
+            }
+        }
+    };
+
+    content.innerHTML = `
+    <div class="popup-layout-wrapper" style="font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 1.6cqw; font-weight: normal; background-color: #ffffff; color: #202124; box-sizing: border-box; width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column;">
+        
+        <div class="email-action-bar" style="display: flex; gap: 2.5cqw; align-items: center; border-bottom: 1px solid #f1f3f4; padding: 1.5cqh 3cqw; color: #5f6368; font-size: 1.8cqw;">
+            <span style="cursor: pointer; font-weight: bold;" onclick="closePopup()">←</span>
+            <span style="cursor: pointer;">📥</span>
+            <span style="cursor: pointer;">⚠️</span>
+            <span style="cursor: pointer;" onclick="window.handleEmailSubmission(1)">🗑️</span>
+            <span style="cursor: pointer; margin-left: auto;">✉️</span>
+            <span style="cursor: pointer;">🕒</span>
+            <span style="cursor: pointer; margin-left: 1cqw;">⋮</span>
+        </div>
+
+        <div style="padding: 3cqh 4cqw; flex-grow: 1;">
+            <div style="display: flex; align-items: center; gap: 1cqw; margin-bottom: 3cqh;">
+                <h2 style="margin: 0; font-size: 2.4cqw; font-weight: 400; color: #202124;">
+                    ${emailSubject}
+                </h2>
+                <span style="background-color: #e8eaed; color: #5f6368; font-size: 1.2cqw; padding: 2px 6px; border-radius: 4px; font-weight: 500;">
+                    Inbox
+                </span>
+            </div>
+
+            <div class="email-meta-row" style="display: flex; align-items: flex-start; margin-bottom: 4cqh; position: relative;">
+                <div style="width: 5cqw; height: 5cqw; border-radius: 50%; background-color: #007791; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 2cqw; margin-right: 2cqw; flex-shrink: 0;">
+                    ${emailSender.substring(0, 2).toUpperCase()}
+                </div>
+                
+                <div style="flex-grow: 1; min-width: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%;">
+                        <div>
+                            <span style="font-weight: bold; color: #202124; font-size: 1.6cqw; margin-right: 0.5cqw;">${emailSender}</span>
+                            <span style="color: #5f6368; font-size: 1.4cqw;">&lt;${emailAddress}&gt;</span>
+                        </div>
+                        <div style="color: #5f6368; font-size: 1.3cqw; white-space: nowrap; margin-left: 2cqw;">
+                            Just now
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="email-body" style="font-size: 1.6cqw; line-height: 1.5; color: #202124; padding-left: 7cqw; margin-bottom: 6cqh; min-height: 12cqh;">
+                ${emailBody}
+            </div>
+
+            <div id="email-options" style="display: flex; gap: 1.5cqw; padding-left: 7cqw; border-top: 1px solid #f1f3f4; padding-top: 3cqh;">
+                <div class="email-option" id="opt-0" onclick="window.handleEmailSubmission(0)" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f7f8f9'" onmouseout="this.style.backgroundColor='transparent'">
+                    ↩️ RESPOND TO EMAIL
+                </div>
+                <div class="email-option" id="opt-1" onclick="window.handleEmailSubmission(1)" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f7f8f9'" onmouseout="this.style.backgroundColor='transparent'">
+                    ➡️ IGNORE / TRASH
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+
+    document.getElementById('popup-overlay').style.display = 'block';
+}
+
+/**
+ * Custom Interactive Interface for Room 2: Changing Router Password
+ */
+function showRouterPasswordPopup(paper) {
+    // If the paper is locked or attempts are exhausted, prevent opening
+    if (paper && (paper.locked || (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect))) {
+        closePopup();
+        return;
+    }
+
+    isPaused = true;
+    currentPaper = paper;
+    currentPaper.type = 'router_password';
+    showingAIDialogue = false;
+
+    const content = document.getElementById('popup-content');
+    content.className = '';
+    content.classList.add('center-modal-mode');
+
+    if (laptopAttempts[currentRoomId] === undefined) {
+        laptopAttempts[currentRoomId] = 0;
+    }
+
+    let remainingTries = 3 - laptopAttempts[currentRoomId];
+
+    content.innerHTML = `
+    <div class="popup-layout-wrapper" style="font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 1.6cqw; background-color: #ffffff; color: #202124; box-sizing: border-box; width: 100%; max-width: 700px; margin: 0 auto; padding: 3cqh 4cqw; border-radius: 12px; display: flex; flex-direction: column; gap: 2cqh;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e8eaed; padding-bottom: 1.5cqh;">
+            <h2 style="margin: 0; font-size: 2.2cqw; color: #1a73e8; display: flex; align-items: center; gap: 0.8cqw;">
+                ⚙️ Router Security Config
+            </h2>
+            <span style="cursor: pointer; font-size: 2cqw; color: #5f6368;" onclick="closePopup()">✖</span>
+        </div>
+
+        <div id="router-avatar-instruction" style="background-color: #f1f3f4; border-left: 5px solid #1a73e8; padding: 2cqh 2.5cqw; border-radius: 4px; font-size: 1.6cqw; line-height: 1.4; color: #202124;">
+            <b>System Interface:</b><br>
+            Warning! The router is currently using a weak default password (<code>admin123</code>). 
+            Please enter a strong new password in the input field below and press <b>SPACE BAR</b> on your keyboard to submit.
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5cqh; margin-top: 1cqh;">
+            <input 
+                type="text" 
+                id="router-password-input" 
+                placeholder="Enter new strong password..." 
+                autocomplete="off"
+                style="width: 80%; padding: 1.2cqh 1.8cqw; font-size: 1.6cqw; border: 2px solid #dadce0; border-radius: 8px; outline: none; text-align: center; font-family: monospace;"
+            />
+            
+            <div id="router-tries-count" style="font-size: 1.4cqw; color: #5f6368; font-weight: 500;">
+                Attempts remaining: <span id="tries-num" style="color: #e63946; font-weight: bold;">${remainingTries}</span> / 3
+            </div>
+
+            <div style="font-size: 1.2cqw; color: #70757a; font-style: italic;">
+                (Press <b>SPACE BAR</b> to submit password)
+            </div>
+        </div>
+    </div>
+    `;
+
+    document.getElementById('popup-overlay').style.display = 'block';
+
+    const inputEl = document.getElementById('router-password-input');
+    if (inputEl) {
+        inputEl.focus();
+
+        inputEl.addEventListener('keydown', function (event) {
+            if (event.code === 'Space' || event.key === ' ') {
+                event.preventDefault();
+                event.stopPropagation();
+                window.handleRouterPasswordSubmit(inputEl.value.trim());
+            }
+        });
+    }
+
+    window.handleRouterPasswordSubmit = function(enteredPassword) {
+        if (!currentPaper || laptopAttempts[currentRoomId] >= 3) return;
+
+        const isStrong = enteredPassword.length >= 8 && 
+                         /[A-Z]/.test(enteredPassword) && 
+                         /[0-9]/.test(enteredPassword) && 
+                         /[^A-Za-z0-9]/.test(enteredPassword);
+
+        const instructionBox = document.getElementById('router-avatar-instruction');
+        const triesNumEl = document.getElementById('tries-num');
+
+        if (isStrong) {
+            laptopAttempts[currentRoomId] += 1;
+            currentPaper.userWasCorrect = true;
+            currentPaper.answered = true;
+            currentPaper.locked = true;
+            currentPaper.hasConsultedAI = false;
+
+            if (instructionBox) {
+                instructionBox.style.borderLeftColor = "#52b788";
+                instructionBox.style.backgroundColor = "#e8f5e9";
+                instructionBox.innerHTML = `
+                    <b>System Interface:</b><br>
+                    <span style="color: #2e7d32; font-weight: bold;">PASS!</span> Excellent job! You created a strong, complex password. The router is now secured against unauthorized access.
+                `;
+            }
+
+            if (inputEl) inputEl.disabled = true;
+
+            setTimeout(() => {
+                closePopup();
+            }, 1800);
+
+        } else {
+            laptopAttempts[currentRoomId] += 1;
+            let triesLeft = 3 - laptopAttempts[currentRoomId];
+
+            if (triesNumEl) {
+                triesNumEl.textContent = triesLeft;
+            }
+
+            if (triesLeft > 0) {
+                if (instructionBox) {
+                    instructionBox.style.borderLeftColor = "#e63946";
+                    instructionBox.style.backgroundColor = "#ffebee";
+                    instructionBox.innerHTML = `
+                        <b>System Interface:</b><br>
+                        <span style="color: #c62828; font-weight: bold;">TRY AGAIN!</span> Password too weak. Ensure it is at least 8 characters long, contains an uppercase letter, a number, and a special character (!@#$).
+                    `;
+                }
+
+                if (inputEl) {
+                    inputEl.value = '';
+                    inputEl.focus();
+                }
+            } else {
+                currentPaper.userWasCorrect = false;
+                currentPaper.answered = true;
+                currentPaper.locked = true;
+                currentPaper.hasConsultedAI = false;
+
+                if (instructionBox) {
+                    instructionBox.style.borderLeftColor = "#c62828";
+                    instructionBox.style.backgroundColor = "#ffebee";
+                    instructionBox.innerHTML = `
+                        <b>System Interface:</b><br>
+                        <span style="color: #c62828; font-weight: bold;">ACCESS DENIED!</span> You have exhausted all 3 attempts. Terminal locked out.
+                    `;
+                }
+
+                if (inputEl) inputEl.disabled = true;
+
+                setTimeout(() => {
+                    closePopup();
+                }, 2000);
+            }
+        }
+    };
+}
+
+function showAIDialoguePopup(state) {
+    isPaused = true;
+    showingAIDialogue = true;
+    
+    const content = document.getElementById('popup-content');
+    const currentConfig = roomConfigurations[currentRoomId];
+    const activePapers = currentConfig?.papers || [];
+    const terminalState = activePapers[0]; 
+
+    if (terminalState && terminalState.answered) {
+        terminalState.hasConsultedAI = true;
+    }
+
+    // Resolve state flags cleanly
+    if (state === undefined && currentConfig) {
+        if (currentConfig.pendingLaptopRetry) {
+            state = "laptop_retry";
+        } else if (currentConfig.pendingPrinterRetry) {
+            state = "printer_retry";
+        }
+    }
+    
+    let textToShow = "";
+    
+    content.className = ''; 
+    content.removeAttribute('style'); 
+    content.classList.add('dialogue-bubble-mode');
+
+    const badge = document.getElementById('ai-attention-badge');
+    if (badge) {
+        badge.style.display = 'none';
+    }
+    
+    if (currentConfig) {
+        if (currentConfig.hasSeenRoomIntro === undefined) currentConfig.hasSeenRoomIntro = false;
+        if (currentConfig.hasSeenLaptopFeedback === undefined) currentConfig.hasSeenLaptopFeedback = false;
+        if (currentConfig.hasSeenPrinterFeedback === undefined) currentConfig.hasSeenPrinterFeedback = false;
+    }
+
+    const scoreElement = document.getElementById('score-display');
+    const currentScore = scoreElement ? parseInt(scoreElement.textContent.replace(/\D/g, '')) || 0 : cyberknowledgeScore;
+
+    if (state === "printer_unpowered") {
+        textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">PRINTER OFFLINE:</span> The printer is currently not powered on. You must resolve security tasks on the workstation laptop first to restore power infrastructure configurations!`;
+    }
+    else if (state === "laptop_exhausted_room2" || (currentRoomId === 'room2' && state === "laptop_exhausted")) {
+        textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #c62828; font-weight: bold;">ACCESS DENIED!</span> You've exhausted all 3 attempts to set a strong router password. Terminal locked out. Head over to the <span class="highlight-blue">Printer</span> for the next task!`;
+    }
+    else if (state === "laptop_exhausted_room3" || (currentRoomId === 'room3' && state === undefined && laptopAttempts[currentRoomId] >= 3 && !terminalState?.userWasCorrect)) {
+        textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">EVALUATION ENDED:</span> Laptop tries exhausted. Keep practicing to become a certified cybersecurity defender!`;
+    }
+    else if (state === "device_secure_success") {
+        textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">PASS!</span> Excellent job! You created a strong, complex password. The router is now secured against unauthorized access. Next, head over to the <span class="highlight-blue">Printer</span> to complete the next task.`;
+    }
+    else if (state === "laptop_retry") {
+        if (currentRoomId === 'room2') {
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #c62828; font-weight: bold;">TRY AGAIN!</span> That password is too weak. Make sure it has at least 8 characters, an uppercase letter, a number, and a special symbol (!@#$).`;
+        } else {
+            textToShow = `<b>AI Guard [System]:</b><br><span style="color: #e63946; font-weight: bold;">Security Discrepancy:</span> That choice is weak or exposed the infrastructure! Read the hints carefully and try again.`;
+        }
+    }
+    else if (state === "printer_retry") {
+        textToShow = `<b>AI Guard [System]:</b><br><span style="color: #e63946; font-weight: bold;">Data Security Risk:</span> The documents are still exposed to unauthorized viewers! Re-examine the contents and try again.`;
+    }
+    else if (currentConfig?.aiNPC?.messageType === 'room1_state') {
+        if (hasCompletedPrinterTask && (currentScore === 20 || currentScore === 30)) {
+            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Room Secured!</span> You've already processed the workstation and checked the printer assets here. Head through the doorway to advance to the next challenge!`;
+        }
+        else if (terminalState && terminalState.answered && terminalState.userWasCorrect && !hasCompletedPrinterTask) {
+            currentConfig.hasSeenLaptopFeedback = true; 
+            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Great eye!</span> You handled that phishing email perfectly. Now, look over at the <span class="highlight-blue">Printer</span>. Someone left a printout sitting out in the open—go decide how to secure it!`;
+        }
+        else if (terminalState && terminalState.answered && !terminalState.userWasCorrect && !hasCompletedPrinterTask) {
+            currentConfig.hasSeenLaptopFeedback = true; 
+            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #c62828; font-weight: bold;">TASK FAILED:</span> You fell for the phishing email attack! Be extra cautious next time. Now, move over to the <span class="highlight-blue">Printer</span> to complete the next task.`;
+        }
+        else if (!hasCompletedPrinterTask && (!terminalState || !terminalState.answered)) {
+            currentConfig.hasSeenRoomIntro = true; 
+            textToShow = `<b>AI Guard [Bedroom]:</b><br>Welcome to the Entry Foyer. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
+            laptopLocked = false; 
+        } 
+        else if (hasCompletedPrinterTask) {
+            currentConfig.hasSeenPrinterFeedback = true; 
+            if (printerTaskCorrect) {
+                textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRINTER HYGIENE!</span> Shredding that network diagram was the perfect decision. Leaving default passwords and system IPs in a physical tray is a major physical-security risk. You've earned your points—let's move on to Room 2!`;
+            } else {
+                textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #e63946; font-weight: bold;">PRINTER LEAK DETECTED:</span> Oh no, you chose to leave the document on the tray! That printout had local network administration passwords on it. Remember to always shred sensitive papers! Let's keep trying!`;
+            }
+        }
+    } 
+    else if (currentConfig?.aiNPC?.messageType === 'room2_state') {
+        if (hasCompletedPrinterTask && (currentScore === 40 || currentScore === 50)) {
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Area Monitored!</span> Network traffic analysis and physical document checks for this room are complete. Head over to the Kitchen when ready!`;
+        }
+        // Success case: Only show if the user actually set a strong password successfully
+        else if (terminalState && terminalState.answered && terminalState.userWasCorrect && !hasCompletedPrinterTask) {
+            currentConfig.hasSeenLaptopFeedback = true; 
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Nice defense!</span> You secured the router with a strong password! Now, run over to the <span class="highlight-blue">Printer</span>. We have a physical data privacy decision waiting for you there.`;
+        }
+        // Failure case: All attempts exhausted without a strong password
+        else if (terminalState && terminalState.answered && !terminalState.userWasCorrect && !hasCompletedPrinterTask) {
+            currentConfig.hasSeenLaptopFeedback = true; 
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #c62828; font-weight: bold;">ACCESS DENIED!</span> You've exhausted all 3 attempts to set a strong router password. The router configuration is locked. Head over to the <span class="highlight-blue">Printer</span> to complete the physical data security check.`;
+        }
+        else if (!hasCompletedPrinterTask && (!terminalState || !terminalState.answered)) {
+            currentConfig.hasSeenRoomIntro = true; 
+            textToShow = `<b>AI Guard [Living Room]:</b><br>Alert! The router in this room is using a weak default password! Head over to the floor terminal right away and change it to a strong password!`;
+            laptopLocked = false;
+        } 
+        else if (hasCompletedPrinterTask) {
+            currentConfig.hasSeenPrinterFeedback = true; 
+            if (printerTaskCorrect) {
+                textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">PRIVACY PROTECTED!</span> Superb job shredding that student export document. Leaving full names, home addresses, and phone directories exposed violates privacy policies. You handled that like a true security analyst! Let's enter Room 3!`;
+            } else {
+                textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #e63946; font-weight: bold;">DATA BREACH ALERT:</span> Leaving a complete physical database of student addresses on an open tray is a massive vulnerability. Identity thieves prey on papers like this. Remember, private databases must be destroyed!`;
+            }
+        }
+    } 
+    else if (currentConfig?.aiNPC?.messageType === 'room3_state') {
+        laptopLocked = false; 
+
+        if (terminalState && terminalState.answered && terminalState.userWasCorrect) {
+            currentConfig.hasSeenLaptopFeedback = true; 
+            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">Security Mastered!</span> You saw right through that attack. You’ve successfully protected the system integrity. You've officially proven you've got the skills to navigate the digital world safely!`;
+        } 
+        else if (terminalState && terminalState.answered && !terminalState.userWasCorrect) {
+            currentConfig.hasSeenLaptopFeedback = true; 
+            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #c62828; font-weight: bold;">EVALUATION ENDED:</span> You failed to defend against the credential harvesting attack. Keep practicing your digital security skills!`;
+        }
+        else {
+            currentConfig.hasSeenRoomIntro = true; 
+            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to the Kitchen! We've got a suspicious request for admin credentials sitting in the inbox. Stay sharp—this is your final test!`;
+        }
+    }
+
+    content.innerHTML = `
+        <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
+            ${textToShow}
+        </div>
+    `;
+        
+    document.getElementById('popup-overlay').style.display = 'block';
+}
+function updateAttentionBadgePosition() {
+    const badge = document.getElementById('ai-attention-badge');
+    if (!badge) return;
+
+    const currentConfig = roomConfigurations[currentRoomId];
+    if (!currentConfig) return;
+
+    const activePapers = currentConfig.papers || [];
+    const terminalState = activePapers[0];
+
+    if (currentConfig.hasSeenRoomIntro === undefined) currentConfig.hasSeenRoomIntro = false;
+    if (currentConfig.hasSeenLaptopFeedback === undefined) currentConfig.hasSeenLaptopFeedback = false;
+    if (currentConfig.hasSeenPrinterFeedback === undefined) currentConfig.hasSeenPrinterFeedback = false;
+
+    let shouldShowBadge = false;
+
+    if (currentConfig.pendingLaptopRetry || currentConfig.pendingPrinterRetry) {
+        shouldShowBadge = true;
+    } 
+    else if (!terminalState || !terminalState.answered) {
+        if (!currentConfig.hasSeenRoomIntro) shouldShowBadge = true;
+    } else if (terminalState && terminalState.answered && !hasCompletedPrinterTask) {
+        if (!currentConfig.hasSeenLaptopFeedback) shouldShowBadge = true;
+    } else if (hasCompletedPrinterTask) {
+        if (!currentConfig.hasSeenPrinterFeedback) shouldShowBadge = true;
+    }
+
+    if (!shouldShowBadge) {
+        badge.style.display = 'none';
+        return;
+    }
+
+    badge.style.display = 'block';
+
+    const canvasWidth = 800;
+    const canvasHeight = 550;
+    
+    const leftPercent = (((aiAvatar.x + 35) / canvasWidth) * 100);
+    const topPercent = (((aiAvatar.y - 60) / canvasHeight) * 100); 
+    
+    badge.style.left = `${leftPercent}%`;
+    badge.style.top = `${topPercent}%`;
+}
+
+function closePopup() {
+    if (showingAIDialogue) {
+        const currentConfig = roomConfigurations[currentRoomId];
+        const activePapers = currentConfig?.papers || [];
+        const activeLaptopPaper = activePapers[0];
+
+        hasSeenRoomIntro = true;
+        if (currentConfig) {
+            currentConfig.hasSeenRoomIntro = true;
+        }
+
+        if (currentConfig) {
+            currentConfig.pendingLaptopRetry = false;
+            currentConfig.pendingPrinterRetry = false;
+        }
+
+        if (activeLaptopPaper && activeLaptopPaper.answered && !activeLaptopPaper.scoreProcessed) {
+            if (activeLaptopPaper.userWasCorrect || laptopAttempts[currentRoomId] >= 3) {
+                let earnedPoints = activeLaptopPaper.userWasCorrect ? 20 : 0;
+                cyberknowledgeScore += earnedPoints;
+                activeLaptopPaper.scoreProcessed = true;
+                hasSeenLaptopFeedback = true; 
+                if (currentConfig) currentConfig.hasSeenLaptopFeedback = true;
+
+                if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+                    let activeModule = 'safe'; 
+                    if (currentRoomId === 'room2') activeModule = 'savvy';
+                    else if (currentRoomId === 'room3') activeModule = 'social';
+
+                    fetch(`/api/save-progress`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            studentNumber: currentStudentNumber,
+                            module: activeModule,
+                            score: earnedPoints, 
+                            completed: earnedPoints > 0
+                        })
+                    })
+                    .then(res => res.json())
+                    .catch(err => console.error("Database sync failed:", err));
+                }
+
+                if (currentRoomId === 'room3') {
+                    hasCompletedPrinterTask = true;
+                    printerTaskCorrect = false; 
+                    if (currentConfig) {
+                        currentConfig.hasSeenPrinterFeedback = true;
+                    }
+                }
+            }
+        }
+        
+        if (hasCompletedPrinterTask && currentPaper && currentPaper.type === 'printer_document' && !currentPaper.scoreProcessed) {
+            let earnedPoints = 0;
+            if (currentPaper.userWasCorrect) {
+                earnedPoints = currentRoomId === 'room3' ? 20 : 10;
+                cyberknowledgeScore += earnedPoints;
+            }
+            
+            currentPaper.scoreProcessed = true;
+            hasSeenPrinterFeedback = true;
+            if (currentConfig) currentConfig.hasSeenPrinterFeedback = true;
+
+            if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+                let activeModule = 'safe'; 
+                if (currentRoomId === 'room2') activeModule = 'savvy';
+                else if (currentRoomId === 'room3') activeModule = 'social';
+
+                fetch(`/api/save-progress`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentNumber: currentStudentNumber,
+                        module: activeModule,
+                        score: earnedPoints, 
+                        completed: earnedPoints > 0
+                    })
+                })
+                .then(res => res.json())
+                .catch(err => console.error("Database sync failed:", err));
+            }
+        }
+
+        hasSeenRoomIntro = true;
+        hasSeenLaptopFeedback = true;
+        hasSeenPrinterFeedback = true;
+
+        const badge = document.getElementById('ai-attention-badge');
+        if (badge) {
+            badge.style.display = 'none';
+        }
+
+        if (typeof updateAttentionBadgePosition === "function") {
+            updateAttentionBadgePosition();
+        }
+
+        if (!hasCompletedAllTasks) {
+            if (cyberknowledgeScore >= 60 && currentRoomId === 'room2') {
+                setTimeout(() => {
+                    transitionToRoom('room3');
+                    hasCompletedPrinterTask = false;
+                    printerTaskCorrect = false;
+                    hasSeenRoomIntro = false;
+                    hasSeenLaptopFeedback = false; 
+                    hasSeenPrinterFeedback = false;
+                    if (typeof updateAttentionBadgePosition === "function") updateAttentionBadgePosition();
+                }, 600);
+            } else if (cyberknowledgeScore >= 30 && currentRoomId === 'room1') {
+                setTimeout(() => {
+                    transitionToRoom('room2');
+                    hasCompletedPrinterTask = false;
+                    printerTaskCorrect = false;
+                    hasSeenRoomIntro = false;
+                    hasSeenLaptopFeedback = false; 
+                    hasSeenPrinterFeedback = false;
+                    if (typeof updateAttentionBadgePosition === "function") updateAttentionBadgePosition();
+                }, 600);
+            }
+        }
+    }
+
+    document.getElementById('popup-content').className = ''; 
+    document.getElementById('popup-overlay').style.display = 'none';
+    showingAIDialogue = false;
+    isPaused = false;
+    currentPaper = null; 
+}
 
 let selectedPrinterOption = 0; 
 
@@ -1372,611 +2476,7 @@ function interactWithPrinter() {
         window.updatePrinterUI();
     }
 }
-function interactWithLaptop(paper) {
-    selectedEmailOption = 0;
 
-    if (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect) {
-        isPaused = true;
-        showingAIDialogue = true;
-        const content = document.getElementById('popup-content');
-        
-        content.className = ''; 
-        content.removeAttribute('style'); 
-        content.classList.add('dialogue-bubble-mode');
-        
-        content.innerHTML = `
-            <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
-                <b>System Notification:</b><br>
-                <span style="color: #e63946; font-weight: bold;">TERMINAL LOCKED PERMANENTLY:</span> Maximum retry threshold reached (3/3 tries exhausted). Hardware access interface completely locked out.
-            </div>
-        `;
-        document.getElementById('popup-overlay').style.display = 'block';
-        return;
-    }
-
-    if (paper.scoreProcessed) {
-        isPaused = true;
-        showingAIDialogue = true;
-        const content = document.getElementById('popup-content');
-        
-        content.className = ''; 
-        content.removeAttribute('style'); 
-        content.classList.add('dialogue-bubble-mode');
-
-        let textToShow = "";
-        if (paper.userWasCorrect) {
-            textToShow = `<b>System Notification:</b><br><span style="color: #52b788; font-weight: bold;">WORKSTATION SECURE:</span> Queue cleared. There are no pending incoming transmissions for this terminal.`;
-        } else {
-            textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">ACCESS REVOKED:</span> Terminal framework remains offline due to ongoing verification loops.`;
-        }
-        
-        content.innerHTML = `
-            <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
-                ${textToShow}
-            </div>
-        `;
-        document.getElementById('popup-overlay').style.display = 'block';
-        return; 
-    }
-
-    if (paper.answered && !paper.hasConsultedAI) {
-        isPaused = true;
-        showingAIDialogue = true;
-        const content = document.getElementById('popup-content');
-        
-        content.className = ''; 
-        content.removeAttribute('style'); 
-        content.classList.add('dialogue-bubble-mode');
-        
-        content.innerHTML = `
-            <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
-                <b>System Notification:</b><br>
-                <span style="color: #ffaa00; font-weight: bold;">TERMINAL STANDBY:</span> Workstation link interrupted. Please redirect to the AI Avatar interface to process active appraisal sequence first.
-            </div>
-        `;
-        document.getElementById('popup-overlay').style.display = 'block';
-        return;
-    }
-
-    if (typeof laptopLocked !== 'undefined' && laptopLocked) {
-        isPaused = true;
-        showingAIDialogue = true;
-        const content = document.getElementById('popup-content');
-        
-        content.className = ''; 
-        content.removeAttribute('style'); 
-        content.classList.add('dialogue-bubble-mode');
-        
-        content.innerHTML = `
-            <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
-                <b>System Notification:</b><br>
-                <span style="color: #e63946; font-weight: bold;">SECURITY LOCK:</span> Threat directives intercepted. Interrogate the AI Avatar system node to bypass firewalls before logging in.
-            </div>
-        `;
-        document.getElementById('popup-overlay').style.display = 'block';
-        return; 
-    }
-
-    showEmailPopup(paper);
-    updateEmailUI();
-}
-function showEmailPopup(paper) {
-    // Exit early if tries are exhausted or already locked without forwarding to the AI Avatar
-    if (paper && (paper.locked || (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect))) {
-        return;
-    }
-
-    isPaused = true;
-    currentPaper = paper;
-    currentPaper.type = 'email'; 
-    showingAIDialogue = false;
-    
-    const content = document.getElementById('popup-content');
-    content.className = ''; 
-    content.classList.add('center-modal-mode');
-
-    let emailPool = {
-        room1: [
-            {
-                sender: "HR Dept",
-                address: "hr@internal-security-system.local",
-                subject: "Action Required: Update Your Credentials Immediately",
-                body: "Your network access password expires within 24 hours. Choose an option to proceed with your credential update.",
-                correctOption: 1
-            },
-            {
-                sender: "Security Alert",
-                address: "security-foyer@critical-alert.net",
-                subject: "WARNING: Unauthorized Entry Attempt Logs",
-                body: "We noted suspicious activity on your host framework node. Select RESPOND TO EMAIL to verify your active authorization token index.",
-                correctOption: 1
-            },
-            {
-                sender: "IT Notice",
-                address: "admin@internal-security-system.local",
-                subject: "Scheduled Server Migration Information",
-                body: "This is a general advisory that internal storage arrays are migrating this Sunday. No action is required from you.",
-                correctOption: 0
-            }
-        ],
-        room2: [
-            {
-                sender: "IT Support Desk",
-                address: "support@urgent-security-update.com",
-                subject: "CRITICAL: Urgent Security Firewall Patch Required",
-                body: "We have detected unauthorized bypass attempts on your workstation segment. Click 'RESPOND TO EMAIL' to download and install the repair package.",
-                correctOption: 1
-            },
-            {
-                sender: "Accounts Payable",
-                address: "billing@external-verify-portal.org",
-                subject: "Overdue Workstation Rental Invoice Attached",
-                body: "Your hardware assignment metrics match an outstanding balance ledger sheet. Click RESPOND TO EMAIL to upload transaction proofs immediately.",
-                correctOption: 1
-            },
-            {
-                sender: "Company Portal",
-                address: "newsletter@company.corp",
-                subject: "Monthly System Performance Newsletter Update",
-                body: "Here is your standard textual tracking wrap-up summary for the month. No authorization values or link downloads are embedded.",
-                correctOption: 0
-            }
-        ],
-        room3: [
-            {
-                sender: "Office Manager", 
-                address: "Admin@company.corp",
-                subject: "Building Maintenance Notice",
-                body: "Please be advised that the main office elevator will be under maintenance on Tuesday. Please use the north side stairs.",
-                correctOption: 0
-            },
-            {
-                sender: "Delivery Service",
-                address: "postmaster@courier-tracking-routing.net",
-                subject: "Package Delivery Alert: Failed Transfer Hold Node",
-                body: "A parcel addressed to your account matrix space cannot spawn delivery updates. Open the confirmation layout module to fix.",
-                correctOption: 1
-            },
-            {
-                sender: "CEO Update",
-                address: "exec-office@company.corp",
-                subject: "Annual Strategic Goals Performance Report",
-                body: "Please review the updated general corporate guidelines for the coming system operations semester.",
-                correctOption: 0
-            }
-        ]
-    };
-
-    let attemptIndex = Math.min(laptopAttempts[currentRoomId] || 0, 2);
-    let selectedScenario = emailPool[currentRoomId][attemptIndex];
-
-    let emailSender = selectedScenario.sender;
-    let emailAddress = selectedScenario.address;
-    let emailSubject = selectedScenario.subject;
-    let emailBody = selectedScenario.body;
-    let correctOption = selectedScenario.correctOption;
-
-    window.handleEmailSubmission = function(chosenOption) {
-    if (!currentPaper) return;
-
-    laptopAttempts[currentRoomId] = (laptopAttempts[currentRoomId] || 0) + 1;
-    
-    if (chosenOption === correctOption) {
-        currentPaper.userWasCorrect = true;
-        currentPaper.answered = true;
-        currentPaper.locked = true; 
-        currentPaper.hasConsultedAI = false; 
-        
-        closePopup();
-    } else {
-        currentPaper.userWasCorrect = false;
-        
-        if (laptopAttempts[currentRoomId] >= 3) {
-            currentPaper.answered = true;
-            currentPaper.locked = true; 
-            currentPaper.hasConsultedAI = false;
-            
-            closePopup();
-        } else {
-            currentPaper.answered = false;
-            currentPaper.locked = false;
-            currentPaper.hasConsultedAI = false;
-            
-            // Set dynamic message signaling flags on the current configuration
-            const currentConfig = roomConfigurations[currentRoomId];
-            if (currentConfig) {
-                currentConfig.pendingLaptopRetry = true;
-            }
-            
-            closePopup();
-        }
-    }
-
-    // Turn on attention badge indicating a new message is waiting
-    const badge = document.getElementById('ai-attention-badge');
-    if (badge) {
-        badge.style.display = 'block';
-        if (typeof updateAttentionBadgePosition === "function") {
-            updateAttentionBadgePosition();
-        }
-    }
-};
-
-    content.innerHTML = `
-    <div class="popup-layout-wrapper" style="font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 1.6cqw; font-weight: normal; background-color: #ffffff; color: #202124; box-sizing: border-box; width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column;">
-        
-        <div class="email-action-bar" style="display: flex; gap: 2.5cqw; align-items: center; border-bottom: 1px solid #f1f3f4; padding: 1.5cqh 3cqw; color: #5f6368; font-size: 1.8cqw;">
-            <span style="cursor: pointer; font-weight: bold;" onclick="closePopup()">←</span>
-            <span style="cursor: pointer;">📥</span>
-            <span style="cursor: pointer;">⚠️</span>
-            <span style="cursor: pointer;" onclick="window.handleEmailSubmission(1)">🗑️</span>
-            <span style="cursor: pointer; margin-left: auto;">✉️</span>
-            <span style="cursor: pointer;">🕒</span>
-            <span style="cursor: pointer; margin-left: 1cqw;">⋮</span>
-        </div>
-
-        <div style="padding: 3cqh 4cqw; flex-grow: 1;">
-            <div style="display: flex; align-items: center; gap: 1cqw; margin-bottom: 3cqh;">
-                <h2 style="margin: 0; font-size: 2.4cqw; font-weight: 400; color: #202124;">
-                    ${emailSubject}
-                </h2>
-                <span style="background-color: #e8eaed; color: #5f6368; font-size: 1.2cqw; padding: 2px 6px; border-radius: 4px; font-weight: 500;">
-                    Inbox
-                </span>
-            </div>
-
-            <div class="email-meta-row" style="display: flex; align-items: flex-start; margin-bottom: 4cqh; position: relative;">
-                <div style="width: 5cqw; height: 5cqw; border-radius: 50%; background-color: #007791; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 2cqw; margin-right: 2cqw; flex-shrink: 0;">
-                    ${emailSender.substring(0, 2).toUpperCase()}
-                </div>
-                
-                <div style="flex-grow: 1; min-width: 0;">
-                    <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%;">
-                        <div>
-                            <span style="font-weight: bold; color: #202124; font-size: 1.6cqw; margin-right: 0.5cqw;">${emailSender}</span>
-                            <span style="color: #5f6368; font-size: 1.4cqw;">&lt;${emailAddress}&gt;</span>
-                        </div>
-                        <div style="color: #5f6368; font-size: 1.3cqw; white-space: nowrap; margin-left: 2cqw;">
-                            Just now
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="email-body" style="font-size: 1.6cqw; line-height: 1.5; color: #202124; padding-left: 7cqw; margin-bottom: 6cqh; min-height: 12cqh;">
-                ${emailBody}
-            </div>
-
-            <div id="email-options" style="display: flex; gap: 1.5cqw; padding-left: 7cqw; border-top: 1px solid #f1f3f4; padding-top: 3cqh;">
-                <div class="email-option" id="opt-0" onclick="window.handleEmailSubmission(0)" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f7f8f9'" onmouseout="this.style.backgroundColor='transparent'">
-                    ↩️ RESPOND TO EMAIL
-                </div>
-                <div class="email-option" id="opt-1" onclick="window.handleEmailSubmission(1)" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f7f8f9'" onmouseout="this.style.backgroundColor='transparent'">
-                    ➡️ IGNORE / TRASH
-                </div>
-            </div>
-        </div>
-    </div>
-    `;
-
-    document.getElementById('popup-overlay').style.display = 'block';
-}
-function showAIDialoguePopup(state) {
-    isPaused = true;
-    showingAIDialogue = true;
-    
-    const content = document.getElementById('popup-content');
-    const currentConfig = roomConfigurations[currentRoomId];
-    const activePapers = currentConfig?.papers || [];
-    const terminalState = activePapers[0]; 
-
-    // --- PROGRESSION ENFORCEMENT ---
-    // Mark the workstation task as "consulted" now that the player is interacting with the AI Avatar.
-    // This allows the interactWithPrinter() function to bypass its gate.
-    if (terminalState && terminalState.answered) {
-        terminalState.hasConsultedAI = true;
-    }
-    // -------------------------------
-
-    // Route state variables dynamically based on explicit custom component signals
-    if (state === undefined && currentConfig) {
-        if (currentConfig.pendingLaptopRetry) {
-            state = "laptop_retry";
-        } else if (currentConfig.pendingPrinterRetry) {
-            state = "printer_retry";
-        }
-    }
-    
-    let textToShow = "";
-    
-    content.className = ''; 
-    content.removeAttribute('style'); 
-    content.classList.add('dialogue-bubble-mode');
-
-    // Turn attention badge off immediately when accessing the dialogue
-    const badge = document.getElementById('ai-attention-badge');
-    if (badge) {
-        badge.style.display = 'none';
-    }
-    
-    if (currentConfig) {
-        if (currentConfig.hasSeenRoomIntro === undefined) currentConfig.hasSeenRoomIntro = false;
-        if (currentConfig.hasSeenLaptopFeedback === undefined) currentConfig.hasSeenLaptopFeedback = false;
-        if (currentConfig.hasSeenPrinterFeedback === undefined) currentConfig.hasSeenPrinterFeedback = false;
-    }
-
-    const scoreElement = document.getElementById('score-display');
-    const currentScore = scoreElement ? parseInt(scoreElement.textContent.replace(/\D/g, '')) || 0 : cyberknowledgeScore;
-
-    // =========================================================================
-    // EXPLICIT STATE ROUTING OVERRIDES (Checked First)
-    // =========================================================================
-    if (state === "printer_unpowered") {
-        textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">PRINTER OFFLINE:</span> The printer is currently not powered on. You must resolve security tasks on the workstation laptop first to restore power infrastructure configurations!`;
-    }
-    else if (state === "laptop_exhausted_room3" || (currentRoomId === 'room3' && state === undefined && laptopAttempts[currentRoomId] >= 3 && !terminalState?.userWasCorrect)) {
-        textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">EVALUATION ENDED:</span> Laptop tries exhausted. Keep practicing to become a certified cybersecurity defender!`;
-    }
-    else if (state === "device_secure_success") {
-        textToShow = `<b>AI Guard [System]:</b><br><span style="color: #52b788; font-weight: bold;">Action Success!</span> The device parameters have been correctly configured and secured.`;
-    }
-    else if (state === "laptop_retry") {
-        textToShow = `<b>AI Guard [System]:</b><br><span style="color: #e63946; font-weight: bold;">Security Discrepancy:</span> That choice exposed the infrastructure! The system has logged the event. Try adjusting your approach on the next attempt.`;
-    }
-    else if (state === "printer_retry") {
-        textToShow = `<b>AI Guard [System]:</b><br><span style="color: #e63946; font-weight: bold;">Data Security Risk:</span> The documents are still exposed to unauthorized viewers! Re-examine the contents and try again.`;
-    }
-    // =========================================================================
-    // STANDARD ROOM 1 FLOW (Bedroom)
-    // =========================================================================
-    else if (currentConfig?.aiNPC?.messageType === 'room1_state') {
-        if (hasCompletedPrinterTask && (currentScore === 20 || currentScore === 30)) {
-            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Room Secured!</span> You've already processed the workstation and checked the printer assets here. Head through the doorway to advance to the next challenge!`;
-        }
-        else if (terminalState && terminalState.answered && !hasCompletedPrinterTask) {
-            currentConfig.hasSeenLaptopFeedback = true; 
-            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Great eye!</span> You handled that phishing email perfectly. Now, look over at the <span class="highlight-blue">Printer</span>. Someone left a printout sitting out in the open—go decide how to secure it!`;
-        }
-        else if (!hasCompletedPrinterTask && (!terminalState || !terminalState.answered)) {
-            currentConfig.hasSeenRoomIntro = true; 
-            textToShow = `<b>AI Guard [Bedroom]:</b><br>Welcome to the Entry Foyer. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
-            laptopLocked = false; 
-        } 
-        else if (hasCompletedPrinterTask) {
-            currentConfig.hasSeenPrinterFeedback = true; 
-            if (printerTaskCorrect) {
-                textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRINTER HYGIENE!</span> Shredding that network diagram was the perfect decision. Leaving default passwords and system IPs in a physical tray is a major physical-security risk. You've earned your points—let's move on to Room 2!`;
-            } else {
-                textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #e63946; font-weight: bold;">PRINTER LEAK DETECTED:</span> Oh no, you chose to leave the document on the tray! That printout had local network administration passwords on it. Remember to always shred sensitive papers! Let's keep trying!`;
-            }
-        }
-    } 
-    // =========================================================================
-    // STANDARD ROOM 2 FLOW (Living Room)
-    // =========================================================================
-    else if (currentConfig?.aiNPC?.messageType === 'room2_state') {
-        if (hasCompletedPrinterTask && (currentScore === 40 || currentScore === 50)) {
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Area Monitored!</span> Network traffic analysis and physical document checks for this room are complete. Head over to the Kitchen when ready!`;
-        }
-        else if (terminalState && terminalState.answered && !hasCompletedPrinterTask) {
-            currentConfig.hasSeenLaptopFeedback = true; 
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Nice defense!</span> Rejecting fake support links keeps our networks clean. Now, run over to the <span class="highlight-blue">Printer</span>. We have a physical data privacy decision waiting for you there.`;
-        }
-        else if (!hasCompletedPrinterTask && (!terminalState || !terminalState.answered)) {
-            currentConfig.hasSeenRoomIntro = true; 
-            textToShow = `<b>AI Guard [Living Room]:</b><br>Alert! Someone is attempting to trick users on our local network segment. Head over to the floor terminal right away to verify what's coming in!`;
-            laptopLocked = false;
-        } 
-        else if (hasCompletedPrinterTask) {
-            currentConfig.hasSeenPrinterFeedback = true; 
-            if (printerTaskCorrect) {
-                textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">PRIVACY PROTECTED!</span> Superb job shredding that student export document. Leaving full names, home addresses, and phone directories exposed violates privacy policies. You handled that like a true security analyst! Let's enter Room 3!`;
-            } else {
-                textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #e63946; font-weight: bold;">DATA BREACH ALERT:</span> Leaving a complete physical database of student addresses on an open tray is a massive vulnerability. Identity thieves prey on papers like this. Remember, private databases must be destroyed!`;
-            }
-        }
-    } 
-    // =========================================================================
-    // STANDARD ROOM 3 FLOW (Kitchen)
-    // =========================================================================
-    else if (currentConfig?.aiNPC?.messageType === 'room3_state') {
-        laptopLocked = false; 
-
-        if (terminalState && terminalState.answered) {
-            currentConfig.hasSeenLaptopFeedback = true; 
-            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">Security Mastered!</span> You saw right through that attack. You’ve successfully protected the system integrity. You've officially proven you've got the skills to navigate the digital world safely!`;
-        } 
-        else {
-            currentConfig.hasSeenRoomIntro = true; 
-            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to the Kitchen! We've got a suspicious request for admin credentials sitting in the inbox. Stay sharp—this is your final test!`;
-        }
-    }
-
-    content.innerHTML = `
-        <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
-            ${textToShow}
-        </div>
-    `;
-        
-    document.getElementById('popup-overlay').style.display = 'block';
-}
-
-function updateAttentionBadgePosition() {
-    const badge = document.getElementById('ai-attention-badge');
-    if (!badge) return;
-
-    const currentConfig = roomConfigurations[currentRoomId];
-    if (!currentConfig) return;
-
-    const activePapers = currentConfig.papers || [];
-    const terminalState = activePapers[0];
-
-    if (currentConfig.hasSeenRoomIntro === undefined) currentConfig.hasSeenRoomIntro = false;
-    if (currentConfig.hasSeenLaptopFeedback === undefined) currentConfig.hasSeenLaptopFeedback = false;
-    if (currentConfig.hasSeenPrinterFeedback === undefined) currentConfig.hasSeenPrinterFeedback = false;
-
-    let shouldShowBadge = false;
-
-    // Check custom explicit signal properties set by our handling handlers
-    if (currentConfig.pendingLaptopRetry || currentConfig.pendingPrinterRetry) {
-        shouldShowBadge = true;
-    } 
-    // Fallback normal layout tracking structures
-    else if (!terminalState || !terminalState.answered) {
-        if (!currentConfig.hasSeenRoomIntro) shouldShowBadge = true;
-    } else if (terminalState && terminalState.answered && !hasCompletedPrinterTask) {
-        if (!currentConfig.hasSeenLaptopFeedback) shouldShowBadge = true;
-    } else if (hasCompletedPrinterTask) {
-        if (!currentConfig.hasSeenPrinterFeedback) shouldShowBadge = true;
-    }
-
-    if (!shouldShowBadge) {
-        badge.style.display = 'none';
-        return;
-    }
-
-    badge.style.display = 'block';
-
-    const canvasWidth = 800;
-    const canvasHeight = 550;
-    
-    const leftPercent = (((aiAvatar.x + 35) / canvasWidth) * 100);
-    const topPercent = (((aiAvatar.y - 60) / canvasHeight) * 100); 
-    
-    badge.style.left = `${leftPercent}%`;
-    badge.style.top = `${topPercent}%`;
-}
-
-function closePopup() {
-    if (showingAIDialogue) {
-        const currentConfig = roomConfigurations[currentRoomId];
-        const activePapers = currentConfig?.papers || [];
-        const activeLaptopPaper = activePapers[0];
-
-        hasSeenRoomIntro = true;
-        if (currentConfig) {
-            currentConfig.hasSeenRoomIntro = true;
-        }
-
-        // =========================================================================
-        // SIGNAL FLUSH SYSTEM
-        // =========================================================================
-        // Clear retry tracking variables so that updateAttentionBadgePosition turns off.
-        if (currentConfig) {
-            currentConfig.pendingLaptopRetry = false;
-            currentConfig.pendingPrinterRetry = false;
-        }
-
-        if (activeLaptopPaper && activeLaptopPaper.answered && !activeLaptopPaper.scoreProcessed) {
-            if (activeLaptopPaper.userWasCorrect || laptopAttempts[currentRoomId] >= 3) {
-                let earnedPoints = activeLaptopPaper.userWasCorrect ? 20 : 0;
-                cyberknowledgeScore += earnedPoints;
-                activeLaptopPaper.scoreProcessed = true;
-                hasSeenLaptopFeedback = true; 
-                if (currentConfig) currentConfig.hasSeenLaptopFeedback = true;
-
-                if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
-                    let activeModule = 'safe'; 
-                    if (currentRoomId === 'room2') activeModule = 'savvy';
-                    else if (currentRoomId === 'room3') activeModule = 'social';
-
-                    fetch(`/api/save-progress`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            studentNumber: currentStudentNumber,
-                            module: activeModule,
-                            score: earnedPoints, 
-                            completed: earnedPoints > 0
-                        })
-                    })
-                    .then(res => res.json())
-                    .catch(err => console.error("Database sync failed:", err));
-                }
-
-                if (currentRoomId === 'room3') {
-                    hasCompletedPrinterTask = true;
-                    printerTaskCorrect = false; 
-                    if (currentConfig) {
-                        currentConfig.hasSeenPrinterFeedback = true;
-                    }
-                }
-            }
-        }
-        
-        if (hasCompletedPrinterTask && currentPaper && currentPaper.type === 'printer_document' && !currentPaper.scoreProcessed) {
-            let earnedPoints = 0;
-            if (currentPaper.userWasCorrect) {
-                earnedPoints = currentRoomId === 'room3' ? 20 : 10;
-                cyberknowledgeScore += earnedPoints;
-            }
-            
-            currentPaper.scoreProcessed = true;
-            hasSeenPrinterFeedback = true;
-            if (currentConfig) currentConfig.hasSeenPrinterFeedback = true;
-
-            if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
-                let activeModule = 'safe'; 
-                if (currentRoomId === 'room2') activeModule = 'savvy';
-                else if (currentRoomId === 'room3') activeModule = 'social';
-
-                fetch(`/api/save-progress`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        studentNumber: currentStudentNumber,
-                        module: activeModule,
-                        score: earnedPoints, 
-                        completed: earnedPoints > 0
-                    })
-                })
-                .then(res => res.json())
-                .catch(err => console.error("Database sync failed:", err));
-            }
-        }
-
-        hasSeenRoomIntro = true;
-        hasSeenLaptopFeedback = true;
-        hasSeenPrinterFeedback = true;
-
-        const badge = document.getElementById('ai-attention-badge');
-        if (badge) {
-            badge.style.display = 'none';
-        }
-
-        updateAttentionBadgePosition();
-
-        if (!hasCompletedAllTasks) {
-            if (cyberknowledgeScore >= 60 && currentRoomId === 'room2') {
-                setTimeout(() => {
-                    transitionToRoom('room3');
-                    hasCompletedPrinterTask = false;
-                    printerTaskCorrect = false;
-                    hasSeenRoomIntro = false;
-                    hasSeenLaptopFeedback = false; 
-                    hasSeenPrinterFeedback = false;
-                    updateAttentionBadgePosition();
-                }, 600);
-            } else if (cyberknowledgeScore >= 30 && currentRoomId === 'room1') {
-                setTimeout(() => {
-                    transitionToRoom('room2');
-                    hasCompletedPrinterTask = false;
-                    printerTaskCorrect = false;
-                    hasSeenRoomIntro = false;
-                    hasSeenLaptopFeedback = false; 
-                    hasSeenPrinterFeedback = false;
-                    updateAttentionBadgePosition();
-                }, 600);
-            }
-        }
-    }
-
-    document.getElementById('popup-content').className = ''; 
-    document.getElementById('popup-overlay').style.display = 'none';
-    showingAIDialogue = false;
-    isPaused = false;
-    currentPaper = null; 
-}
 function update() {
     function updateAvatarMovementAudio() {
         const cutsceneActive = (typeof isCutsceneActive !== 'undefined' && isCutsceneActive);
@@ -2166,314 +2666,6 @@ function isInsideCollisionZone(x, y, radius = 25) {
         }
     }
     return false;
-}
-
-function draw() {
-    if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
-        if (typeof currentStudentNumber === 'undefined' || !currentStudentNumber) {
-            currentStudentNumber = "DEBUG_USER_001";
-        }
-        if (typeof currentRoomCode === 'undefined' || !currentRoomCode) {
-            currentRoomCode = "DEBUG_ROOM";
-        }
-
-        isAuthenticated = true;
-        gameState = 'game';
-        isPaused = false;
-
-        const menuOverlay = document.getElementById('menu-overlay');
-        if (menuOverlay) menuOverlay.style.display = 'none';
-        
-        currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
-        const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
-
-        if (currentConfig.aiNPC) {
-            aiAvatar.x = currentConfig.aiNPC.x;
-            aiAvatar.y = currentConfig.aiNPC.y;
-            aiAvatar.angle = currentConfig.aiNPC.angle || 0;
-        }
-
-        avatar.x = currentConfig.spawnX;
-        avatar.y = currentConfig.spawnY;
-        avatar.angle = (roomConfigurations[currentRoomId]?.cutscene?.directionAngle !== undefined) 
-            ? roomConfigurations[currentRoomId].cutscene.directionAngle 
-            : 90;
-        
-        isCutsceneActive = true;
-        cutsceneStartTime = Date.now();
-        
-        const badge = document.getElementById('ai-attention-badge');
-        if (badge) badge.style.display = 'block';
-
-        if (typeof updateAttentionBadgePosition === 'function') {
-            updateAttentionBadgePosition();
-        }
-    }
-
-    if (gameState === 'title') {
-        drawTitleScreen();
-        requestAnimationFrame(draw);
-        return;
-    }
-
-    ctx.clearRect(0, 0, 800, 600);
-        
-    const activeRoomConfig = roomConfigurations[currentRoomId];
-    const activeBgImage = images[activeRoomConfig.bgKey];
-
-    if (activeBgImage && activeBgImage.naturalWidth > 0) {
-        ctx.drawImage(activeBgImage, 0, 0, 800, 600);
-    }
-
-    if (activeRoomConfig?.printerDevice) {
-        const printer = activeRoomConfig.printerDevice;
-        const shredder = activeRoomConfig.shredderDevice;
-
-        if (shredder && images.paper_shredder && images.paper_shredder.naturalWidth > 0) {
-            ctx.save();
-            ctx.translate(shredder.x, shredder.y);
-            if (shredder.angle) ctx.rotate(shredder.angle * Math.PI / 180);
-            ctx.drawImage(
-                images.paper_shredder, 
-                -SHREDDER_WIDTH / 2, 
-                -SHREDDER_HEIGHT / 2, 
-                SHREDDER_WIDTH, 
-                SHREDDER_HEIGHT
-            );
-            ctx.restore();
-        }
-
-        if (images.printer && images.printer.naturalWidth > 0) {
-            ctx.save();
-            ctx.translate(printer.x, printer.y);
-            if (printer.angle) ctx.rotate(printer.angle * Math.PI / 180);
-            ctx.drawImage(
-                images.printer, 
-                -PRINTER_WIDTH / 2, 
-                -PRINTER_HEIGHT / 2, 
-                PRINTER_WIDTH, 
-                PRINTER_HEIGHT
-            );
-            ctx.restore();
-        }
-
-        const pDx = (avatar.x + 35) - printer.x;
-        const pDy = (avatar.y + 35) - printer.y;
-        const printerDist = Math.sqrt(pDx * pDx + pDy * pDy);
-
-        if (printerDist < interactionDist) {
-            ctx.save();
-            ctx.translate(printer.x, printer.y);
-            ctx.strokeStyle = "yellow";
-            ctx.lineWidth = 3;
-            ctx.strokeRect(
-                -(PRINTER_WIDTH / 2 + 5), 
-                -(PRINTER_HEIGHT / 2 + 5), 
-                PRINTER_WIDTH + 10, 
-                PRINTER_HEIGHT + 10
-            );
-            ctx.restore();
-        }
-    }
-
-    const activePapers = activeRoomConfig?.papers || [];
-    activePapers.forEach(p => {
-        if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            if (p.angle) {
-                ctx.rotate(p.angle * Math.PI / 180);
-            }
-            ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
-            ctx.restore();
-        }
-                
-        const dx = (avatar.x + 35) - p.x;
-        const dy = (avatar.y + 35) - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < interactionDist) {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            if (p.angle) {
-                ctx.rotate(p.angle * Math.PI / 180);
-            }
-            ctx.strokeStyle = "yellow";
-            ctx.lineWidth = 3;
-            ctx.strokeRect(-55, -40, 110, 80);
-            ctx.restore();
-        }
-    });
-
-    if (typeof remotePlayers !== 'undefined' && remotePlayers) {
-        Object.keys(remotePlayers).forEach(id => {
-            if (id.trim().toUpperCase() === currentStudentNumber.trim().toUpperCase()) return; 
-            const peer = remotePlayers[id];
-            
-            if (peer.roomCode === currentRoomCode && peer.roomId === currentRoomId) {
-                ctx.save();
-                ctx.translate(peer.x + 35, peer.y + 35);
-                ctx.rotate((peer.angle || 0) * Math.PI / 180);
-                
-                let peerSprite = images.idle;
-                if (peer.moving) {
-                    peerSprite = (Math.floor(Date.now() / 150) % 2 === 0) ? images.walkLeft : images.walkRight;
-                }
-                
-                if (peerSprite && peerSprite.complete) {
-                    ctx.drawImage(peerSprite, -35, -35, 70, 70);
-                } else {
-                    ctx.fillStyle = '#9b59b6'; 
-                    ctx.fillRect(-25, -25, 50, 50);
-                }
-                ctx.restore();
-
-                ctx.font = "bold 9px Arial";
-                const textWidth = ctx.measureText(peer.studentNumber).width;
-                const paddingX = 8;
-                const boxWidth = textWidth + paddingX;
-                const boxHeight = 14;
-                
-                ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-                ctx.fillRect(peer.x + 35 - (boxWidth / 2), peer.y - 26, boxWidth, boxHeight);
-                
-                ctx.fillStyle = "#52b788"; 
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(peer.studentNumber, peer.x + 35, peer.y - 26 + (boxHeight / 2));
-            }
-        });
-    }
-
-    let localNow = Date.now();
-    let img;
-
-    if (avatar.moving) {
-        let currentSpeed = avatar.speed || 4;
-        let dynamicInterval = Math.max(60, 600 / currentSpeed);
-
-        if (localNow - avatar.lastFrameSwap > dynamicInterval) {
-            if (typeof avatar.animStep === 'undefined') avatar.animStep = 0;
-            avatar.animStep = (avatar.animStep + 1) % 4;
-            avatar.lastFrameSwap = localNow;
-        }
-
-        if (avatar.animStep === 0) {
-            img = images.walkLeft;
-        } else if (avatar.animStep === 2) {
-            img = images.walkRight;
-        } else {
-            img = images.idle;
-        }
-    } else {
-        img = images.idle;
-    }
-        
-    if (img && img.naturalWidth > 0) {
-        ctx.save();                
-        ctx.translate(avatar.x + 35, avatar.y + 35);                
-        ctx.rotate(avatar.angle * Math.PI / 180);
-        ctx.drawImage(img, -35, -35, 70, 70);
-        ctx.restore();
-    }
-
-    if (images.aiNPC && images.aiNPC.naturalWidth > 0) {
-        ctx.save();
-        ctx.translate(aiAvatar.x + 35, aiAvatar.y + 35);
-        let correctedAngle = (aiAvatar.angle || 0) + 180;
-        ctx.rotate(correctedAngle * Math.PI / 180);
-        ctx.drawImage(images.aiNPC, -35, -35, 70, 70);
-        ctx.restore();
-    }
-
-    if (typeof isAuthenticated !== 'undefined' && isAuthenticated && currentStudentNumber) {
-        ctx.font = "bold 9px Arial";
-        const localTextWidth = ctx.measureText(currentStudentNumber).width;
-        const localPaddingX = 8;
-        const localBoxWidth = localTextWidth + localPaddingX;
-        const localBoxHeight = 14;
-
-        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-        ctx.fillRect(avatar.x + 35 - (localBoxWidth / 2), avatar.y - 26, localBoxWidth, localBoxHeight);
-        
-        ctx.fillStyle = "#52b788"; 
-        ctx.font = "bold 9px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = 'middle';
-        ctx.fillText(currentStudentNumber, avatar.x + 35, avatar.y - 26 + (localBoxHeight / 2));
-    }
-
-    if (typeof debugMode !== 'undefined' && debugMode) {
-        ctx.lineWidth = 2;
-        const currentZones = activeRoomConfig?.collisionZones || [];
-        currentZones.forEach(z => {
-            ctx.save();
-            if (z.type === 'circle') {
-                ctx.beginPath();
-                ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2);
-                ctx.strokeStyle = "red";
-                ctx.stroke();
-                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
-                ctx.fill();
-            } else {
-                ctx.translate(z.x, z.y);
-                if (z.deg) {
-                    ctx.rotate(z.deg * Math.PI / 180);
-                }
-                ctx.strokeStyle = "red";
-                ctx.strokeRect(0, 0, z.w, z.h);
-                ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
-                ctx.fillRect(0, 0, z.w, z.h);
-            }
-            ctx.restore();
-        });
-    }
-
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-    ctx.fillRect(580, 10, 210, 40);
-    ctx.strokeStyle = "#dcc23c";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(580, 10, 210, 40);
-
-    ctx.fillStyle = "white";
-    ctx.font = "bold 14px Arial";
-    ctx.textAlign = "left";
-    ctx.fillText(`Cyberknowledge: ${cyberknowledgeScore}`, 595, 36);
-
-    const inst = document.getElementById('instructions');
-    if (inst) {
-        const structuralVisibility = (typeof showGuideControls !== 'undefined' && !showGuideControls) ? 'none' : 'block';
-        if (inst.style.display !== structuralVisibility) {
-            inst.style.display = structuralVisibility;
-        }
-    }
-
-    if (!isPaused) {
-        update();
-    }
-
-    if (fadeState === 'out') {
-        fadeAlpha += 0.05;
-        if (fadeAlpha >= 1) {
-            fadeAlpha = 1;
-            executeRoomSwitch(targetRoomId);
-            fadeState = 'in';
-        }
-    } else if (fadeState === 'in') {
-        fadeAlpha -= 0.05;
-        if (fadeAlpha <= 0) {
-            fadeAlpha = 0;
-            fadeState = 'idle';
-            targetRoomId = null;
-        }
-    }
-
-    if (fadeAlpha > 0) {
-        ctx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
-        ctx.fillRect(0, 0, 800, 600);
-    }
-
-    requestAnimationFrame(draw);
 }
 
 function drawTitleScreen() {
