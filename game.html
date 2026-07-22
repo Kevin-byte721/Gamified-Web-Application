@@ -326,18 +326,27 @@
         <p class="access-prompt-text">Press <span class="highlight-key">SPACE</span> to Initialize Gameplay</p>
     </div>
 </div>
+<!--
+    <div class="settings-group">
+        <label for="debug-toggle">Enable Debug Mode</label>
+        <input type="checkbox" id="debug-toggle" onchange="toggleDebugMode(this.checked)">
+    </div>
+
+-->
 <div id="settings-overlay">
     <div class="settings-modal" id="settings-card">
         <h2>Game Settings</h2>
-        
+
+        <!-- Sound Effects Volume -->
         <div class="settings-group">
-            <label for="debug-toggle">Enable Debug Mode</label>
-            <input type="checkbox" id="debug-toggle" onchange="toggleDebugMode(this.checked)">
+            <label for="volume-slider">Game Volume: <span id="volume-val">60%</span></label>
+            <input type="range" id="volume-slider" class="volume-slider" min="0" max="100" value="60" oninput="updateGameVolume(this.value)">
         </div>
 
+        <!-- Background Music Volume -->
         <div class="settings-group">
-            <label for="volume-slider">Game Volume: <span id="volume-val">80%</span></label>
-            <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="updateGameVolume(this.value)">
+            <label for="music-slider">Music Volume: <span id="music-val">100%</span></label>
+            <input type="range" id="music-slider" class="volume-slider" min="0" max="100" value="100" oninput="updateMusicVolume(this.value)">
         </div>
 
         <div class="settings-actions" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
@@ -348,8 +357,7 @@
             </button>
         </div>
     </div>
-</div>
-        <div id="popup-overlay">
+</div>        <div id="popup-overlay">
             <div id="popup-content">
                 <!-- Injected dynamically -->
             </div>
@@ -715,10 +723,177 @@ const imageFiles = {
     aiNPC: 'ai_helper_avatar.png'
 };
 
+const sounds = {
+    walking: new Audio('walking.mp3'),
+    bgm: new Audio('background_music.mp3')
+};
+
+sounds.walking.loop = true;
+sounds.walking.volume = 0.6; // 60%
+
+sounds.bgm.loop = true;
+sounds.bgm.volume = 1.0; // 100%
+
+// Safely start BGM upon first user interaction
+function startBackgroundMusic() {
+    if (sounds.bgm && sounds.bgm.paused) {
+        sounds.bgm.play().catch(() => {});
+    }
+}
+
+window.addEventListener('click', startBackgroundMusic, { once: true });
+window.addEventListener('keydown', startBackgroundMusic, { once: true });
+
+// Controls Sound Effects Volume
+function updateGameVolume(value) {
+    const volumeValSpan = document.getElementById('volume-val');
+    if (volumeValSpan) {
+        volumeValSpan.innerText = value + '%';
+    }
+    if (sounds && sounds.walking) {
+        sounds.walking.volume = value / 100;
+    }
+}
+
+// Controls Background Music Volume
+function updateMusicVolume(value) {
+    const musicValSpan = document.getElementById('music-val');
+    if (musicValSpan) {
+        musicValSpan.innerText = value + '%';
+    }
+    if (sounds && sounds.bgm) {
+        sounds.bgm.volume = value / 100;
+    }
+}
+
+function update() {
+    // Ensure BGM continues playing when in active game state
+    if (gameState === 'game' && sounds.bgm.paused) {
+        sounds.bgm.play().catch(() => {});
+    }
+
+    function updateAvatarMovementAudio() {
+        const cutsceneActive = (typeof isCutsceneActive !== 'undefined' && isCutsceneActive);
+        if (typeof sounds === 'undefined' || !sounds || !sounds.walking) return; 
+
+        if ((gameState === 'game' || cutsceneActive) && !isPaused && avatar.moving) {
+            if (sounds.walking.paused) {
+                sounds.walking.play().catch(() => {});
+            }
+        } else {
+            if (!sounds.walking.paused) {
+                sounds.walking.pause();
+                sounds.walking.currentTime = 0; 
+            }
+        }
+    }
+
+    updateAvatarMovementAudio();
+
+    if (isPaused || gameState !== 'game') return;
+
+    if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
+        let now = Date.now();
+        const activeConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+        const activeDuration = activeConfig.cutscene?.duration || 500; 
+
+        if (now - cutsceneStartTime < activeDuration) {
+            avatar.moving = true;
+            avatar.angle = activeConfig.cutscene?.directionAngle || 180; 
+
+            let currentSpeed = avatar.speed || 4;
+            let angleRad = (avatar.angle - 90) * Math.PI / 180;
+            
+            let potentialX = avatar.x + Math.cos(angleRad) * currentSpeed;
+            let potentialY = avatar.y + Math.sin(angleRad) * currentSpeed;
+
+            if (checkAvatarBoundaries(potentialX, potentialY)) {
+                if (!checkCollisionAt(potentialX, potentialY) && 
+                    (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(potentialX, potentialY))) {
+                    avatar.x = potentialX;
+                    avatar.y = potentialY;
+                }
+            }
+        } else {
+            isCutsceneActive = false;
+            avatar.moving = false;
+        }
+
+        updateAI();
+        updateAttentionBadgePosition();
+        updateAvatarMovementAudio();
+        return; 
+    }
+
+    let moveX = 0, moveY = 0;
+        
+    if (keys['ArrowLeft'] || keys['KeyA'] || keys['a'] || keys['A']) moveX = -1;
+    if (keys['ArrowRight'] || keys['KeyD'] || keys['d'] || keys['D']) moveX = 1;
+    if (keys['ArrowUp'] || keys['KeyW'] || keys['w'] || keys['W']) moveY = -1;
+    if (keys['ArrowDown'] || keys['KeyS'] || keys['s'] || keys['S']) moveY = 1;
+
+    if (moveX !== 0 || moveY !== 0) {
+        if (moveX > 0 && moveY === 0) avatar.angle = 90;      
+        else if (moveX < 0 && moveY === 0) avatar.angle = 270;  
+        else if (moveY < 0 && moveX === 0) avatar.angle = 0;    
+        else if (moveY > 0 && moveX === 0) avatar.angle = 180;  
+        else if (moveX > 0 && moveY < 0) avatar.angle = 45;     
+        else if (moveX < 0 && moveY < 0) avatar.angle = 315;    
+        else if (moveX > 0 && moveY > 0) avatar.angle = 135;    
+        else if (moveX < 0 && moveY > 0) avatar.angle = 225;    
+                
+        let dx = moveX * avatar.speed;
+        let dy = moveY * avatar.speed;
+                
+        let potentialX = avatar.x + dx;
+        let potentialY = avatar.y + dy;
+
+        if (checkAvatarBoundaries(potentialX, potentialY)) {
+            if (!checkCollisionAt(potentialX, avatar.y) && 
+                (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(potentialX, avatar.y))) {
+                avatar.x = potentialX;
+            }
+            if (!checkCollisionAt(avatar.x, potentialY) && 
+                (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(avatar.x, potentialY))) {
+                avatar.y = potentialY;
+            }
+        }
+                
+        avatar.moving = true;
+        if (moveX < 0) avatar.lastDir = 'left';
+        if (moveX > 0) avatar.lastDir = 'right';
+    } else { 
+        avatar.moving = false; 
+    }
+
+    if (keys['KeyE'] || keys['e'] || keys['E']) {
+        const activeRoomConfig = roomConfigurations[currentRoomId];
+        if (activeRoomConfig && activeRoomConfig.printerDevice) {
+            const pX = activeRoomConfig.printerDevice.x;
+            const pY = activeRoomConfig.printerDevice.y;
+            const dx = (avatar.x + 35) - pX;
+            const dy = (avatar.y + 35) - pY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < interactionDist) {
+                keys['KeyE'] = false;
+                keys['e'] = false;
+                keys['E'] = false;
+                interactWithPrinter();
+            }
+        }
+    }
+
+    updateAI();
+    updateAttentionBadgePosition(); 
+    updateAvatarMovementAudio();
+}
+
 let currentRoomCode = ""; 
 var remotePlayers = {};
-//let skipTitleScreen = true;
-//let debugMode = true; 
+let skipTitleScreen = false;
+let debugMode = false;
+let cyberknowledgeScore = 20;
 let showGuideControls = false;
 let imagesLoaded = 0;
 const totalImages = Object.keys(imageFiles).length;
@@ -729,15 +904,7 @@ let showingAIDialogue = false;
 const interactionDist = 80;
 let isCutsceneActive = false;       
 let cutsceneStartTime = 0;          
-
-const sounds = {
-    walking: new Audio('walking.mp3')   
-};
-
-sounds.walking.loop = true;
-sounds.walking.volume = 1;
 let currentRoomId = 'room1';
-
 let fadeAlpha = 0;
 let fadeState = 'idle'; 
 let targetRoomId = null;
@@ -783,7 +950,6 @@ const aiAvatar = {
 };
 
 const keys = {};
-let cyberknowledgeScore = 0;
 let selectedEmailOption = 0; 
 var laptopLocked = true; 
 let currentStudentNumber = "";
@@ -808,16 +974,7 @@ function showSettingsMenu() {
     }
 }
 
-function updateGameVolume(value) {
-    const volumeValSpan = document.getElementById('volume-val');
-    if (volumeValSpan) {
-        volumeValSpan.innerText = value + '%';
-    }
-    const volumeLevel = value / 100;
-    if (sounds && sounds.walking) {
-        sounds.walking.volume = volumeLevel;
-    }
-}
+
 
 function draw() {
     if (typeof skipTitleScreen !== 'undefined' && skipTitleScreen && gameState === 'title') {
@@ -1194,7 +1351,7 @@ const roomConfigurations = {
         collisionZones: [
             { x: 0, y: 75, w: 800, h: 45 },    
             { x: 0, y: 520, w: 800, h: 80 },  
-            { x: 0, y: 0, w: 60, h: 600 },    
+            { x: 0, y: 0, w: 90, h: 600 },    
             { x: 700, y: 0, w: 60, h: 600 },  
             { x: 280, y: 0, w: 250, h: 340 },
             { x: 25, y: 450, w: 295, h: 50 },
@@ -1331,13 +1488,38 @@ function checkInteraction() {
 function interactWithLaptop(paper) {
     selectedEmailOption = 0;
 
+    // Fetch dynamic score
+    const scoreElement = document.getElementById('score-display');
+    const currentScore = scoreElement ? parseInt(scoreElement.textContent.replace(/\D/g, '')) || 0 : cyberknowledgeScore;
+    const room3Phase = (typeof room3ChatState !== 'undefined') ? room3ChatState.phase : 1;
+
+    // --- ROOM 3 PHASE 2 RE-ENGAGEMENT CHECK ---
+    // If in Room 3 and Phase 1 is completed (score 80 or phase === 2), but overall Room 3 is not fully completed (< 100 score)
+    if (currentRoomId === 'room3' && (currentScore >= 80 || room3Phase === 2) && currentScore < 100) {
+        laptopLocked = false; // Ensure laptop is unlocked for Phase 2
+        
+        // Reset answered & processed states for Phase 1 so Phase 2 chat can be opened
+        if (paper) {
+            paper.scoreProcessed = false;
+            paper.answered = false;
+            paper.hasConsultedAI = false;
+            paper.userWasCorrect = false;
+        }
+        
+        // Ensure attempt count is reset for Phase 2
+        if (laptopAttempts['room3'] >= 3) {
+            laptopAttempts['room3'] = 0;
+        }
+    }
+
     // Check if max retry threshold reached for current room
-    if (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect) {
+    if (laptopAttempts[currentRoomId] >= 3 && (!paper || !paper.userWasCorrect)) {
         showAIDialoguePopup(currentRoomId === 'room2' ? 'laptop_exhausted_room2' : 'laptop_exhausted');
         return;
     }
 
-    if (paper.scoreProcessed) {
+    // Block interaction if paper/task score was already finalized (Fully completed room)
+    if (paper && paper.scoreProcessed) {
         isPaused = true;
         showingAIDialogue = true;
         const content = document.getElementById('popup-content');
@@ -1347,7 +1529,7 @@ function interactWithLaptop(paper) {
         content.classList.add('dialogue-bubble-mode');
 
         let textToShow = "";
-        if (paper.userWasCorrect) {
+        if (paper.userWasCorrect || currentScore >= 100) {
             textToShow = `<b>System Notification:</b><br><span style="color: #52b788; font-weight: bold;">WORKSTATION SECURE:</span> Messaging protocol completed safely.`;
         } else {
             textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">SECURITY BREACH:</span> Unsafe messaging conduct detected on workstation.`;
@@ -1362,7 +1544,8 @@ function interactWithLaptop(paper) {
         return; 
     }
 
-    if (paper.answered && !paper.hasConsultedAI) {
+    // Block if user answered but has not spoken to the AI Avatar node yet
+    if (paper && paper.answered && !paper.hasConsultedAI) {
         isPaused = true;
         showingAIDialogue = true;
         const content = document.getElementById('popup-content');
@@ -1381,6 +1564,7 @@ function interactWithLaptop(paper) {
         return;
     }
 
+    // Lock check
     if (typeof laptopLocked !== 'undefined' && laptopLocked) {
         isPaused = true;
         showingAIDialogue = true;
@@ -1393,7 +1577,7 @@ function interactWithLaptop(paper) {
         content.innerHTML = `
             <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
                 <b>System Notification:</b><br>
-                <span style="color: #e63946; font-weight: bold;">SECURITY LOCK:</span> Interrogate the AI Avatar system node to unlock workstation access.
+                <span style="color: #e63946; font-weight: bold;">Laptop Turned Off:</span> Talk the AI Avatar to unlock workstation access.
             </div>
         `;
         document.getElementById('popup-overlay').style.display = 'block';
@@ -1803,21 +1987,27 @@ function showAIDialoguePopup(state) {
     
     const content = document.getElementById('popup-content');
     const currentConfig = roomConfigurations[currentRoomId];
-    const activePapers = currentConfig?.papers || [];
+    if (!currentConfig) return;
+
+    const activePapers = currentConfig.papers || [];
     const terminalState = activePapers[0]; 
 
+    // --- PROGRESSION ENFORCEMENT ---
     if (terminalState && terminalState.answered) {
         terminalState.hasConsultedAI = true;
     }
 
-    // Resolve state flags cleanly
+    // Resolve pending flags before state processing
     if (state === undefined && currentConfig) {
-        if (currentConfig.pendingLaptopRetry) {
-            state = "laptop_retry";
-            currentConfig.pendingLaptopRetry = false;
-        } else if (currentConfig.pendingLaptopSuccess) {
+        if (currentConfig.pendingLaptopSuccess) {
             state = "device_secure_success";
             currentConfig.pendingLaptopSuccess = false;
+        } else if (currentConfig.pendingLaptopRetry) {
+            state = "laptop_retry";
+            currentConfig.pendingLaptopRetry = false;
+        } else if (currentConfig.pendingLaptopExhausted) {
+            state = "laptop_exhausted";
+            currentConfig.pendingLaptopExhausted = false;
         } else if (currentConfig.pendingPrinterRetry) {
             state = "printer_retry";
             currentConfig.pendingPrinterRetry = false;
@@ -1845,131 +2035,145 @@ function showAIDialoguePopup(state) {
     const currentScore = scoreElement ? parseInt(scoreElement.textContent.replace(/\D/g, '')) || 0 : cyberknowledgeScore;
     const triesLeft = Math.max(0, 3 - (laptopAttempts[currentRoomId] || 0));
 
-    // --- State Mapping ---
+    // Room completion benchmarks based on score & phases
+    const hasPassedRoom1Laptop = currentRoomId === 'room1' && currentScore >= 20;
+    const hasPassedRoom2Laptop = currentRoomId === 'room2' && currentScore >= 50;
+    
+    // Room 3 multi-phase benchmarks
+    const room3Phase = (typeof room3ChatState !== 'undefined') ? room3ChatState.phase : 1;
+    const hasPassedRoom3Phase1 = currentRoomId === 'room3' && (currentScore >= 80 || room3Phase > 1 || terminalState?.userWasCorrect);
+    const hasPassedRoom3Phase2 = currentRoomId === 'room3' && (currentScore >= 100);
+
+    // Localized room printer status check
+    const roomPrinterCompleted = currentConfig.hasCompletedPrinterTask || (typeof hasCompletedPrinterTask !== 'undefined' ? hasCompletedPrinterTask : false);
+    const roomPrinterCorrect = currentConfig.printerTaskCorrect || (typeof printerTaskCorrect !== 'undefined' ? printerTaskCorrect : false);
+
+    // =========================================================================
+    // GLOBAL/CROSS-ROOM EXPLICIT OVERRIDES
+    // =========================================================================
     if (state === "printer_unpowered") {
         textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">PRINTER OFFLINE:</span> The printer is currently not powered on. You must resolve security tasks on the workstation laptop first to restore power infrastructure configurations!`;
-    }
-    else if (state === "laptop_exhausted_room2" || (currentRoomId === 'room2' && state === "laptop_exhausted")) {
-        textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #c62828; font-weight: bold;">ACCESS DENIED!</span> You've exhausted all 3 attempts to set a strong router password. Terminal locked out. Head over to the <span class="highlight-blue">Printer</span> for the next task!`;
-    }
-    else if (state === "laptop_exhausted_room3" || (currentRoomId === 'room3' && (state === "laptop_exhausted" || (laptopAttempts[currentRoomId] >= 3 && !terminalState?.userWasCorrect)))) {
-        textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">EVALUATION ENDED:</span> You exhausted all chat response attempts. Be cautious when communicating online!`;
-    }
-    // Room Success Messages
-    else if (state === "device_secure_success") {
-        if (currentRoomId === 'room2') {
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">PASS!</span> Excellent job! You created a strong, complex password. The router is now secured against unauthorized access. Next, head over to the <span class="highlight-blue">Printer</span> to complete the next task.`;
-        } else if (currentRoomId === 'room3') {
-            // Room 3 Phase 1 vs Phase 2 Pass
-            if (typeof room3ChatState !== 'undefined' && room3ChatState.phase === 1) {
-                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRIVACY DEFENSE!</span> You kept confidential credentials safe.<br>Now reopen the chat application and message a classmate!`;
-            } else {
-                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">GREAT DIGITAL NETIQUETTE!</span> You communicated kindly and supported your classmate without cyberbullying or scamming!`;
-            }
-        } else {
-            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">PASS!</span> Phishing email spotted and reported successfully! Next, check the printer in the foyer.`;
-        }
-    }
-    // Try Again / Retry Messages
-    else if (state === "laptop_retry") {
-        if (currentRoomId === 'room2') {
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #c62828; font-weight: bold;">TRY AGAIN! (${triesLeft} ${triesLeft === 1 ? 'attempt' : 'attempts'} left)</span><br>That password is too weak. Make sure it has at least 8 characters, an uppercase letter, a number, and a special symbol (!@#$).`;
-        } else if (currentRoomId === 'room3') {
-            // Room 3 Phase 1 vs Phase 2 Retry
-            if (typeof room3ChatState !== 'undefined' && room3ChatState.phase === 1) {
-                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">PRIVACY RISK DETECTED (${triesLeft} ${triesLeft === 1 ? 'attempt' : 'attempts'} left):</span> Never share confidential passwords, access codes, or private details with strangers! Read the options carefully and try again.`;
-            } else {
-                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">NETIQUETTE VIOLATION (${triesLeft} ${triesLeft === 1 ? 'attempt' : 'attempts'} left):</span> Cyberbullying or sending unkind messages violates digital safety! Try a supportive response instead.`;
-            }
-        } else {
-            textToShow = `<b>AI Guard [System]:</b><br><span style="color: #e63946; font-weight: bold;">Security Discrepancy:</span> That choice is weak or exposed the infrastructure! Read the hints carefully and try again.`;
-        }
     }
     else if (state === "printer_retry") {
         textToShow = `<b>AI Guard [System]:</b><br><span style="color: #e63946; font-weight: bold;">Data Security Risk:</span> The documents are still exposed to unauthorized viewers! Re-examine the contents and try again.`;
     }
-    // Room 1 Sequence
+    // =========================================================================
+    // STANDARD ROOM 1 FLOW (Bedroom)
+    // =========================================================================
     else if (currentConfig?.aiNPC?.messageType === 'room1_state') {
-        if (hasCompletedPrinterTask && (currentScore === 20 || currentScore === 30)) {
+        if (state === "device_secure_success") {
+            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">PASS!</span> Phishing email spotted and reported successfully! Next, check the printer in the foyer.`;
+        }
+        else if (state === "laptop_retry") {
+            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #e63946; font-weight: bold;">SECURITY RISK:</span> That choice exposed the infrastructure or clicked a dangerous link! Read the hints carefully and try again.`;
+        }
+        else if (state === "laptop_exhausted") {
+            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #c62828; font-weight: bold;">TASK FAILED:</span> You fell for the phishing email attack and exhausted your attempts! Be extra cautious next time. Head over to the <span class="highlight-blue">Printer</span> for your next task.`;
+        }
+        else if (roomPrinterCompleted && (currentScore === 20 || currentScore === 30)) {
             textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Room Secured!</span> You've already processed the workstation and checked the printer assets here. Head through the doorway to advance to the next challenge!`;
         }
-        else if (terminalState && terminalState.answered && terminalState.userWasCorrect && !hasCompletedPrinterTask) {
+        else if ((hasPassedRoom1Laptop || (terminalState && terminalState.answered && terminalState.userWasCorrect)) && !roomPrinterCompleted) {
             currentConfig.hasSeenLaptopFeedback = true; 
             textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Great eye!</span> You handled that phishing email perfectly. Now, look over at the <span class="highlight-blue">Printer</span>. Someone left a printout sitting out in the open—go decide how to secure it!`;
         }
-        else if (terminalState && terminalState.answered && !terminalState.userWasCorrect && !hasCompletedPrinterTask) {
-            currentConfig.hasSeenLaptopFeedback = true; 
-            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #c62828; font-weight: bold;">TASK FAILED:</span> You fell for the phishing email attack! Be extra cautious next time. Now, move over to the <span class="highlight-blue">Printer</span> to complete the next task.`;
-        }
-        else if (!hasCompletedPrinterTask && (!terminalState || !terminalState.answered)) {
+        else if (!roomPrinterCompleted && (!terminalState || !terminalState.answered)) {
             currentConfig.hasSeenRoomIntro = true; 
             textToShow = `<b>AI Guard [Bedroom]:</b><br>Welcome to the Entry Foyer. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
             laptopLocked = false; 
         } 
-        else if (hasCompletedPrinterTask) {
+        else if (roomPrinterCompleted) {
             currentConfig.hasSeenPrinterFeedback = true; 
-            if (printerTaskCorrect) {
+            if (roomPrinterCorrect) {
                 textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRINTER HYGIENE!</span> Shredding that network diagram was the perfect decision. Leaving default passwords and system IPs in a physical tray is a major physical-security risk. You've earned your points—let's move on to Room 2!`;
             } else {
                 textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #e63946; font-weight: bold;">PRINTER LEAK DETECTED:</span> Oh no, you chose to leave the document on the tray! That printout had local network administration passwords on it. Remember to always shred sensitive papers! Let's keep trying!`;
             }
         }
     } 
-    // Room 2 Sequence
+    // =========================================================================
+    // STANDARD ROOM 2 FLOW (Living Room)
+    // =========================================================================
     else if (currentConfig?.aiNPC?.messageType === 'room2_state') {
-        if (hasCompletedPrinterTask && (currentScore === 40 || currentScore === 50)) {
+        if (state === "device_secure_success") {
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">PASS!</span> Excellent job! You created a strong, complex password. The router is now secured against unauthorized access. Next, head over to the <span class="highlight-blue">Printer</span> to complete the next task.`;
+        }
+        else if (state === "laptop_retry") {
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #c62828; font-weight: bold;">TRY AGAIN! (${triesLeft} ${triesLeft === 1 ? 'attempt' : 'attempts'} left)</span><br>That password is too weak. Make sure it has at least 8 characters, an uppercase letter, a number, and a special symbol (!@#$).`;
+        }
+        else if (state === "laptop_exhausted" || (laptopAttempts[currentRoomId] >= 3 && !terminalState?.userWasCorrect)) {
+            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #c62828; font-weight: bold;">ACCESS DENIED!</span> You've exhausted all 3 attempts to set a strong router password. Terminal locked out. Head over to the <span class="highlight-blue">Printer</span> for the next task!`;
+        }
+        else if (roomPrinterCompleted && (currentScore === 40 || currentScore === 50)) {
             textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Area Monitored!</span> Network traffic analysis and physical document checks for this room are complete. Head over to the Kitchen when ready!`;
         }
-        else if (terminalState && terminalState.answered && terminalState.userWasCorrect && !hasCompletedPrinterTask) {
+        else if ((hasPassedRoom2Laptop || (terminalState && terminalState.answered && terminalState.userWasCorrect)) && !roomPrinterCompleted) {
             currentConfig.hasSeenLaptopFeedback = true; 
             textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Nice defense!</span> You secured the router with a strong password! Now, run over to the <span class="highlight-blue">Printer</span>. We have a physical data privacy decision waiting for you there.`;
         }
-        else if (terminalState && terminalState.answered && !terminalState.userWasCorrect && !hasCompletedPrinterTask) {
-            currentConfig.hasSeenLaptopFeedback = true; 
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #c62828; font-weight: bold;">ACCESS DENIED!</span> You've exhausted all 3 attempts to set a strong router password. The router configuration is locked. Head over to the <span class="highlight-blue">Printer</span> to complete the physical data security check.`;
-        }
-        else if (!hasCompletedPrinterTask && (!terminalState || !terminalState.answered)) {
+        else if (!roomPrinterCompleted && (!terminalState || !terminalState.answered)) {
             currentConfig.hasSeenRoomIntro = true; 
             textToShow = `<b>AI Guard [Living Room]:</b><br>Alert! The router in this room is using a weak default password! Head over to the floor terminal right away and change it to a strong password!`;
             laptopLocked = false;
         } 
-        else if (hasCompletedPrinterTask) {
+        else if (roomPrinterCompleted) {
             currentConfig.hasSeenPrinterFeedback = true; 
-            if (printerTaskCorrect) {
+            if (roomPrinterCorrect) {
                 textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">PRIVACY PROTECTED!</span> Superb job shredding that student export document. Leaving full names, home addresses, and phone directories exposed violates privacy policies. You handled that like a true security analyst! Let's enter Room 3!`;
             } else {
                 textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #e63946; font-weight: bold;">DATA BREACH ALERT:</span> Leaving a complete physical database of student addresses on an open tray is a massive vulnerability. Identity thieves prey on papers like this. Remember, private databases must be destroyed!`;
             }
         }
     } 
-    // Room 3 Sequence
+    // =========================================================================
+    // STANDARD ROOM 3 FLOW (Kitchen)
+    // =========================================================================
     else if (currentConfig?.aiNPC?.messageType === 'room3_state') {
         laptopLocked = false; 
 
-        if (terminalState && terminalState.answered) {
-            currentConfig.hasSeenLaptopFeedback = true; 
-            if (terminalState.userWasCorrect) {
-                if (typeof room3ChatState !== 'undefined' && room3ChatState.phase === 1) {
-                    textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRIVACY DEFENSE!</span> You refused to share confidential credentials with a stranger.<br><br>Now open the messaging chat again on the laptop and select a known classmate to message!`;
-                } else {
-                    textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">GREAT DIGITAL NETIQUETTE!</span> You communicated kindly and supported your classmate without cyberbullying or scamming!`;
-                }
+        if (state === "device_secure_success") {
+            if (hasPassedRoom3Phase2) {
+                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">GREAT DIGITAL NETIQUETTE!</span> You communicated kindly and supported your classmate without cyberbullying or scamming!`;
             } else {
-                if (typeof room3ChatState !== 'undefined' && room3ChatState.phase === 1) {
-                    textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #c62828; font-weight: bold;">PRIVACY BREACH!</span> You shared confidential credentials with an unverified stranger. Stay vigilant!`;
+                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRIVACY DEFENSE!</span> You kept credentials safe.<br>Now reopen the chat application and message a classmate!`;
+            }
+        }
+        else if (state === "laptop_retry") {
+            if (room3Phase === 1) {
+                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">PRIVACY RISK DETECTED (${triesLeft} ${triesLeft === 1 ? 'attempt' : 'attempts'} left):</span> Never share confidential passwords, access codes, or private details with strangers! Read the options carefully and try again.`;
+            } else {
+                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">NETIQUETTE VIOLATION (${triesLeft} ${triesLeft === 1 ? 'attempt' : 'attempts'} left):</span> Cyberbullying or sending mean messages violates digital citizenship safety! Try a supportive response instead.`;
+            }
+        }
+        else if (state === "laptop_exhausted" || (laptopAttempts[currentRoomId] >= 3 && !hasPassedRoom3Phase1)) {
+            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">EVALUATION ENDED:</span> You exhausted all chat response attempts. Keep practicing to become a certified cybersecurity defender!`;
+        }
+        else if (terminalState && terminalState.answered) {
+            currentConfig.hasSeenLaptopFeedback = true; 
+            
+            if (hasPassedRoom3Phase2) {
+                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">GREAT DIGITAL NETIQUETTE!</span> You communicated kindly and supported your classmate without cyberbullying or scamming!`;
+            } else if (hasPassedRoom3Phase1) {
+                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRIVACY DEFENSE!</span> You refused to share confidential credentials with a stranger. Now open the messaging chat again on the laptop and select a known classmate to message!`;
+            } else {
+                if (room3Phase === 1) {
+                    textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #c62828; font-weight: bold;">PRIVACY RISK DETECTED:</span> Never share confidential passwords, access codes, or private details with strangers! Reopen the laptop chat and select a safer response.`;
                 } else {
-                    textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #c62828; font-weight: bold;">EVALUATION ENDED:</span> Negative or abusive communication violates online safety guidelines.`;
+                    textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #c62828; font-weight: bold;">NETIQUETTE VIOLATION:</span> Negative or abusive communication violates online safety guidelines. Reopen the laptop chat and select a supportive response.`;
                 }
             }
         } 
         else {
             currentConfig.hasSeenRoomIntro = true; 
-            if (typeof room3ChatState !== 'undefined' && room3ChatState.phase === 2) {
-                textToShow = `<b>AI Guard [Kitchen]:</b><br>Great work on Phase 1! Now return to the workstation chat and select an appropriate response to communicate with your classmate Alex.`;
-            } else {
-                textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to Room 3! Check the messaging application on the workstation. Be careful about who you communicate with and what info you share!`;
-            }
+            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to Room 3! Check the messaging application on the laptop. Be careful with who you communicate with and what info you share!`;
         }
+    }
+
+    // Fallback to last dialogue message if no dynamic match produced text
+    if (!textToShow && currentConfig.lastDialogueMessage) {
+        textToShow = currentConfig.lastDialogueMessage;
+    } else if (textToShow && currentConfig) {
+        currentConfig.lastDialogueMessage = textToShow;
     }
 
     content.innerHTML = `
@@ -2502,6 +2706,15 @@ function showChatPopup(paper) {
         return;
     }
 
+    // --- PHASE SYNCHRONIZATION FIX ---
+    const scoreElement = document.getElementById('score-display');
+    const currentScore = scoreElement ? parseInt(scoreElement.textContent.replace(/\D/g, '')) || 0 : (typeof cyberknowledgeScore !== 'undefined' ? cyberknowledgeScore : 0);
+    
+    if (currentRoomId === 'room3' && (currentScore >= 80 || room3ChatState.phase1Completed)) {
+        room3ChatState.phase = 2;
+        room3ChatState.phase1Completed = true;
+    }
+
     isPaused = true;
     currentPaper = paper;
     currentPaper.type = 'chat';
@@ -2610,27 +2823,26 @@ function showChatPopup(paper) {
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        // Inside submitChatMessage after rendering the "Message Sent" UI:
-const selectionPanel = document.getElementById('chat-selection-panel');
-if (selectionPanel) {
-    selectionPanel.innerHTML = `
-        <div style="text-align: center; padding: 10px 0;">
-            <div style="color: #16a34a; font-weight: 600; font-size: 0.95rem; margin-bottom: 6px;">
-                ✓ Message Sent
-            </div>
-        </div>
-    `;
-}
+        // 2. Render "Message Sent" feedback in selection panel
+        const selectionPanel = document.getElementById('chat-selection-panel');
+        if (selectionPanel) {
+            selectionPanel.innerHTML = `
+                <div style="text-align: center; padding: 10px 0;">
+                    <div style="color: #16a34a; font-weight: 600; font-size: 0.95rem; margin-bottom: 6px;">
+                        ✓ Message Sent
+                    </div>
+                </div>
+            `;
+        }
 
-        // 3. Process game logic & advance scenario indices (for BOTH pass & fail)
+        // 3. Process game logic & advance scenario indices
         laptopAttempts[currentRoomId] = (laptopAttempts[currentRoomId] || 0) + 1;
 
-        // Advance scenario index so the NEXT scenario is prepared for subsequent attempts
         if (room3ChatState.phase === 1) {
             room3ChatState.phase1Index++;
             if (room3ChatState.phase1Index >= room3Scenarios.phase1.length) {
                 room3ChatState.phase1Completed = true;
-                room3ChatState.phase = 2; // Auto-transition to Phase 2 once Phase 1 scenarios are complete
+                room3ChatState.phase = 2; // Auto-transition to Phase 2 once Phase 1 scenarios complete
             }
         } else {
             room3ChatState.phase2Index++;
@@ -2676,7 +2888,7 @@ if (selectionPanel) {
             currentConfig.lastDialogueMessage = null;
         }
 
-        // 4. Trigger AI Attention Badge directly
+        // 4. Trigger AI Attention Badge
         const badge = document.getElementById('ai-attention-badge');
         if (badge) {
             badge.style.display = 'block';
@@ -2734,7 +2946,7 @@ if (selectionPanel) {
     }
 }
 window.addEventListener('keydown', e => {
-    // 1. Ignore global hotkeys if the user is typing into an input or textarea
+    // 1. Ignore global hotkeys if the user is typing into an input, textarea, or select element
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
         return;
     }
@@ -2751,7 +2963,38 @@ window.addEventListener('keydown', e => {
     if (gameState === 'title') {
         if (e.code === 'Space' || e.code === 'Enter') {
             e.preventDefault();
-            startGame();
+
+            if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
+                const inputField = document.getElementById('student-number-input');
+                if (inputField) {
+                    inputField.focus();
+                    inputField.style.borderColor = '#ff4a4a';
+                }
+                return;
+            }
+
+            gameState = 'game';
+            document.getElementById('menu-overlay').style.display = 'none';
+            
+            currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
+            const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+
+            avatar.x = currentConfig.spawnX;
+            avatar.y = currentConfig.spawnY;
+            avatar.angle = currentConfig.cutscene?.directionAngle || 180; 
+            
+            isCutsceneActive = true;
+            cutsceneStartTime = Date.now(); 
+
+            const instElement = document.getElementById('instructions');
+            if (instElement) {
+                instElement.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
+            }
+            
+            const badge = document.getElementById('ai-attention-badge');
+            if (badge) {
+                badge.style.display = 'block';
+            }
         }
         return;
     }
@@ -2759,12 +3002,31 @@ window.addEventListener('keydown', e => {
     // 4. Toggle Key (KeyT)
     if (e.code === 'KeyT') {
         if (gameState === 'title') {
-            startGame();
+            if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) return;
+
+            gameState = 'game';
+            document.getElementById('menu-overlay').style.display = 'none';
+            
+            currentRoomId = getSpawnRoomByScore(cyberknowledgeScore);
+            const currentConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
+
+            avatar.x = currentConfig.spawnX;
+            avatar.y = currentConfig.spawnY;
+            avatar.angle = currentConfig.cutscene?.directionAngle || 180;
+            isCutsceneActive = true;
+            cutsceneStartTime = Date.now();
+
+            const instElement = document.getElementById('instructions');
+            if (instElement) {
+                instElement.style.display = (typeof showGuideControls !== 'undefined' && showGuideControls) ? 'block' : 'none';
+            }
+            const badge = document.getElementById('ai-attention-badge');
+            if (badge) badge.style.display = 'block';
         } else if (gameState === 'game') {
             gameState = 'title';
             document.getElementById('menu-overlay').style.display = 'flex';
             document.getElementById('instructions').style.display = 'none';
-
+            
             const badge = document.getElementById('ai-attention-badge');
             if (badge) badge.style.display = 'none';
         }
@@ -2785,83 +3047,110 @@ window.addEventListener('keydown', e => {
     if (gameState === 'game') {
         keys[e.code] = true;
 
-        // --- PAUSED STATE (UI Popups / Dialogues / Papers) ---
         if (isPaused) {
-            // Handle AI Dialogue close
             if (showingAIDialogue) {
-                if (['Space', 'Escape', 'Enter'].includes(e.code)) {
+                if (e.code === 'Space' || e.code === 'Escape' || e.code === 'Enter') {
                     e.preventDefault();
                     closePopup();
                 }
                 return;
             }
 
-            // Handle Interactive Popups (Printer, Chat, Email)
             if (currentPaper) {
-                const isPrinter = currentPaper.type === 'printer_document';
-                const isChat = currentPaper.type === 'chat';
-
-                if (!currentPaper.answered) {
-                    // Navigate options down
-                    if (e.code === 'ArrowDown' || e.code === 'KeyS') {
-                        e.preventDefault();
-                        if (isPrinter) {
-                            selectedPrinterOption = 1;
-                            if (typeof window.updatePrinterUI === 'function') window.updatePrinterUI();
-                        } else if (isChat) {
-                            selectedChatOption = 1;
-                            if (typeof updateChatUI === 'function') updateChatUI();
-                        } else {
-                            selectedEmailOption = 1;
-                            if (typeof updateEmailUI === 'function') updateEmailUI();
+                if (currentPaper.type === 'printer_document') {
+                    if (!currentPaper.answered) {
+                        // Move Selection Down
+                        if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
+                            e.preventDefault();
+                            selectedPrinterOption = 1; 
+                            if (typeof window.updatePrinterUI === 'function') window.updatePrinterUI(); 
+                        }
+                        // Move Selection Up
+                        if (e.code === 'ArrowUp' || e.code === 'KeyW') { 
+                            e.preventDefault();
+                            selectedPrinterOption = 0; 
+                            if (typeof window.updatePrinterUI === 'function') window.updatePrinterUI(); 
+                        }
+                        // Confirm Answer with Space (or Enter)
+                        if (e.code === 'Space' || e.code === 'Enter') {
+                            e.preventDefault();
+                            if (typeof window.handlePrinterSubmission === 'function') {
+                                window.handlePrinterSubmission(selectedPrinterOption);
+                            }
+                        }
+                    } else {
+                        if (e.code === 'Space' || e.code === 'Escape' || e.code === 'Enter') {
+                            e.preventDefault();
+                            closePopup();
                         }
                     }
-
-                    // Navigate options up
-                    if (e.code === 'ArrowUp' || e.code === 'KeyW') {
-                        e.preventDefault();
-                        if (isPrinter) {
-                            selectedPrinterOption = 0;
-                            if (typeof window.updatePrinterUI === 'function') window.updatePrinterUI();
-                        } else if (isChat) {
-                            selectedChatOption = 0;
-                            if (typeof updateChatUI === 'function') updateChatUI();
-                        } else {
-                            selectedEmailOption = 0;
-                            if (typeof updateEmailUI === 'function') updateEmailUI();
+                } 
+                else if (currentPaper.type === 'chat') {
+                    if (!currentPaper.answered) {
+                        // Move Selection Down
+                        if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
+                            e.preventDefault();
+                            selectedChatOption = 1; 
+                            if (typeof updateChatUI === 'function') updateChatUI(); 
                         }
-                    }
-
-                    // Submit selected option
-                    if (e.code === 'Space' || e.code === 'Enter') {
-                        e.preventDefault();
-                        if (isPrinter && typeof window.handlePrinterSubmission === 'function') {
-                            window.handlePrinterSubmission(selectedPrinterOption);
-                        } else if (isChat && typeof window.submitChatMessage === 'function') {
-                            window.submitChatMessage(selectedChatOption);
-                        } else if (typeof window.handleEmailSubmission === 'function') {
-                            window.handleEmailSubmission(selectedEmailOption);
+                        // Move Selection Up
+                        if (e.code === 'ArrowUp' || e.code === 'KeyW') { 
+                            e.preventDefault();
+                            selectedChatOption = 0; 
+                            if (typeof updateChatUI === 'function') updateChatUI(); 
                         }
-                    }
-                } else {
-                    // Close answered paper popup
-                    if (['Space', 'Escape', 'Enter'].includes(e.code)) {
-                        e.preventDefault();
-                        closePopup();
+                        // Confirm Answer with Space (or Enter)
+                        if (e.code === 'Space' || e.code === 'Enter') {
+                            e.preventDefault();
+                            if (typeof window.submitChatMessage === 'function') {
+                                window.submitChatMessage(selectedChatOption);
+                            }
+                        }
+                    } else {
+                        if (e.code === 'Space' || e.code === 'Escape' || e.code === 'Enter') {
+                            e.preventDefault();
+                            closePopup();
+                        }
                     }
                 }
-
-                // Global escape key for popups
-                if (e.code === 'Escape') {
+                else {
+                    if (!currentPaper.answered) {
+                        // Move Selection Down
+                        if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
+                            e.preventDefault();
+                            selectedEmailOption = 1; 
+                            if (typeof updateEmailUI === 'function') updateEmailUI(); 
+                        }
+                        // Move Selection Up
+                        if (e.code === 'ArrowUp' || e.code === 'KeyW') { 
+                            e.preventDefault();
+                            selectedEmailOption = 0; 
+                            if (typeof updateEmailUI === 'function') updateEmailUI(); 
+                        }
+                        // Confirm Answer with Space (or Enter)
+                        if (e.code === 'Space' || e.code === 'Enter') {
+                            e.preventDefault();
+                            if (typeof window.handleEmailSubmission === 'function') {
+                                window.handleEmailSubmission(selectedEmailOption);
+                            }
+                        }
+                    } else {
+                        if (e.code === 'Space' || e.code === 'Escape' || e.code === 'Enter') {
+                            e.preventDefault();
+                            closePopup();
+                        }
+                    }
+                }
+                
+                if (e.code === 'Escape') { 
                     e.preventDefault();
-                    closePopup();
+                    closePopup(); 
                 }
                 return;
             }
-
-            // Generic fallback close for unhandled paused popups
+            
             if (!showingAIDialogue && !currentPaper) {
-                if (['Space', 'Escape', 'Enter'].includes(e.code)) {
+                if (e.code === 'Space' || e.code === 'Escape' || e.code === 'Enter') {
                     e.preventDefault();
                     closePopup();
                 }
@@ -2869,12 +3158,10 @@ window.addEventListener('keydown', e => {
             }
         }
 
-        // --- UNPAUSED GAMEPLAY ACTIONS ---
-
-        // Interact with Object (Printer / Workstation)
+        // Interact with Object (Printer / Workstation) using Space or KeyE
         if ((e.code === 'Space' || e.code === 'KeyE') && !isPaused) {
             e.preventDefault();
-
+            
             const activeRoomConfig = roomConfigurations[currentRoomId];
             if (activeRoomConfig && activeRoomConfig.printerDevice) {
                 const pX = activeRoomConfig.printerDevice.x;
@@ -2885,13 +3172,12 @@ window.addEventListener('keydown', e => {
 
                 if (dist < interactionDist) {
                     interactWithPrinter();
-                    return;
+                    return; 
                 }
             }
             checkInteraction();
         }
 
-        // Open Pause / Settings Menu
         if (e.code === 'Escape' && !isPaused) {
             e.preventDefault();
             Object.keys(keys).forEach(key => keys[key] = false);
@@ -3098,123 +3384,6 @@ function interactWithPrinter() {
     }
 }
 
-function update() {
-    function updateAvatarMovementAudio() {
-        const cutsceneActive = (typeof isCutsceneActive !== 'undefined' && isCutsceneActive);
-        if (typeof sounds === 'undefined' || !sounds || !sounds.walking) return; 
-
-        if ((gameState === 'game' || cutsceneActive) && !isPaused && avatar.moving) {
-            if (sounds.walking.paused) {
-                sounds.walking.play().catch(() => {});
-            }
-        } else {
-            if (!sounds.walking.paused) {
-                sounds.walking.pause();
-                sounds.walking.currentTime = 0; 
-            }
-        }
-    }
-
-    updateAvatarMovementAudio();
-
-    if (isPaused || gameState !== 'game') return;
-
-    if (typeof isCutsceneActive !== 'undefined' && isCutsceneActive) {
-        let now = Date.now();
-        const activeConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
-        const activeDuration = activeConfig.cutscene?.duration || 500; 
-
-        if (now - cutsceneStartTime < activeDuration) {
-            avatar.moving = true;
-            avatar.angle = activeConfig.cutscene?.directionAngle || 180; 
-
-            let currentSpeed = avatar.speed || 4;
-            let angleRad = (avatar.angle - 90) * Math.PI / 180;
-            
-            let potentialX = avatar.x + Math.cos(angleRad) * currentSpeed;
-            let potentialY = avatar.y + Math.sin(angleRad) * currentSpeed;
-
-            if (checkAvatarBoundaries(potentialX, potentialY)) {
-                if (!checkCollisionAt(potentialX, potentialY) && 
-                    (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(potentialX, potentialY))) {
-                    avatar.x = potentialX;
-                    avatar.y = potentialY;
-                }
-            }
-        } else {
-            isCutsceneActive = false;
-            avatar.moving = false;
-        }
-
-        updateAI();
-        updateAttentionBadgePosition();
-        updateAvatarMovementAudio();
-        return; 
-    }
-
-    let moveX = 0, moveY = 0;
-        
-    if (keys['ArrowLeft'] || keys['KeyA'] || keys['a'] || keys['A']) moveX = -1;
-    if (keys['ArrowRight'] || keys['KeyD'] || keys['d'] || keys['D']) moveX = 1;
-    if (keys['ArrowUp'] || keys['KeyW'] || keys['w'] || keys['W']) moveY = -1;
-    if (keys['ArrowDown'] || keys['KeyS'] || keys['s'] || keys['S']) moveY = 1;
-
-    if (moveX !== 0 || moveY !== 0) {
-        if (moveX > 0 && moveY === 0) avatar.angle = 90;      
-        else if (moveX < 0 && moveY === 0) avatar.angle = 270;  
-        else if (moveY < 0 && moveX === 0) avatar.angle = 0;    
-        else if (moveY > 0 && moveX === 0) avatar.angle = 180;  
-        else if (moveX > 0 && moveY < 0) avatar.angle = 45;     
-        else if (moveX < 0 && moveY < 0) avatar.angle = 315;    
-        else if (moveX > 0 && moveY > 0) avatar.angle = 135;    
-        else if (moveX < 0 && moveY > 0) avatar.angle = 225;    
-                
-        let dx = moveX * avatar.speed;
-        let dy = moveY * avatar.speed;
-                
-        let potentialX = avatar.x + dx;
-        let potentialY = avatar.y + dy;
-
-        if (checkAvatarBoundaries(potentialX, potentialY)) {
-            if (!checkCollisionAt(potentialX, avatar.y) && 
-                (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(potentialX, avatar.y))) {
-                avatar.x = potentialX;
-            }
-            if (!checkCollisionAt(avatar.x, potentialY) && 
-                (typeof checkPeerPlayerCollisions !== 'function' || !checkPeerPlayerCollisions(avatar.x, potentialY))) {
-                avatar.y = potentialY;
-            }
-        }
-                
-        avatar.moving = true;
-        if (moveX < 0) avatar.lastDir = 'left';
-        if (moveX > 0) avatar.lastDir = 'right';
-    } else { 
-        avatar.moving = false; 
-    }
-
-    if (keys['KeyE'] || keys['e'] || keys['E']) {
-        const activeRoomConfig = roomConfigurations[currentRoomId];
-        if (activeRoomConfig && activeRoomConfig.printerDevice) {
-            const pX = activeRoomConfig.printerDevice.x;
-            const pY = activeRoomConfig.printerDevice.y;
-            const dx = (avatar.x + 35) - pX;
-            const dy = (avatar.y + 35) - pY;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < interactionDist) {
-                keys['KeyE'] = false;
-                keys['e'] = false;
-                keys['E'] = false;
-                interactWithPrinter();
-            }
-        }
-    }
-
-    updateAI();
-    updateAttentionBadgePosition(); 
-    updateAvatarMovementAudio();
-}
 
 const SHREDDER_WIDTH = 75;      
 const SHREDDER_HEIGHT = 80;     
