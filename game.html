@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -719,8 +720,12 @@ const imageFiles = {
     printer: 'printer.png',
     paper_shredder: 'paper_shredder.png',
     paper: 'paper.png',
-    router: 'router.png', // <-- Added router image path
-    aiNPC: 'ai_helper_avatar.png'
+    router: 'router.png',
+    aiNPC: 'ai_helper_avatar.png',
+    // New assets added below:
+    gamingConsole: 'gaming_console.png',
+    flashDrive: 'flash_drive.png',
+    smartphone: 'smartphone.png'
 };
 
 const sounds = {
@@ -893,7 +898,7 @@ let currentRoomCode = "";
 var remotePlayers = {};
 let skipTitleScreen = false;
 let debugMode = false;
-let cyberknowledgeScore = 20;
+let cyberknowledgeScore = 0;
 let showGuideControls = false;
 let imagesLoaded = 0;
 const totalImages = Object.keys(imageFiles).length;
@@ -973,7 +978,6 @@ function showSettingsMenu() {
         settingsOverlay.style.display = 'none';
     }
 }
-
 
 
 function draw() {
@@ -1108,22 +1112,111 @@ function draw() {
             ctx.restore();
         }
 
-        // Router proximity highlight
         const rDx = (avatar.x + 35) - router.x;
         const rDy = (avatar.y + 35) - router.y;
         const routerDist = Math.sqrt(rDx * rDx + rDy * rDy);
     });
 
-    // --- PAPERS / LAPTOPS ---
+    // --- GAMING CONSOLES ---
+    const activeConsoles = activeRoomConfig?.gamingConsoles || (activeRoomConfig?.gamingConsole ? [activeRoomConfig.gamingConsole] : []);
+    activeConsoles.forEach(consoleDev => {
+        const width = consoleDev.w || 60;
+        const height = consoleDev.h || 40;
+        if (images.gamingConsole && images.gamingConsole.naturalWidth > 0) {
+            ctx.save();
+            ctx.translate(consoleDev.x, consoleDev.y);
+            if (consoleDev.angle) ctx.rotate(consoleDev.angle * Math.PI / 180);
+            ctx.drawImage(images.gamingConsole, -width / 2, -height / 2, width, height);
+            ctx.restore();
+        }
+
+        const cDx = (avatar.x + 35) - consoleDev.x;
+        const cDy = (avatar.y + 35) - consoleDev.y;
+        if (Math.sqrt(cDx * cDx + cDy * cDy) < interactionDist) {
+            ctx.save();
+            ctx.translate(consoleDev.x, consoleDev.y);
+            if (consoleDev.angle) ctx.rotate(consoleDev.angle * Math.PI / 180);
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-(width / 2 + 5), -(height / 2 + 5), width + 10, height + 10);
+            ctx.restore();
+        }
+    });
+
+    // --- FLASH DRIVES ---
+    const activeFlashDrives = activeRoomConfig?.flashDrives || (activeRoomConfig?.flashDrive ? [activeRoomConfig.flashDrive] : []);
+    activeFlashDrives.forEach(drive => {
+        const width = drive.w || 30;
+        const height = drive.h || 20;
+        if (images.flashDrive && images.flashDrive.naturalWidth > 0) {
+            ctx.save();
+            ctx.translate(drive.x, drive.y);
+            if (drive.angle) ctx.rotate(drive.angle * Math.PI / 180);
+            ctx.drawImage(images.flashDrive, -width / 2, -height / 2, width, height);
+            ctx.restore();
+        }
+
+        const fDx = (avatar.x + 35) - drive.x;
+        const fDy = (avatar.y + 35) - drive.y;
+        if (Math.sqrt(fDx * fDx + fDy * fDy) < interactionDist) {
+            ctx.save();
+            ctx.translate(drive.x, drive.y);
+            if (drive.angle) ctx.rotate(drive.angle * Math.PI / 180);
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-(width / 2 + 5), -(height / 2 + 5), width + 10, height + 10);
+            ctx.restore();
+        }
+    });
+
+    // --- STANDALONE SMARTPHONES ---
+    const activeSmartphones = activeRoomConfig?.smartphones || (activeRoomConfig?.smartphone ? [activeRoomConfig.smartphone] : []);
+    activeSmartphones.forEach(phone => {
+        const width = phone.w || 25;
+        const height = phone.h || 40;
+        if (images.smartphone && images.smartphone.naturalWidth > 0) {
+            ctx.save();
+            ctx.translate(phone.x, phone.y);
+            if (phone.angle) ctx.rotate(phone.angle * Math.PI / 180);
+            ctx.drawImage(images.smartphone, -width / 2, -height / 2, width, height);
+            ctx.restore();
+        }
+
+        const sDx = (avatar.x + 35) - phone.x;
+        const sDy = (avatar.y + 35) - phone.y;
+        if (Math.sqrt(sDx * sDx + sDy * sDy) < interactionDist) {
+            ctx.save();
+            ctx.translate(phone.x, phone.y);
+            if (phone.angle) ctx.rotate(phone.angle * Math.PI / 180);
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-(width / 2 + 5), -(height / 2 + 5), width + 10, height + 10);
+            ctx.restore();
+        }
+    });
+
+    // --- PAPERS / LAPTOPS / ROOM 3 SMARTPHONE INTERACTION OBJECTS ---
     const activePapers = activeRoomConfig?.papers || [];
     activePapers.forEach(p => {
-        if (images.laptopEmail && images.laptopEmail.naturalWidth > 0) {
+        // Use smartphone asset if in Room 3; default to laptop email asset otherwise
+        const isRoom3Phone = (currentRoomId === 'room3');
+        const deviceImg = (isRoom3Phone && images.smartphone && images.smartphone.naturalWidth > 0) 
+            ? images.smartphone 
+            : images.laptopEmail;
+
+        // Custom bounds depending on asset type
+        const imgW = isRoom3Phone ? 30 : 100;
+        const imgH = isRoom3Phone ? 50 : 70;
+        const outlineW = isRoom3Phone ? 40 : 110;
+        const outlineH = isRoom3Phone ? 60 : 80;
+
+        if (deviceImg && deviceImg.naturalWidth > 0) {
             ctx.save();
             ctx.translate(p.x, p.y);
             if (p.angle) {
                 ctx.rotate(p.angle * Math.PI / 180);
             }
-            ctx.drawImage(images.laptopEmail, -50, -35, 100, 70);
+            ctx.drawImage(deviceImg, -imgW / 2, -imgH / 2, imgW, imgH);
             ctx.restore();
         }
                 
@@ -1139,7 +1232,7 @@ function draw() {
             }
             ctx.strokeStyle = "yellow";
             ctx.lineWidth = 3;
-            ctx.strokeRect(-55, -40, 110, 80);
+            ctx.strokeRect(-outlineW / 2, -outlineH / 2, outlineW, outlineH);
             ctx.restore();
         }
     });
@@ -1211,8 +1304,8 @@ function draw() {
     }
         
     if (img && img.naturalWidth > 0) {
-        ctx.save();                
-        ctx.translate(avatar.x + 35, avatar.y + 35);                
+        ctx.save();                 
+        ctx.translate(avatar.x + 35, avatar.y + 35);                 
         ctx.rotate(avatar.angle * Math.PI / 180);
         ctx.drawImage(img, -35, -35, 70, 70);
         ctx.restore();
@@ -1321,7 +1414,6 @@ function draw() {
 
     requestAnimationFrame(draw);
 }
-
 const ROUTER_WIDTH = 60;  // Adjust dimensions as needed
 const ROUTER_HEIGHT = 60;
 
@@ -1405,7 +1497,6 @@ const roomConfigurations = {
         spawnY: 210,
         aiNPC: { x: 330, y: 430, messageType: 'room3_state', angle: 270 },
         cutscene: { duration: 500, directionAngle: 270 }, 
-        routerDevice: { x: 100, y: 450, angle: 0 }, // <-- Router added here
         papers: [
             { 
                 x: 320, 
@@ -1496,7 +1587,7 @@ function interactWithLaptop(paper) {
     // --- ROOM 3 PHASE 2 RE-ENGAGEMENT CHECK ---
     // If in Room 3 and Phase 1 is completed (score 80 or phase === 2), but overall Room 3 is not fully completed (< 100 score)
     if (currentRoomId === 'room3' && (currentScore >= 80 || room3Phase === 2) && currentScore < 100) {
-        laptopLocked = false; // Ensure laptop is unlocked for Phase 2
+        laptopLocked = false; // Ensure device is unlocked for Phase 2
         
         // Reset answered & processed states for Phase 1 so Phase 2 chat can be opened
         if (paper) {
@@ -1529,10 +1620,11 @@ function interactWithLaptop(paper) {
         content.classList.add('dialogue-bubble-mode');
 
         let textToShow = "";
+        const deviceName = currentRoomId === 'room3' ? 'SMARTPHONE' : 'WORKSTATION';
         if (paper.userWasCorrect || currentScore >= 100) {
-            textToShow = `<b>System Notification:</b><br><span style="color: #52b788; font-weight: bold;">WORKSTATION SECURE:</span> Messaging protocol completed safely.`;
+            textToShow = `<b>System Notification:</b><br><span style="color: #52b788; font-weight: bold;">${deviceName} SECURE:</span> Messaging protocol completed safely.`;
         } else {
-            textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">SECURITY BREACH:</span> Unsafe messaging conduct detected on workstation.`;
+            textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">SECURITY BREACH:</span> Unsafe messaging conduct detected on ${deviceName.toLowerCase()}.`;
         }
         
         content.innerHTML = `
@@ -1557,7 +1649,7 @@ function interactWithLaptop(paper) {
         content.innerHTML = `
             <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
                 <b>System Notification:</b><br>
-                <span style="color: #ffaa00; font-weight: bold;">TERMINAL STANDBY:</span> Message appraisal pending. Speak with the AI Avatar to review your communication before continuing.
+                <span style="color: #ffaa00; font-weight: bold;">SMARTPHONE STANDBY:</span> Message appraisal pending. Speak with the AI Avatar to review your communication before continuing.
             </div>
         `;
         document.getElementById('popup-overlay').style.display = 'block';
@@ -1574,10 +1666,11 @@ function interactWithLaptop(paper) {
         content.removeAttribute('style'); 
         content.classList.add('dialogue-bubble-mode');
         
+        const deviceLockText = currentRoomId === 'room3' ? 'Smartphone Locked:' : 'Laptop Turned Off:';
         content.innerHTML = `
             <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
                 <b>System Notification:</b><br>
-                <span style="color: #e63946; font-weight: bold;">Laptop Turned Off:</span> Talk the AI Avatar to unlock workstation access.
+                <span style="color: #e63946; font-weight: bold;">${deviceLockText}</span> Talk to the AI Avatar to unlock device access.
             </div>
         `;
         document.getElementById('popup-overlay').style.display = 'block';
@@ -1595,6 +1688,455 @@ function interactWithLaptop(paper) {
     }
 }
 
+var selectedChatOption = 0;
+
+function updateChatUI() {
+    const options = document.querySelectorAll('.chat-option-btn');
+    options.forEach((btn, idx) => {
+        if (idx === selectedChatOption) {
+            btn.style.background = '#e0e7ff';
+            btn.style.borderColor = '#2563eb';
+            btn.style.boxShadow = '0 0 0 2px #2563eb';
+            btn.style.fontWeight = '600';
+        } else {
+            btn.style.background = '#f3f4f6';
+            btn.style.borderColor = '#d1d5db';
+            btn.style.boxShadow = 'none';
+            btn.style.fontWeight = 'normal';
+        }
+    });
+}
+
+// Global tracking state for Room 3 messaging phases
+if (typeof room3ChatState === 'undefined') {
+    var room3ChatState = {
+        phase: 1, // Phase 1: Stranger, Phase 2: Known Contact
+        phase1Index: 0, 
+        phase2Index: 0,
+        selectedContact: null, 
+        selectedContactIndex: 0, 
+        phase1Completed: false,
+        phase2Completed: false
+    };
+}
+
+// Scenario dataset
+const room3Scenarios = {
+    phase1: [
+        {
+            title: "Smartphone — Direct Message",
+            contactName: "Unknown_User99 (Stranger)",
+            avatarBg: "#e63946",
+            initialMessage: "Hey! I lost my access code and login credentials for the school server. Can you quickly send me your account details or password so I can log in?",
+            options: [
+                { text: "I cannot share login credentials or private information with anyone.", isSafe: true },
+                { text: "Sure, here is my password and student ID info.", isSafe: false }
+            ]
+        },
+        {
+            title: "Smartphone — System Alert",
+            contactName: "IT_Support_Alert (Stranger)",
+            avatarBg: "#d97706",
+            initialMessage: "SECURITY ALERT: Your account was flagged for unusual activity. Please reply with the 6-digit verification code sent to your email to verify your identity.",
+            options: [
+                { text: "I will report this message and contact the IT helpdesk through the official portal instead.", isSafe: true },
+                { text: "Okay! The code I just received is 482910.", isSafe: false }
+            ]
+        },
+        {
+            title: "Smartphone — Direct Message",
+            contactName: "GamerPro_2026 (Stranger)",
+            avatarBg: "#7c3aed",
+            initialMessage: "Hey, I made a free tool that auto-completes cybersecurity labs! Just fill out this quick form with your full name, birthdate, and student email to unlock download access.",
+            options: [
+                { text: "No thanks, sharing sensitive personal information for untrusted files is dangerous.", isSafe: true },
+                { text: "Awesome! Let me fill out my info right now so I can download it.", isSafe: false }
+            ]
+        }
+    ],
+    phase2Contacts: [
+        { id: "alex", name: "Alex (Classmate)", avatarBg: "#2563eb", status: "Online" },
+        { id: "jordan", name: "Jordan (Study Partner)", avatarBg: "#059669", status: "Active 5m ago" },
+        { id: "sam", name: "Sam (Lab Lead)", avatarBg: "#9333ea", status: "Online" }
+    ],
+    phase2Scenarios: {
+        alex: [
+            {
+                title: "Smartphone — Alex",
+                contactName: "Alex (Classmate)",
+                avatarBg: "#2563eb",
+                initialMessage: "Hey, I was having trouble understanding today's cybersecurity lesson and felt a bit lost. How did you find it?",
+                options: [
+                    { text: "Haha you're so bad at this, you should just quit class lol.", isSafe: false },
+                    { text: "Don't worry, it's tricky at first! Let me know if you want to study together or review notes.", isSafe: true }
+                ]
+            },
+            {
+                title: "Smartphone — Alex",
+                contactName: "Alex (Classmate)",
+                avatarBg: "#2563eb",
+                initialMessage: "I saw someone posted an embarrassing photo of our teacher in the class group chat. Everyone is reacting to it, should we forward it?",
+                options: [
+                    { text: "No, forwarding or sharing photos meant to humiliate someone is unacceptable and unethical.", isSafe: true },
+                    { text: "Haha yeah send it to everyone else too!", isSafe: false }
+                ]
+            },
+            {
+                title: "Smartphone — Alex",
+                contactName: "Alex (Classmate)",
+                avatarBg: "#2563eb",
+                initialMessage: "Hey, can you send me your completed quiz file so I can copy the answers before midnight?",
+                options: [
+                    { text: "I can explain the concepts to help you work through it, but I can't share my work for you to copy.", isSafe: true },
+                    { text: "Sure, here is my completed submission file. Just change a few words.", isSafe: false }
+                ]
+            }
+        ],
+        jordan: [
+            {
+                title: "Smartphone — Jordan",
+                contactName: "Jordan (Study Partner)",
+                avatarBg: "#059669",
+                initialMessage: "Hey! Someone added me to an anonymous chat group where people are talking badly about our classmates. What should we do?",
+                options: [
+                    { text: "Leave the group immediately and report the activity to a trusted adult or moderator.", isSafe: true },
+                    { text: "Stay in the group and see what other secrets people post.", isSafe: false }
+                ]
+            },
+            {
+                title: "Smartphone — Jordan",
+                contactName: "Jordan (Study Partner)",
+                avatarBg: "#059669",
+                initialMessage: "I found a USB drive labeled 'Final Exam Answers' in the library hallway. Should we plug it into the computer lab desktop to check?",
+                options: [
+                    { text: "Never plug unknown USB drives into any computer. Turn it over to IT or a teacher.", isSafe: true },
+                    { text: "Let's plug it in right away to see if the exam files are on it!", isSafe: false }
+                ]
+            },
+            {
+                title: "Smartphone — Jordan",
+                contactName: "Jordan (Study Partner)",
+                avatarBg: "#059669",
+                initialMessage: "Hey, someone is asking for my phone number on a public gaming forum so we can form a squad. Is that fine?",
+                options: [
+                    { text: "Avoid sharing personal contact info on public forums. Keep communication on the platform.", isSafe: true },
+                    { text: "Yeah go ahead, sharing your phone number online is completely fine.", isSafe: false }
+                ]
+            }
+        ],
+        sam: [
+            {
+                title: "Smartphone — Sam",
+                contactName: "Sam (Lab Lead)",
+                avatarBg: "#9333ea",
+                initialMessage: "Our lab team needs a shared password for the test database. Should we write it on a sticky note and leave it on the monitor?",
+                options: [
+                    { text: "No, passwords should never be written down in physical public view. We should use a password manager.", isSafe: true },
+                    { text: "Yeah, sticky notes are convenient so nobody forgets it.", isSafe: false }
+                ]
+            },
+            {
+                title: "Smartphone — Sam",
+                contactName: "Sam (Lab Lead)",
+                avatarBg: "#9333ea",
+                initialMessage: "I got an email saying our Wi-Fi certificate expired and asking us to re-enter our school password on an external site. Should I click it?",
+                options: [
+                    { text: "Check the URL carefully—official network updates never ask for passwords on external third-party pages.", isSafe: true },
+                    { text: "Click the link and log in quickly so we don't lose Wi-Fi access.", isSafe: false }
+                ]
+            },
+            {
+                title: "Smartphone — Sam",
+                contactName: "Sam (Lab Lead)",
+                avatarBg: "#9333ea",
+                initialMessage: "Someone posted rude comments on your recent project submission. How do you want to handle it?",
+                options: [
+                    { text: "Remain calm, avoid engaging in argument, and report abusive comments to the platform admin.", isSafe: true },
+                    { text: "Write mean comments back to insult them in public.", isSafe: false }
+                ]
+            }
+        ]
+    }
+};
+// Example room object definition for Room 3
+const room3Objects = [
+  {
+    id: 'smartphone',
+    type: 'laptop', // Keeps function binding intact
+    imageSrc: 'smartphone.png',
+    x: 150,
+    y: 200,
+    width: 64,
+    height: 128
+  }
+];
+function updateContactSelectionUI() {
+    room3Scenarios.phase2Contacts.forEach((c, idx) => {
+        const item = document.getElementById(`contact-item-${idx}`);
+        if (!item) return;
+
+        if (idx === room3ChatState.selectedContactIndex) {
+            item.style.borderColor = '#2563eb';
+            item.style.background = '#f0f9ff';
+            item.style.boxShadow = '0 0 0 2px rgba(37,99,235,0.2)';
+        } else {
+            item.style.borderColor = '#e5e7eb';
+            item.style.background = '#ffffff';
+            item.style.boxShadow = 'none';
+        }
+    });
+}
+
+function selectPhase2Contact(contactId) {
+    room3ChatState.selectedContact = contactId;
+    if (currentPaper) {
+        showChatPopup(currentPaper);
+    }
+}
+
+function showChatPopup(paper) {
+    if (paper && (paper.locked || (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect))) {
+        return;
+    }
+
+    const scoreElement = document.getElementById('score-display');
+    const currentScore = scoreElement ? parseInt(scoreElement.textContent.replace(/\D/g, '')) || 0 : (typeof cyberknowledgeScore !== 'undefined' ? cyberknowledgeScore : 0);
+    
+    if (currentRoomId === 'room3' && (currentScore >= 80 || room3ChatState.phase1Completed)) {
+        room3ChatState.phase = 2;
+        room3ChatState.phase1Completed = true;
+    }
+
+    isPaused = true;
+    currentPaper = paper;
+    currentPaper.type = 'chat';
+    currentPaper.isSubmitting = false;
+    showingAIDialogue = false;
+    selectedChatOption = 0;
+
+    const content = document.getElementById('popup-content');
+    content.className = '';
+    content.classList.add('center-modal-mode');
+
+    // --- PHASE 2 CONTACT SELECTION VIEW ---
+    if (room3ChatState.phase === 2 && !room3ChatState.selectedContact) {
+        window.activeChatOptionsCount = room3Scenarios.phase2Contacts.length;
+        window.isSelectingContactMode = true;
+
+        content.innerHTML = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; width: 100%; max-width: 700px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
+            <div style="background: #1f2937; color: #ffffff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="font-weight: bold; font-size: 1.1rem;">Smartphone — Select Contact</div>
+                <button onclick="closePopup()" style="background: transparent; border: none; color: #ffffff; font-size: 1.4rem; cursor: pointer;">✕</button>
+            </div>
+            <div style="padding: 20px; background: #f9fafb;">
+                <p style="margin: 0 0 16px 0; font-size: 0.85rem; color: #6b7280; font-weight: 600;">SELECT A CONTACT (W/S or UP/DOWN to navigate, SPACE/ENTER to select):</p>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    ${room3Scenarios.phase2Contacts.map((c, idx) => `
+                        <div id="contact-item-${idx}"
+                             onclick="room3ChatState.selectedContactIndex=${idx}; updateContactSelectionUI(); selectPhase2Contact('${c.id}');" 
+                             onmouseenter="room3ChatState.selectedContactIndex=${idx}; updateContactSelectionUI();"
+                             style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.15s ease;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 42px; height: 42px; border-radius: 50%; background-color: ${c.avatarBg}; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #ffffff; font-size: 1.1rem;">
+                                    ${c.name.substring(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: #1f2937; font-size: 0.95rem;">${c.name}</div>
+                                    <div style="font-size: 0.8rem; color: #16a34a;">● ${c.status}</div>
+                                </div>
+                            </div>
+                            <span style="color: #2563eb; font-weight: bold; font-size: 1.2rem;">→</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+        `;
+        document.getElementById('popup-overlay').style.display = 'block';
+
+        setTimeout(updateContactSelectionUI, 10);
+        return;
+    }
+
+    // --- CHAT MESSAGE VIEW MODE ---
+    window.isSelectingContactMode = false;
+
+    let chatData = {};
+
+    if (room3ChatState.phase === 1) {
+        const idx = room3ChatState.phase1Index % room3Scenarios.phase1.length;
+        chatData = room3Scenarios.phase1[idx];
+    } else {
+        const contactId = room3ChatState.selectedContact || "alex";
+        const contactList = room3Scenarios.phase2Scenarios[contactId] || room3Scenarios.phase2Scenarios["alex"];
+        const idx = room3ChatState.phase2Index % contactList.length;
+        chatData = contactList[idx];
+    }
+
+    window.activeChatOptionsCount = chatData.options.length;
+
+    // --- SUBMISSION HANDLER ---
+    window.submitChatMessage = function(optionIndex) {
+        if (window.isSelectingContactMode) {
+            const selected = room3Scenarios.phase2Contacts[room3ChatState.selectedContactIndex];
+            if (selected) {
+                selectPhase2Contact(selected.id);
+            }
+            return;
+        }
+
+        if (!currentPaper || currentPaper.isSubmitting) return;
+
+        currentPaper.isSubmitting = true;
+
+        const selectedOption = chatData.options[optionIndex];
+        if (!selectedOption) return;
+
+        const currentConfig = roomConfigurations[currentRoomId];
+
+        // 1. Render sent message bubble in chat container
+        const chatContainer = document.getElementById('chat-messages-body');
+        if (chatContainer) {
+            const sentBubble = document.createElement('div');
+            sentBubble.style.cssText = `
+                align-self: flex-end; 
+                max-width: 80%; 
+                background: #2563eb; 
+                color: #ffffff; 
+                padding: 12px 16px; 
+                border-radius: 12px 12px 0px 12px; 
+                font-size: 0.95rem; 
+                line-height: 1.4;
+                box-shadow: 0 2px 6px rgba(37,99,235,0.2);
+            `;
+            sentBubble.textContent = selectedOption.text;
+            chatContainer.appendChild(sentBubble);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // 2. Render "Message Sent" feedback in selection panel
+        const selectionPanel = document.getElementById('chat-selection-panel');
+        if (selectionPanel) {
+            selectionPanel.innerHTML = `
+                <div style="text-align: center; padding: 10px 0;">
+                    <div style="color: #16a34a; font-weight: 600; font-size: 0.95rem; margin-bottom: 6px;">
+                        ✓ Message Sent
+                    </div>
+                </div>
+            `;
+        }
+
+        // 3. Process game logic & advance scenario indices
+        laptopAttempts[currentRoomId] = (laptopAttempts[currentRoomId] || 0) + 1;
+
+        if (room3ChatState.phase === 1) {
+            room3ChatState.phase1Index++;
+            if (room3ChatState.phase1Index >= room3Scenarios.phase1.length) {
+                room3ChatState.phase1Completed = true;
+                room3ChatState.phase = 2; 
+            }
+        } else {
+            room3ChatState.phase2Index++;
+            const contactId = room3ChatState.selectedContact || "alex";
+            const contactList = room3Scenarios.phase2Scenarios[contactId] || room3Scenarios.phase2Scenarios["alex"];
+            if (room3ChatState.phase2Index >= contactList.length) {
+                room3ChatState.phase2Completed = true;
+            }
+        }
+
+        if (selectedOption.isSafe) {
+            currentPaper.userWasCorrect = true;
+            currentPaper.answered = true;
+            currentPaper.locked = true;
+            currentPaper.hasConsultedAI = false;
+
+            if (currentConfig) {
+                currentConfig.pendingLaptopSuccess = true;
+            }
+        } else {
+            currentPaper.userWasCorrect = false;
+
+            if (laptopAttempts[currentRoomId] >= 3) {
+                currentPaper.answered = true;
+                currentPaper.locked = true;
+                currentPaper.hasConsultedAI = false;
+
+                if (currentConfig) {
+                    currentConfig.pendingLaptopExhausted = true;
+                }
+            } else {
+                currentPaper.answered = false;
+                currentPaper.locked = false;
+                currentPaper.hasConsultedAI = false;
+
+                if (currentConfig) {
+                    currentConfig.pendingLaptopRetry = true;
+                }
+            }
+        }
+
+        if (currentConfig) {
+            currentConfig.lastDialogueMessage = null;
+        }
+
+        // 4. Trigger AI Attention Badge
+        const badge = document.getElementById('ai-attention-badge');
+        if (badge) {
+            badge.style.display = 'block';
+            if (typeof updateAttentionBadgePosition === "function") updateAttentionBadgePosition();
+        }
+    };
+
+    // --- POPUP MARKUP ---
+    content.innerHTML = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; width: 100%; max-width: 700px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
+        
+        <!-- Header -->
+        <div style="background: #1f2937; color: #ffffff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background-color: ${chatData.avatarBg}; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; color: #ffffff;">
+                    ${chatData.contactName.substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                    <div style="font-weight: bold; font-size: 1.1rem;">${chatData.contactName}</div>
+                    <div style="font-size: 0.8rem; color: #9ca3af;">● Online</div>
+                </div>
+            </div>
+            <button onclick="closePopup()" style="background: transparent; border: none; color: #ffffff; font-size: 1.4rem; cursor: pointer;">✕</button>
+        </div>
+
+        <!-- Message Body -->
+        <div id="chat-messages-body" style="padding: 20px; background: #f9fafb; min-height: 200px; max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
+            <div style="align-self: flex-start; max-width: 80%; background: #ffffff; border: 1px solid #e5e7eb; padding: 12px 16px; border-radius: 12px 12px 12px 0px; color: #1f2937; font-size: 0.95rem; line-height: 1.4;">
+                ${chatData.initialMessage}
+            </div>
+        </div>
+
+        <!-- Selection Panel -->
+        <div id="chat-selection-panel" style="padding: 16px; background: #ffffff; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: #6b7280; font-weight: 600;">SELECT YOUR MESSAGE RESPONSE (W/S or UP/DOWN to navigate, SPACE/ENTER to send):</p>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                ${chatData.options.map((opt, idx) => `
+                    <button id="chat-option-${idx}"
+                        class="chat-option-btn"
+                        onclick="selectedChatOption=${idx}; if(typeof updateChatUI==='function') updateChatUI(); window.submitChatMessage(${idx});" 
+                        onmouseenter="selectedChatOption=${idx}; if(typeof updateChatUI==='function') updateChatUI();"
+                        style="text-align: left; background: #f3f4f6; border: 1px solid #d1d5db; padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; color: #1f2937; cursor: pointer; transition: all 0.2s ease;">
+                         ${opt.text}
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    </div>
+    `;
+
+    document.getElementById('popup-overlay').style.display = 'block';
+
+    if (typeof updateChatUI === "function") {
+        setTimeout(updateChatUI, 10);
+    }
+}
 
 function showEmailPopup(paper) {
     if (paper && (paper.locked || (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect))) {
@@ -2154,10 +2696,10 @@ function showAIDialoguePopup(state) {
             if (hasPassedRoom3Phase2) {
                 textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">GREAT DIGITAL NETIQUETTE!</span> You communicated kindly and supported your classmate without cyberbullying or scamming!`;
             } else if (hasPassedRoom3Phase1) {
-                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRIVACY DEFENSE!</span> You refused to share confidential credentials with a stranger. Now open the messaging chat again on the laptop and select a known classmate to message!`;
+                textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRIVACY DEFENSE!</span> You refused to share confidential credentials with a stranger. Now open the messaging chat again on the smartphone and select a known classmate to message!`;
             } else {
                 if (room3Phase === 1) {
-                    textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #c62828; font-weight: bold;">PRIVACY RISK DETECTED:</span> Never share confidential passwords, access codes, or private details with strangers! Reopen the laptop chat and select a safer response.`;
+                    textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #c62828; font-weight: bold;">PRIVACY RISK DETECTED:</span> Never share confidential passwords, access codes, or private details with strangers! Reopen the smartphone chat and select a safer response.`;
                 } else {
                     textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #c62828; font-weight: bold;">NETIQUETTE VIOLATION:</span> Negative or abusive communication violates online safety guidelines. Reopen the laptop chat and select a supportive response.`;
                 }
@@ -2165,7 +2707,7 @@ function showAIDialoguePopup(state) {
         } 
         else {
             currentConfig.hasSeenRoomIntro = true; 
-            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to Room 3! Check the messaging application on the laptop. Be careful with who you communicate with and what info you share!`;
+            textToShow = `<b>AI Guard [Kitchen]:</b><br>Welcome to Room 3! Check the messaging application on the smartphone. Be careful with who you communicate with and what info you share!`;
         }
     }
 
@@ -2431,520 +2973,7 @@ function updateAttentionBadgePosition() {
 
 let selectedPrinterOption = 0; 
 // Global selection state for Chat App popups
-var selectedChatOption = 0;
 
-function updateChatUI() {
-    const options = document.querySelectorAll('.chat-option-btn');
-    options.forEach((btn, idx) => {
-        if (idx === selectedChatOption) {
-            // Visual highlight styling for the currently selected choice
-            btn.style.background = '#e0e7ff';
-            btn.style.borderColor = '#2563eb';
-            btn.style.boxShadow = '0 0 0 2px #2563eb';
-            btn.style.fontWeight = '600';
-        } else {
-            // Default styling for unselected choices
-            btn.style.background = '#f3f4f6';
-            btn.style.borderColor = '#d1d5db';
-            btn.style.boxShadow = 'none';
-            btn.style.fontWeight = 'normal';
-        }
-    });
-}
-
-// Global tracking state for Room 3 messaging phases
-if (typeof room3ChatState === 'undefined') {
-    var room3ChatState = {
-        phase: 1, // Phase 1: Stranger, Phase 2: Known Contact
-        phase1Index: 0, // Track sub-scenarios (0, 1, 2)
-        phase2Index: 0,
-        selectedContact: null, // Selected contact ID for Phase 2
-        selectedContactIndex: 0, // Keyboard navigation state for contact list
-        phase1Completed: false,
-        phase2Completed: false
-    };
-}
-
-// Scenario dataset
-const room3Scenarios = {
-    phase1: [
-        {
-            title: "Chat App — Direct Message",
-            contactName: "Unknown_User99 (Stranger)",
-            avatarBg: "#e63946",
-            initialMessage: "Hey! I lost my access code and login credentials for the school server. Can you quickly send me your account details or password so I can log in?",
-            options: [
-                {
-                    text: "I cannot share login credentials or private information with anyone.",
-                    isSafe: true
-                },
-                {
-                    text: "Sure, here is my password and student ID info.",
-                    isSafe: false
-                }
-            ]
-        },
-        {
-            title: "Chat App — System Alert",
-            contactName: "IT_Support_Alert (Stranger)",
-            avatarBg: "#d97706",
-            initialMessage: "SECURITY ALERT: Your account was flagged for unusual activity. Please reply with the 6-digit verification code sent to your email to verify your identity.",
-            options: [
-                {
-                    text: "I will report this message and contact the IT helpdesk through the official portal instead.",
-                    isSafe: true
-                },
-                {
-                    text: "Okay! The code I just received is 482910.",
-                    isSafe: false
-                }
-            ]
-        },
-        {
-            title: "Chat App — Direct Message",
-            contactName: "GamerPro_2026 (Stranger)",
-            avatarBg: "#7c3aed",
-            initialMessage: "Hey, I made a free tool that auto-completes cybersecurity labs! Just fill out this quick form with your full name, birthdate, and student email to unlock download access.",
-            options: [
-                {
-                    text: "No thanks, sharing sensitive personal information for untrusted files is dangerous.",
-                    isSafe: true
-                },
-                {
-                    text: "Awesome! Let me fill out my info right now so I can download it.",
-                    isSafe: false
-                }
-            ]
-        }
-    ],
-    phase2Contacts: [
-        { id: "alex", name: "Alex (Classmate)", avatarBg: "#2563eb", status: "Online" },
-        { id: "jordan", name: "Jordan (Study Partner)", avatarBg: "#059669", status: "Active 5m ago" },
-        { id: "sam", name: "Sam (Lab Lead)", avatarBg: "#9333ea", status: "Online" }
-    ],
-    phase2Scenarios: {
-        alex: [
-            {
-                title: "Chat App — Alex",
-                contactName: "Alex (Classmate)",
-                avatarBg: "#2563eb",
-                initialMessage: "Hey, I was having trouble understanding today's cybersecurity lesson and felt a bit lost. How did you find it?",
-                options: [
-                    {
-                        text: "Haha you're so bad at this, you should just quit class lol.",
-                        isSafe: false
-                    },
-                    {
-                        text: "Don't worry, it's tricky at first! Let me know if you want to study together or review notes.",
-                        isSafe: true
-                    }
-                ]
-            },
-            {
-                title: "Chat App — Alex",
-                contactName: "Alex (Classmate)",
-                avatarBg: "#2563eb",
-                initialMessage: "I saw someone posted an embarrassing photo of our teacher in the class group chat. Everyone is reacting to it, should we forward it?",
-                options: [
-                    {
-                        text: "No, forwarding or sharing photos meant to humiliate someone is unacceptable and unethical.",
-                        isSafe: true
-                    },
-                    {
-                        text: "Haha yeah send it to everyone else too!",
-                        isSafe: false
-                    }
-                ]
-            },
-            {
-                title: "Chat App — Alex",
-                contactName: "Alex (Classmate)",
-                avatarBg: "#2563eb",
-                initialMessage: "Hey, can you send me your completed quiz file so I can copy the answers before midnight?",
-                options: [
-                    {
-                        text: "I can explain the concepts to help you work through it, but I can't share my work for you to copy.",
-                        isSafe: true
-                    },
-                    {
-                        text: "Sure, here is my completed submission file. Just change a few words.",
-                        isSafe: false
-                    }
-                ]
-            }
-        ],
-        jordan: [
-            {
-                title: "Chat App — Jordan",
-                contactName: "Jordan (Study Partner)",
-                avatarBg: "#059669",
-                initialMessage: "Hey! Someone added me to an anonymous chat group where people are talking badly about our classmates. What should we do?",
-                options: [
-                    {
-                        text: "Leave the group immediately and report the activity to a trusted adult or moderator.",
-                        isSafe: true
-                    },
-                    {
-                        text: "Stay in the group and see what other secrets people post.",
-                        isSafe: false
-                    }
-                ]
-            },
-            {
-                title: "Chat App — Jordan",
-                contactName: "Jordan (Study Partner)",
-                avatarBg: "#059669",
-                initialMessage: "I found a USB drive labeled 'Final Exam Answers' in the library hallway. Should we plug it into the computer lab desktop to check?",
-                options: [
-                    {
-                        text: "Never plug unknown USB drives into any computer. Turn it over to IT or a teacher.",
-                        isSafe: true
-                    },
-                    {
-                        text: "Let's plug it in right away to see if the exam files are on it!",
-                        isSafe: false
-                    }
-                ]
-            },
-            {
-                title: "Chat App — Jordan",
-                contactName: "Jordan (Study Partner)",
-                avatarBg: "#059669",
-                initialMessage: "Hey, someone is asking for my phone number on a public gaming forum so we can form a squad. Is that fine?",
-                options: [
-                    {
-                        text: "Avoid sharing personal contact info on public forums. Keep communication on the platform.",
-                        isSafe: true
-                    },
-                    {
-                        text: "Yeah go ahead, sharing your phone number online is completely fine.",
-                        isSafe: false
-                    }
-                ]
-            }
-        ],
-        sam: [
-            {
-                title: "Chat App — Sam",
-                contactName: "Sam (Lab Lead)",
-                avatarBg: "#9333ea",
-                initialMessage: "Our lab team needs a shared password for the test database. Should we write it on a sticky note and leave it on the monitor?",
-                options: [
-                    {
-                        text: "No, passwords should never be written down in physical public view. We should use a password manager.",
-                        isSafe: true
-                    },
-                    {
-                        text: "Yeah, sticky notes are convenient so nobody forgets it.",
-                        isSafe: false
-                    }
-                ]
-            },
-            {
-                title: "Chat App — Sam",
-                contactName: "Sam (Lab Lead)",
-                avatarBg: "#9333ea",
-                initialMessage: "I got an email saying our Wi-Fi certificate expired and asking us to re-enter our school password on an external site. Should I click it?",
-                options: [
-                    {
-                        text: "Check the URL carefully—official network updates never ask for passwords on external third-party pages.",
-                        isSafe: true
-                    },
-                    {
-                        text: "Click the link and log in quickly so we don't lose Wi-Fi access.",
-                        isSafe: false
-                    }
-                ]
-            },
-            {
-                title: "Chat App — Sam",
-                contactName: "Sam (Lab Lead)",
-                avatarBg: "#9333ea",
-                initialMessage: "Someone posted rude comments on your recent project submission. How do you want to handle it?",
-                options: [
-                    {
-                        text: "Remain calm, avoid engaging in argument, and report abusive comments to the platform admin.",
-                        isSafe: true
-                    },
-                    {
-                        text: "Write mean comments back to insult them in public.",
-                        isSafe: false
-                    }
-                ]
-            }
-        ]
-    }
-};
-
-// UI renderer for keyboard selection in the Contact View
-function updateContactSelectionUI() {
-    room3Scenarios.phase2Contacts.forEach((c, idx) => {
-        const item = document.getElementById(`contact-item-${idx}`);
-        if (!item) return;
-
-        if (idx === room3ChatState.selectedContactIndex) {
-            item.style.borderColor = '#2563eb';
-            item.style.background = '#f0f9ff';
-            item.style.boxShadow = '0 0 0 2px rgba(37,99,235,0.2)';
-        } else {
-            item.style.borderColor = '#e5e7eb';
-            item.style.background = '#ffffff';
-            item.style.boxShadow = 'none';
-        }
-    });
-}
-
-function selectPhase2Contact(contactId) {
-    room3ChatState.selectedContact = contactId;
-    if (currentPaper) {
-        showChatPopup(currentPaper);
-    }
-}
-
-function showChatPopup(paper) {
-    if (paper && (paper.locked || (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect))) {
-        return;
-    }
-
-    // --- PHASE SYNCHRONIZATION FIX ---
-    const scoreElement = document.getElementById('score-display');
-    const currentScore = scoreElement ? parseInt(scoreElement.textContent.replace(/\D/g, '')) || 0 : (typeof cyberknowledgeScore !== 'undefined' ? cyberknowledgeScore : 0);
-    
-    if (currentRoomId === 'room3' && (currentScore >= 80 || room3ChatState.phase1Completed)) {
-        room3ChatState.phase = 2;
-        room3ChatState.phase1Completed = true;
-    }
-
-    isPaused = true;
-    currentPaper = paper;
-    currentPaper.type = 'chat';
-    currentPaper.isSubmitting = false;
-    showingAIDialogue = false;
-    selectedChatOption = 0;
-
-    const content = document.getElementById('popup-content');
-    content.className = '';
-    content.classList.add('center-modal-mode');
-
-    // --- PHASE 2 CONTACT SELECTION VIEW ---
-    if (room3ChatState.phase === 2 && !room3ChatState.selectedContact) {
-        window.activeChatOptionsCount = room3Scenarios.phase2Contacts.length;
-        window.isSelectingContactMode = true;
-
-        content.innerHTML = `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; width: 100%; max-width: 700px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
-            <div style="background: #1f2937; color: #ffffff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;">
-                <div style="font-weight: bold; font-size: 1.1rem;">Chat App — Select Contact</div>
-                <button onclick="closePopup()" style="background: transparent; border: none; color: #ffffff; font-size: 1.4rem; cursor: pointer;">✕</button>
-            </div>
-            <div style="padding: 20px; background: #f9fafb;">
-                <p style="margin: 0 0 16px 0; font-size: 0.85rem; color: #6b7280; font-weight: 600;">SELECT A CONTACT (W/S or UP/DOWN to navigate, SPACE/ENTER to select):</p>
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    ${room3Scenarios.phase2Contacts.map((c, idx) => `
-                        <div id="contact-item-${idx}"
-                             onclick="room3ChatState.selectedContactIndex=${idx}; updateContactSelectionUI(); selectPhase2Contact('${c.id}');" 
-                             onmouseenter="room3ChatState.selectedContactIndex=${idx}; updateContactSelectionUI();"
-                             style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.15s ease;">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <div style="width: 42px; height: 42px; border-radius: 50%; background-color: ${c.avatarBg}; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #ffffff; font-size: 1.1rem;">
-                                    ${c.name.substring(0, 2).toUpperCase()}
-                                </div>
-                                <div>
-                                    <div style="font-weight: 600; color: #1f2937; font-size: 0.95rem;">${c.name}</div>
-                                    <div style="font-size: 0.8rem; color: #16a34a;">● ${c.status}</div>
-                                </div>
-                            </div>
-                            <span style="color: #2563eb; font-weight: bold; font-size: 1.2rem;">→</span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        </div>
-        `;
-        document.getElementById('popup-overlay').style.display = 'block';
-
-        setTimeout(updateContactSelectionUI, 10);
-        return;
-    }
-
-    // --- CHAT MESSAGE VIEW MODE ---
-    window.isSelectingContactMode = false;
-
-    let chatData = {};
-
-    if (room3ChatState.phase === 1) {
-        const idx = room3ChatState.phase1Index % room3Scenarios.phase1.length;
-        chatData = room3Scenarios.phase1[idx];
-    } else {
-        const contactId = room3ChatState.selectedContact || "alex";
-        const contactList = room3Scenarios.phase2Scenarios[contactId] || room3Scenarios.phase2Scenarios["alex"];
-        const idx = room3ChatState.phase2Index % contactList.length;
-        chatData = contactList[idx];
-    }
-
-    window.activeChatOptionsCount = chatData.options.length;
-
-    // --- SUBMISSION HANDLER ---
-    window.submitChatMessage = function(optionIndex) {
-        if (window.isSelectingContactMode) {
-            const selected = room3Scenarios.phase2Contacts[room3ChatState.selectedContactIndex];
-            if (selected) {
-                selectPhase2Contact(selected.id);
-            }
-            return;
-        }
-
-        if (!currentPaper || currentPaper.isSubmitting) return;
-
-        currentPaper.isSubmitting = true;
-
-        const selectedOption = chatData.options[optionIndex];
-        if (!selectedOption) return;
-
-        const currentConfig = roomConfigurations[currentRoomId];
-
-        // 1. Render sent message bubble in chat container
-        const chatContainer = document.getElementById('chat-messages-body');
-        if (chatContainer) {
-            const sentBubble = document.createElement('div');
-            sentBubble.style.cssText = `
-                align-self: flex-end; 
-                max-width: 80%; 
-                background: #2563eb; 
-                color: #ffffff; 
-                padding: 12px 16px; 
-                border-radius: 12px 12px 0px 12px; 
-                font-size: 0.95rem; 
-                line-height: 1.4;
-                box-shadow: 0 2px 6px rgba(37,99,235,0.2);
-            `;
-            sentBubble.textContent = selectedOption.text;
-            chatContainer.appendChild(sentBubble);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        // 2. Render "Message Sent" feedback in selection panel
-        const selectionPanel = document.getElementById('chat-selection-panel');
-        if (selectionPanel) {
-            selectionPanel.innerHTML = `
-                <div style="text-align: center; padding: 10px 0;">
-                    <div style="color: #16a34a; font-weight: 600; font-size: 0.95rem; margin-bottom: 6px;">
-                        ✓ Message Sent
-                    </div>
-                </div>
-            `;
-        }
-
-        // 3. Process game logic & advance scenario indices
-        laptopAttempts[currentRoomId] = (laptopAttempts[currentRoomId] || 0) + 1;
-
-        if (room3ChatState.phase === 1) {
-            room3ChatState.phase1Index++;
-            if (room3ChatState.phase1Index >= room3Scenarios.phase1.length) {
-                room3ChatState.phase1Completed = true;
-                room3ChatState.phase = 2; // Auto-transition to Phase 2 once Phase 1 scenarios complete
-            }
-        } else {
-            room3ChatState.phase2Index++;
-            const contactId = room3ChatState.selectedContact || "alex";
-            const contactList = room3Scenarios.phase2Scenarios[contactId] || room3Scenarios.phase2Scenarios["alex"];
-            if (room3ChatState.phase2Index >= contactList.length) {
-                room3ChatState.phase2Completed = true;
-            }
-        }
-
-        if (selectedOption.isSafe) {
-            currentPaper.userWasCorrect = true;
-            currentPaper.answered = true;
-            currentPaper.locked = true;
-            currentPaper.hasConsultedAI = false;
-
-            if (currentConfig) {
-                currentConfig.pendingLaptopSuccess = true;
-            }
-        } else {
-            currentPaper.userWasCorrect = false;
-
-            if (laptopAttempts[currentRoomId] >= 3) {
-                currentPaper.answered = true;
-                currentPaper.locked = true;
-                currentPaper.hasConsultedAI = false;
-
-                if (currentConfig) {
-                    currentConfig.pendingLaptopExhausted = true;
-                }
-            } else {
-                currentPaper.answered = false;
-                currentPaper.locked = false;
-                currentPaper.hasConsultedAI = false;
-
-                if (currentConfig) {
-                    currentConfig.pendingLaptopRetry = true;
-                }
-            }
-        }
-
-        if (currentConfig) {
-            currentConfig.lastDialogueMessage = null;
-        }
-
-        // 4. Trigger AI Attention Badge
-        const badge = document.getElementById('ai-attention-badge');
-        if (badge) {
-            badge.style.display = 'block';
-            if (typeof updateAttentionBadgePosition === "function") updateAttentionBadgePosition();
-        }
-    };
-
-    // --- POPUP MARKUP ---
-    content.innerHTML = `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; width: 100%; max-width: 700px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
-        
-        <!-- Header -->
-        <div style="background: #1f2937; color: #ffffff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 40px; height: 40px; border-radius: 50%; background-color: ${chatData.avatarBg}; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; color: #ffffff;">
-                    ${chatData.contactName.substring(0, 2).toUpperCase()}
-                </div>
-                <div>
-                    <div style="font-weight: bold; font-size: 1.1rem;">${chatData.contactName}</div>
-                    <div style="font-size: 0.8rem; color: #9ca3af;">● Online</div>
-                </div>
-            </div>
-            <button onclick="closePopup()" style="background: transparent; border: none; color: #ffffff; font-size: 1.4rem; cursor: pointer;">✕</button>
-        </div>
-
-        <!-- Message Body -->
-        <div id="chat-messages-body" style="padding: 20px; background: #f9fafb; min-height: 200px; max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
-            <div style="align-self: flex-start; max-width: 80%; background: #ffffff; border: 1px solid #e5e7eb; padding: 12px 16px; border-radius: 12px 12px 12px 0px; color: #1f2937; font-size: 0.95rem; line-height: 1.4;">
-                ${chatData.initialMessage}
-            </div>
-        </div>
-
-        <!-- Selection Panel -->
-        <div id="chat-selection-panel" style="padding: 16px; background: #ffffff; border-top: 1px solid #e5e7eb;">
-            <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: #6b7280; font-weight: 600;">SELECT YOUR MESSAGE RESPONSE (W/S or UP/DOWN to navigate, SPACE/ENTER to send):</p>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                ${chatData.options.map((opt, idx) => `
-                    <button id="chat-option-${idx}"
-                        class="chat-option-btn"
-                        onclick="selectedChatOption=${idx}; if(typeof updateChatUI==='function') updateChatUI(); window.submitChatMessage(${idx});" 
-                        onmouseenter="selectedChatOption=${idx}; if(typeof updateChatUI==='function') updateChatUI();"
-                        style="text-align: left; background: #f3f4f6; border: 1px solid #d1d5db; padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; color: #1f2937; cursor: pointer; transition: all 0.2s ease;">
-                         ${opt.text}
-                    </button>
-                `).join('')}
-            </div>
-        </div>
-    </div>
-    `;
-
-    document.getElementById('popup-overlay').style.display = 'block';
-
-    if (typeof updateChatUI === "function") {
-        setTimeout(updateChatUI, 10);
-    }
-}
 window.addEventListener('keydown', e => {
     // 1. Ignore global hotkeys if the user is typing into an input, textarea, or select element
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
