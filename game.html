@@ -1470,7 +1470,6 @@ const roomConfigurations = {
         spawnY: 315,
         aiNPC: { x: 440, y: 400, messageType: 'room2_state', angle: 90 },
         cutscene: { duration: 500, directionAngle: 90 }, 
-        shredderDevice: { x: 130, y: 500, angle: 180 },
         routerDevice: { x: 653, y: 390, angle: 90 },
         papers: [
             { 
@@ -2610,28 +2609,28 @@ function showAIDialoguePopup(state) {
         textToShow = `<b>AI Guard [System]:</b><br><span style="color: #e63946; font-weight: bold;">Data Security Risk:</span> The configuration settings are still exposed to unauthorized viewers! Re-examine the contents and try again.`;
     }
     // =========================================================================
-    // UPDATED ROOM 1 FLOW (Bedroom / Entry Foyer - Gaming Console & Password Task)
+    // UPDATED ROOM 1 FLOW (Bedroom / Entry Foyer - Gaming Console & Router Password Task)
     // =========================================================================
     else if (currentConfig?.aiNPC?.messageType === 'room1_state') {
         if (state === "device_secure_success") {
-            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #52b788; font-weight: bold;">SUCCESS!</span> Fantastic work! You configured a robust, multi-character passcode. Your device is now locked down tight. Next, check the <span class="highlight-blue">Gaming Console</span> for your next security challenge.`;
+            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #52b788; font-weight: bold;">SUCCESS!</span> Fantastic work! You replaced the default router credentials with a robust administrator password. Your network gateway is now locked down tight. Next, check the <span class="highlight-blue">Gaming Console</span> for your next security challenge.`;
         }
         else if (state === "laptop_retry") {
-            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #c62828; font-weight: bold;">VULNERABLE PASSCODE (${triesLeft} ${triesLeft === 1 ? 'attempt' : 'attempts'} left)</span><br>That combination is too simple or predictable. Ensure your passcode includes at least 8 characters, a mix of upper and lowercase letters, numbers, and symbols!`;
+            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #c62828; font-weight: bold;">WEAK ROUTER CREDENTIALS (${triesLeft} ${triesLeft === 1 ? 'attempt' : 'attempts'} left)</span><br>Leaving default admin credentials or a simple password on your router allows anyone to hijack your Wi-Fi network! Ensure you use a strong, unique password.`;
         }
         else if (state === "laptop_exhausted" || (laptopAttempts[currentRoomId] >= 3 && !terminalState?.userWasCorrect)) {
-            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #c62828; font-weight: bold;">LOCKOUT ENGAGED:</span> You've used all 3 passcode configuration attempts without success. Terminal locked. Proceed to the <span class="highlight-blue">Gaming Console</span> to continue your assessment!`;
+            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #c62828; font-weight: bold;">LOCKOUT ENGAGED:</span> You've used all 3 router configuration attempts without success. Terminal locked. Proceed to the <span class="highlight-blue">Gaming Console</span> to continue your assessment!`;
         }
         else if (roomPrinterCompleted && (currentScore === 20 || currentScore === 30)) {
-            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #52b788; font-weight: bold;">Sector Cleared!</span> You've successfully secured your workstation and the gaming console profile. Head through the exit doorway to advance to Room 2!`;
+            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #52b788; font-weight: bold;">Sector Cleared!</span> You've successfully secured your router gateway and the gaming console profile. Head through the exit doorway to advance to Room 2!`;
         }
         else if ((hasPassedRoom1Laptop || (terminalState && terminalState.answered && terminalState.userWasCorrect)) && !roomPrinterCompleted) {
             currentConfig.hasSeenLaptopFeedback = true; 
-            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #52b788; font-weight: bold;">Perimeter Secured!</span> Excellent execution on setting that secure device passcode. Now, pivot your focus to the <span class="highlight-blue">Gaming Console</span>. There is an active profile setup waiting there that needs your protection.`;
+            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #52b788; font-weight: bold;">Perimeter Secured!</span> Excellent execution on updating that router administrator password. Now, pivot your focus to the <span class="highlight-blue">Gaming Console</span>. There is an active profile setup waiting there that needs your protection.`;
         }
         else if (!roomPrinterCompleted && (!terminalState || !terminalState.answered)) {
             currentConfig.hasSeenRoomIntro = true; 
-            textToShow = `<b>AI Guard [Room 1]:</b><br>Welcome, Operative! Your initial terminal scan shows your workstation device is currently wide open with a weak default configuration. Access the workstation laptop immediately to establish a strong passcode!`;
+            textToShow = `<b>AI Guard [Room 1]:</b><br>Welcome, Operative! Your initial network scan shows your Wi-Fi router is currently wide open with default factory settings. Access the router configuration page on the laptop immediately to change the administrator password!`;
             laptopLocked = false; 
         } 
         else if (roomPrinterCompleted) {
@@ -2648,34 +2647,23 @@ function showAIDialoguePopup(state) {
     // =========================================================================
     else if (currentConfig?.aiNPC?.messageType === 'room2_state') {
         if (state === "device_secure_success") {
-            textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #52b788; font-weight: bold;">PASS!</span> Phishing email spotted and reported successfully! Next, check the printer in this room.`;
+            textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #52b788; font-weight: bold;">PASS!</span> Phishing email spotted and reported successfully!`;
         }
         else if (state === "laptop_retry") {
             textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #e63946; font-weight: bold;">SECURITY RISK:</span> That choice exposed the infrastructure or clicked a dangerous link! Read the hints carefully and try again.`;
         }
         else if (state === "laptop_exhausted") {
-            textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #c62828; font-weight: bold;">TASK FAILED:</span> You fell for the phishing email attack and exhausted your attempts! Be extra cautious next time. Head over to the <span class="highlight-blue">Printer</span> for your next task.`;
+            textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #c62828; font-weight: bold;">TASK FAILED:</span> You fell for the phishing email attack and exhausted your attempts! Be extra cautious next time. Proceed to the kitchen.`;
         }
-        else if (roomPrinterCompleted && (currentScore === 40 || currentScore === 50)) {
-            textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #52b788; font-weight: bold;">Area Monitored!</span> Network traffic analysis and physical document checks for this room are complete. Head over to the Kitchen when ready!`;
-        }
-        else if ((hasPassedRoom2Laptop || (terminalState && terminalState.answered && terminalState.userWasCorrect)) && !roomPrinterCompleted) {
+        else if (hasPassedRoom2Laptop || (terminalState && terminalState.answered && terminalState.userWasCorrect)) {
             currentConfig.hasSeenLaptopFeedback = true; 
-            textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #52b788; font-weight: bold;">Great eye!</span> You handled that phishing email perfectly. Now, look over at the <span class="highlight-blue">Printer</span>. Someone left a printout sitting out in the open—go decide how to secure it!`;
+            textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #52b788; font-weight: bold;">Great eye!</span> You handled that phishing email perfectly. Proceed to the kitchen!`;
         }
-        else if (!roomPrinterCompleted && (!terminalState || !terminalState.answered)) {
+        else if (!terminalState || !terminalState.answered) {
             currentConfig.hasSeenRoomIntro = true; 
             textToShow = `<b>AI Guard [Room 2]:</b><br>Welcome to Room 2. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
             laptopLocked = false;
         } 
-        else if (roomPrinterCompleted) {
-            currentConfig.hasSeenPrinterFeedback = true; 
-            if (roomPrinterCorrect) {
-                textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #52b788; font-weight: bold;">PRIVACY PROTECTED!</span> Superb job shredding that student export document. Leaving full names, home addresses, and phone directories exposed violates privacy policies. You handled that like a true security analyst! Let's enter Room 3!`;
-            } else {
-                textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #e63946; font-weight: bold;">DATA BREACH ALERT:</span> Leaving a complete physical database of student addresses on an open tray is a massive vulnerability. Identity thieves prey on papers like this. Remember, private databases must be destroyed!`;
-            }
-        }
     } 
     // =========================================================================
     // STANDARD ROOM 3 FLOW (Kitchen)
