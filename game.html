@@ -3,6 +3,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -439,7 +440,6 @@ function getSpawnRoomByScore(score) {
     if (score >= 30) return 'room2';
     return 'room1';
 }
-
 document.addEventListener("DOMContentLoaded", () => {
     const loginBtn = document.getElementById('login-submit-btn');
     const inputField = document.getElementById('student-number-input');
@@ -465,7 +465,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error("Could not authenticate student record with cloud services.");
+                return response.json().then(errData => { throw new Error(errData.error || "Could not authenticate student record with cloud services."); });
             }
             return response.json();
         })
@@ -490,13 +490,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 hasCompletedAllTasks = false;
             }
 
-            const roomSelection = prompt("Enter a Room Code to join or create (e.g., ROOM1):", "ROOM1");
-            if (!roomSelection) {
-                alert("A room code is required for multiplayer mapping functionality.");
-                return;
-            }
-
-            const targetRoomCode = roomSelection.trim().toUpperCase();
+            const assignedRoomCode = authResult.assignedRoom;
             const temporaryRoomId = getSpawnRoomByScore(cyberknowledgeScore);
 
             return fetch(`${API_BASE}/api/multiplayer/join-room`, {
@@ -504,7 +498,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     studentNumber: studentId, 
-                    roomCode: targetRoomCode, 
+                    roomCode: assignedRoomCode, 
                     roomId: temporaryRoomId 
                 })
             })
@@ -516,7 +510,7 @@ document.addEventListener("DOMContentLoaded", () => {
             })
             .then(roomData => {
                 currentStudentNumber = studentId;
-                currentRoomCode = targetRoomCode;
+                currentRoomCode = assignedRoomCode;
                 currentRoomId = roomData.roomId || temporaryRoomId; 
 
                 const activeConfig = roomConfigurations[currentRoomId] || roomConfigurations.room1;
