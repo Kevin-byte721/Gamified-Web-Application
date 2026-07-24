@@ -730,7 +730,7 @@ const imageFiles = {
     walkRight: 'avatar_walk_right.png',
     laptopEmail: 'Laptop-computer1.png',
     printer: 'gaming_console.png',
-    paper_shredder: 'smartphone.png',
+    paper_shredder: 'paper_shredder.png',
     paper: 'paper.png',
     router: 'router.png',
     aiNPC: 'ai_helper_avatar.png',
@@ -2794,7 +2794,17 @@ function closePopup() {
 
         if (activeLaptopPaper && activeLaptopPaper.answered && !activeLaptopPaper.scoreProcessed) {
             if (activeLaptopPaper.userWasCorrect || laptopAttempts[currentRoomId] >= 3) {
-                let earnedPoints = activeLaptopPaper.userWasCorrect ? 20 : 0;
+                let earnedPoints = 0;
+                if (activeLaptopPaper.userWasCorrect) {
+                    if (currentRoomId === 'room1') {
+                        earnedPoints = 20;
+                    } else if (currentRoomId === 'room2') {
+                        earnedPoints = 30;
+                    } else {
+                        earnedPoints = 20; // Room 3 phase points (20 points per phase)
+                    }
+                }
+                
                 cyberknowledgeScore += earnedPoints;
                 
                 // Update score display DOM
