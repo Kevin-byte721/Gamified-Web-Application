@@ -2,6 +2,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -728,8 +729,8 @@ const imageFiles = {
     walkLeft: 'avatar_walk_left.png',
     walkRight: 'avatar_walk_right.png',
     laptopEmail: 'Laptop-computer1.png',
-    printer: 'printer.png',
-    paper_shredder: 'paper_shredder.png',
+    printer: 'gaming_console.png',
+    paper_shredder: 'smartphone.png',
     paper: 'paper.png',
     router: 'router.png',
     aiNPC: 'ai_helper_avatar.png',
@@ -1436,7 +1437,6 @@ const roomConfigurations = {
         aiNPC: { x: 100, y: 240, messageType: 'room1_state', angle: 180 },
         cutscene: { duration: 500, directionAngle: 180 }, 
         printerDevice: { x: 240, y: 100, angle: 0 },
-        shredderDevice: { x: 650, y: 100, angle: 0 },
         papers: [
             { 
                 x: 210, 
@@ -1470,7 +1470,6 @@ const roomConfigurations = {
         spawnY: 315,
         aiNPC: { x: 440, y: 400, messageType: 'room2_state', angle: 90 },
         cutscene: { duration: 500, directionAngle: 90 }, 
-        printerDevice: { x: 205, y: 500, angle: 180 },
         shredderDevice: { x: 130, y: 500, angle: 180 },
         routerDevice: { x: 653, y: 390, angle: 90 },
         papers: [
@@ -1616,7 +1615,7 @@ function interactWithLaptop(paper) {
 
     // Check if max retry threshold reached for current room
     if (laptopAttempts[currentRoomId] >= 3 && (!paper || !paper.userWasCorrect)) {
-        showAIDialoguePopup(currentRoomId === 'room2' ? 'laptop_exhausted_room2' : 'laptop_exhausted');
+        showAIDialoguePopup(currentRoomId === 'room1' ? 'laptop_exhausted_room2' : 'laptop_exhausted');
         return;
     }
 
@@ -1688,8 +1687,8 @@ function interactWithLaptop(paper) {
         return; 
     }
 
-    // Routing by Room
-    if (currentRoomId === 'room2') {
+    // Routing by Room (Swapped: room1 now triggers router password, room2 triggers email)
+    if (currentRoomId === 'room1') {
         showRouterPasswordPopup(paper);
     } else if (currentRoomId === 'room3') {
         showChatPopup(paper);
@@ -1699,6 +1698,385 @@ function interactWithLaptop(paper) {
     }
 }
 
+function showEmailPopup(paper) {
+    if (paper && (paper.locked || (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect))) {
+        return;
+    }
+
+    isPaused = true;
+    currentPaper = paper;
+    currentPaper.type = 'email'; 
+    showingAIDialogue = false;
+    
+    const content = document.getElementById('popup-content');
+    content.className = ''; 
+    content.classList.add('center-modal-mode');
+
+    let emailPool = {
+        room1: [
+            {
+                sender: "HR Dept",
+                address: "hr@internal-security-system.local",
+                subject: "Action Required: Update Your Credentials Immediately",
+                body: "Your network access password expires within 24 hours. Choose an option to proceed with your credential update.",
+                correctOption: 1
+            },
+            {
+                sender: "Security Alert",
+                address: "security-foyer@critical-alert.net",
+                subject: "WARNING: Unauthorized Entry Attempt Logs",
+                body: "We noted suspicious activity on your host framework node. Select RESPOND TO EMAIL to verify your active authorization token index.",
+                correctOption: 1
+            },
+            {
+                sender: "IT Notice",
+                address: "admin@internal-security-system.local",
+                subject: "Scheduled Server Migration Information",
+                body: "This is a general advisory that internal storage arrays are migrating this Sunday. No action is required from you.",
+                correctOption: 0
+            }
+        ],
+        room2: [
+            {
+                sender: "IT Support Desk",
+                address: "support@urgent-security-update.com",
+                subject: "CRITICAL: Urgent Security Firewall Patch Required",
+                body: "We have detected unauthorized bypass attempts on your workstation segment. Click 'RESPOND TO EMAIL' to download and install the repair package.",
+                correctOption: 1
+            },
+            {
+                sender: "Accounts Payable",
+                address: "billing@external-verify-portal.org",
+                subject: "Overdue Workstation Rental Invoice Attached",
+                body: "Your hardware assignment metrics match an outstanding balance ledger sheet. Click RESPOND TO EMAIL to upload transaction proofs immediately.",
+                correctOption: 1
+            },
+            {
+                sender: "Company Portal",
+                address: "newsletter@company.corp",
+                subject: "Monthly System Performance Newsletter Update",
+                body: "Here is your standard textual tracking wrap-up summary for the month. No authorization values or link downloads are embedded.",
+                correctOption: 0
+            }
+        ],
+        room3: [
+            {
+                sender: "Office Manager", 
+                address: "Admin@company.corp",
+                subject: "Building Maintenance Notice",
+                body: "Please be advised that the main office elevator will be under maintenance on Tuesday. Please use the north side stairs.",
+                correctOption: 0
+            },
+            {
+                sender: "Delivery Service",
+                address: "postmaster@courier-tracking-routing.net",
+                subject: "Package Delivery Alert: Failed Transfer Hold Node",
+                body: "A parcel addressed to your account matrix space cannot spawn delivery updates. Open the confirmation layout module to fix.",
+                correctOption: 1
+            },
+            {
+                sender: "CEO Update",
+                address: "exec-office@company.corp",
+                subject: "Annual Strategic Goals Performance Report",
+                body: "Please review the updated general corporate guidelines for the coming system operations semester.",
+                correctOption: 0
+            }
+        ]
+    };
+
+    let attemptIndex = Math.min(laptopAttempts[currentRoomId] || 0, 2);
+    let selectedScenario = emailPool[currentRoomId] ? emailPool[currentRoomId][attemptIndex] : emailPool.room1[0];
+
+    let emailSender = selectedScenario.sender;
+    let emailAddress = selectedScenario.address;
+    let emailSubject = selectedScenario.subject;
+    let emailBody = selectedScenario.body;
+    let correctOption = selectedScenario.correctOption;
+
+    window.handleEmailSubmission = function(chosenOption) {
+        if (!currentPaper) return;
+
+        laptopAttempts[currentRoomId] = (laptopAttempts[currentRoomId] || 0) + 1;
+        
+        if (chosenOption === correctOption) {
+            currentPaper.userWasCorrect = true;
+            currentPaper.answered = true;
+            currentPaper.locked = true; 
+            currentPaper.hasConsultedAI = false; 
+            
+            closePopup();
+        } else {
+            currentPaper.userWasCorrect = false;
+            
+            if (laptopAttempts[currentRoomId] >= 3) {
+                currentPaper.answered = true;
+                currentPaper.locked = true; 
+                currentPaper.hasConsultedAI = false;
+                
+                closePopup();
+            } else {
+                currentPaper.answered = false;
+                currentPaper.locked = false;
+                currentPaper.hasConsultedAI = false;
+                
+                const currentConfig = roomConfigurations[currentRoomId];
+                if (currentConfig) {
+                    currentConfig.pendingLaptopRetry = true;
+                }
+                
+                closePopup();
+            }
+        }
+
+        const badge = document.getElementById('ai-attention-badge');
+        if (badge) {
+            badge.style.display = 'block';
+            if (typeof updateAttentionBadgePosition === "function") {
+                updateAttentionBadgePosition();
+            }
+        }
+    };
+
+    content.innerHTML = `
+    <div class="popup-layout-wrapper" style="font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 1.6cqw; font-weight: normal; background-color: #ffffff; color: #202124; box-sizing: border-box; width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column;">
+        
+        <div class="email-action-bar" style="display: flex; gap: 2.5cqw; align-items: center; border-bottom: 1px solid #f1f3f4; padding: 1.5cqh 3cqw; color: #5f6368; font-size: 1.8cqw;">
+            <span style="cursor: pointer; font-weight: bold;" onclick="closePopup()">←</span>
+            <span style="cursor: pointer;">📥</span>
+            <span style="cursor: pointer;">⚠️</span>
+            <span style="cursor: pointer;" onclick="window.handleEmailSubmission(1)">🗑️</span>
+            <span style="cursor: pointer; margin-left: auto;">✉️</span>
+            <span style="cursor: pointer;">🕒</span>
+            <span style="cursor: pointer; margin-left: 1cqw;">⋮</span>
+        </div>
+
+        <div style="padding: 3cqh 4cqw; flex-grow: 1;">
+            <div style="display: flex; align-items: center; gap: 1cqw; margin-bottom: 3cqh;">
+                <h2 style="margin: 0; font-size: 2.4cqw; font-weight: 400; color: #202124;">
+                    ${emailSubject}
+                </h2>
+                <span style="background-color: #e8eaed; color: #5f6368; font-size: 1.2cqw; padding: 2px 6px; border-radius: 4px; font-weight: 500;">
+                    Inbox
+                </span>
+            </div>
+
+            <div class="email-meta-row" style="display: flex; align-items: flex-start; margin-bottom: 4cqh; position: relative;">
+                <div style="width: 5cqw; height: 5cqw; border-radius: 50%; background-color: #007791; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 2cqw; margin-right: 2cqw; flex-shrink: 0;">
+                    ${emailSender.substring(0, 2).toUpperCase()}
+                </div>
+                
+                <div style="flex-grow: 1; min-width: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%;">
+                        <div>
+                            <span style="font-weight: bold; color: #202124; font-size: 1.6cqw; margin-right: 0.5cqw;">${emailSender}</span>
+                            <span style="color: #5f6368; font-size: 1.4cqw;">&lt;${emailAddress}&gt;</span>
+                        </div>
+                        <div style="color: #5f6368; font-size: 1.3cqw; white-space: nowrap; margin-left: 2cqw;">
+                            Just now
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="email-body" style="font-size: 1.6cqw; line-height: 1.5; color: #202124; padding-left: 7cqw; margin-bottom: 6cqh; min-height: 12cqh;">
+                ${emailBody}
+            </div>
+
+            <div id="email-options" style="display: flex; gap: 1.5cqw; padding-left: 7cqw; border-top: 1px solid #f1f3f4; padding-top: 3cqh;">
+                <div class="email-option" id="opt-0" onclick="window.handleEmailSubmission(0)" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f7f8f9'" onmouseout="this.style.backgroundColor='transparent'">
+                    ↩️ RESPOND TO EMAIL
+                </div>
+                <div class="email-option" id="opt-1" onclick="window.handleEmailSubmission(1)" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f7f8f9'" onmouseout="this.style.backgroundColor='transparent'">
+                    ➡️ IGNORE / TRASH
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+
+    document.getElementById('popup-overlay').style.display = 'block';
+}
+
+/**
+ * Custom Interactive Interface for Room 1/2: Changing Router Password
+ */
+function showRouterPasswordPopup(paper) {
+    // If the paper is locked or attempts are exhausted, prevent opening
+    if (paper && (paper.locked || (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect))) {
+        closePopup();
+        return;
+    }
+
+    isPaused = true;
+    currentPaper = paper;
+    currentPaper.type = 'router_password';
+    showingAIDialogue = false;
+
+    const content = document.getElementById('popup-content');
+    content.className = '';
+    content.classList.add('center-modal-mode');
+
+    if (laptopAttempts[currentRoomId] === undefined) {
+        laptopAttempts[currentRoomId] = 0;
+    }
+
+    let remainingTries = 3 - laptopAttempts[currentRoomId];
+
+    content.innerHTML = `
+    <div class="popup-layout-wrapper" style="
+        font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+        font-size: 1.5cqw;
+        background: #ffffff;
+        color: #1f2937;
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 3.5cqh 3.5cqw;
+        border-radius: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 2.5cqh;
+    ">
+        
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 1.8cqh;">
+            <div style="display: flex; align-items: center; gap: 0.8cqw;">
+                <span style="font-size: 2cqw;">⚙️</span>
+                <h2 style="margin: 0; font-size: 2cqw; font-weight: 700; color: #1e40af; letter-spacing: -0.02em;">
+                    Router Security Configuration
+                </h2>
+            </div>
+            <span style="cursor: pointer; font-size: 1.8cqw; color: #9ca3af; transition: color 0.2s;" 
+                  onmouseover="this.style.color='#111827'" 
+                  onmouseout="this.style.color='#9ca3af'" 
+                  onclick="closePopup()">✖</span>
+        </div>
+
+        <!-- Instruction Card -->
+        <div style="
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #2563eb;
+            padding: 2cqh 2.2cqw;
+            border-radius: 8px;
+            font-size: 1.4cqw;
+            line-height: 1.5;
+            color: #334155;
+        ">
+            <strong style="color: #1e293b; display: block; margin-bottom: 0.4cqh;">System Status: Vulnerable</strong>
+            The router is currently running with default credentials (<code style="background: #e2e8f0; padding: 0.2cqh 0.5cqw; border-radius: 4px; font-family: monospace; color: #0f172a;">admin123</code>). 
+            Enter a strong password below and press <kbd style="background: #e2e8f0; padding: 0.2cqh 0.6cqw; border-radius: 4px; font-size: 1.2cqw;">SPACE BAR</kbd> to apply updates.
+        </div>
+
+        <!-- Form Area -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1.8cqh; margin-top: 0.5cqh;">
+            <input 
+                type="text" 
+                id="router-password-input" 
+                placeholder="Enter new strong password..." 
+                autocomplete="off"
+                style="
+                    width: 85%;
+                    padding: 1.4cqh 2cqw;
+                    font-size: 1.5cqw;
+                    border: 2px solid #cbd5e1;
+                    border-radius: 10px;
+                    outline: none;
+                    text-align: center;
+                    font-family: 'Courier New', Courier, monospace;
+                    letter-spacing: 0.05em;
+                    transition: border-color 0.2s, box-shadow 0.2s;
+                    background: #f8fafc;
+                "
+                onfocus="this.style.borderColor='#2563eb'; this.style.backgroundColor='#ffffff'; this.style.boxShadow='0 0 0 4px rgba(37, 99, 235, 0.1)';"
+                onblur="this.style.borderColor='#cbd5e1'; this.style.backgroundColor='#f8fafc'; this.style.boxShadow='none';"
+            />
+            
+            <div style="display: flex; align-items: center; gap: 0.5cqw; font-size: 1.3cqw; color: #64748b; font-weight: 500;">
+                Attempts remaining: 
+                <span id="tries-num" style="
+                    background: #fef2f2; 
+                    color: #dc2626; 
+                    padding: 0.2cqh 0.8cqw; 
+                    border-radius: 12px; 
+                    font-weight: 700;
+                    border: 1px solid #fecaca;
+                ">${remainingTries} / 3</span>
+            </div>
+
+            <div style="font-size: 1.1cqw; color: #94a3b8; font-style: italic;">
+                Press <b style="color: #64748b;">SPACE BAR</b> on your keyboard to submit
+            </div>
+        </div>
+    </div>
+    `;
+
+    document.getElementById('popup-overlay').style.display = 'block';
+
+    const inputEl = document.getElementById('router-password-input');
+    if (inputEl) {
+        inputEl.focus();
+
+        inputEl.addEventListener('keydown', function (event) {
+            if (event.code === 'Space' || event.key === ' ') {
+                event.preventDefault();
+                event.stopPropagation();
+                window.handleRouterPasswordSubmit(inputEl.value.trim());
+            }
+        });
+    }
+
+    window.handleRouterPasswordSubmit = function(enteredPassword) {
+        if (!currentPaper || laptopAttempts[currentRoomId] >= 3) return;
+
+        const currentConfig = roomConfigurations[currentRoomId];
+        const isStrong = enteredPassword.length >= 8 && 
+                         /[A-Z]/.test(enteredPassword) && 
+                         /[0-9]/.test(enteredPassword) && 
+                         /[^A-Za-z0-9]/.test(enteredPassword);
+
+        if (isStrong) {
+            laptopAttempts[currentRoomId] += 1;
+            currentPaper.userWasCorrect = true;
+            currentPaper.answered = true;
+            currentPaper.locked = true;
+            currentPaper.hasConsultedAI = false;
+
+            if (currentConfig) {
+                currentConfig.pendingLaptopRetry = false;
+                currentConfig.pendingLaptopSuccess = true;
+            }
+
+            // Standard close without triggering AI dialogue automatically
+            closePopup();
+
+        } else {
+            laptopAttempts[currentRoomId] += 1;
+            let triesLeft = 3 - laptopAttempts[currentRoomId];
+
+            if (triesLeft > 0) {
+                if (currentConfig) {
+                    currentConfig.pendingLaptopRetry = true;
+                }
+            } else {
+                currentPaper.userWasCorrect = false;
+                currentPaper.answered = true;
+                currentPaper.locked = true;
+                currentPaper.hasConsultedAI = false;
+
+                if (currentConfig) {
+                    currentConfig.pendingLaptopRetry = false;
+                    currentConfig.pendingLaptopExhausted = true;
+                }
+            }
+
+            // Standard close without triggering AI dialogue automatically
+            closePopup();
+        }
+    };
+}
 var selectedChatOption = 0;
 
 function updateChatUI() {
@@ -2149,385 +2527,6 @@ function showChatPopup(paper) {
     }
 }
 
-function showEmailPopup(paper) {
-    if (paper && (paper.locked || (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect))) {
-        return;
-    }
-
-    isPaused = true;
-    currentPaper = paper;
-    currentPaper.type = 'email'; 
-    showingAIDialogue = false;
-    
-    const content = document.getElementById('popup-content');
-    content.className = ''; 
-    content.classList.add('center-modal-mode');
-
-    let emailPool = {
-        room1: [
-            {
-                sender: "HR Dept",
-                address: "hr@internal-security-system.local",
-                subject: "Action Required: Update Your Credentials Immediately",
-                body: "Your network access password expires within 24 hours. Choose an option to proceed with your credential update.",
-                correctOption: 1
-            },
-            {
-                sender: "Security Alert",
-                address: "security-foyer@critical-alert.net",
-                subject: "WARNING: Unauthorized Entry Attempt Logs",
-                body: "We noted suspicious activity on your host framework node. Select RESPOND TO EMAIL to verify your active authorization token index.",
-                correctOption: 1
-            },
-            {
-                sender: "IT Notice",
-                address: "admin@internal-security-system.local",
-                subject: "Scheduled Server Migration Information",
-                body: "This is a general advisory that internal storage arrays are migrating this Sunday. No action is required from you.",
-                correctOption: 0
-            }
-        ],
-        room2: [
-            {
-                sender: "IT Support Desk",
-                address: "support@urgent-security-update.com",
-                subject: "CRITICAL: Urgent Security Firewall Patch Required",
-                body: "We have detected unauthorized bypass attempts on your workstation segment. Click 'RESPOND TO EMAIL' to download and install the repair package.",
-                correctOption: 1
-            },
-            {
-                sender: "Accounts Payable",
-                address: "billing@external-verify-portal.org",
-                subject: "Overdue Workstation Rental Invoice Attached",
-                body: "Your hardware assignment metrics match an outstanding balance ledger sheet. Click RESPOND TO EMAIL to upload transaction proofs immediately.",
-                correctOption: 1
-            },
-            {
-                sender: "Company Portal",
-                address: "newsletter@company.corp",
-                subject: "Monthly System Performance Newsletter Update",
-                body: "Here is your standard textual tracking wrap-up summary for the month. No authorization values or link downloads are embedded.",
-                correctOption: 0
-            }
-        ],
-        room3: [
-            {
-                sender: "Office Manager", 
-                address: "Admin@company.corp",
-                subject: "Building Maintenance Notice",
-                body: "Please be advised that the main office elevator will be under maintenance on Tuesday. Please use the north side stairs.",
-                correctOption: 0
-            },
-            {
-                sender: "Delivery Service",
-                address: "postmaster@courier-tracking-routing.net",
-                subject: "Package Delivery Alert: Failed Transfer Hold Node",
-                body: "A parcel addressed to your account matrix space cannot spawn delivery updates. Open the confirmation layout module to fix.",
-                correctOption: 1
-            },
-            {
-                sender: "CEO Update",
-                address: "exec-office@company.corp",
-                subject: "Annual Strategic Goals Performance Report",
-                body: "Please review the updated general corporate guidelines for the coming system operations semester.",
-                correctOption: 0
-            }
-        ]
-    };
-
-    let attemptIndex = Math.min(laptopAttempts[currentRoomId] || 0, 2);
-    let selectedScenario = emailPool[currentRoomId] ? emailPool[currentRoomId][attemptIndex] : emailPool.room1[0];
-
-    let emailSender = selectedScenario.sender;
-    let emailAddress = selectedScenario.address;
-    let emailSubject = selectedScenario.subject;
-    let emailBody = selectedScenario.body;
-    let correctOption = selectedScenario.correctOption;
-
-    window.handleEmailSubmission = function(chosenOption) {
-        if (!currentPaper) return;
-
-        laptopAttempts[currentRoomId] = (laptopAttempts[currentRoomId] || 0) + 1;
-        
-        if (chosenOption === correctOption) {
-            currentPaper.userWasCorrect = true;
-            currentPaper.answered = true;
-            currentPaper.locked = true; 
-            currentPaper.hasConsultedAI = false; 
-            
-            closePopup();
-        } else {
-            currentPaper.userWasCorrect = false;
-            
-            if (laptopAttempts[currentRoomId] >= 3) {
-                currentPaper.answered = true;
-                currentPaper.locked = true; 
-                currentPaper.hasConsultedAI = false;
-                
-                closePopup();
-            } else {
-                currentPaper.answered = false;
-                currentPaper.locked = false;
-                currentPaper.hasConsultedAI = false;
-                
-                const currentConfig = roomConfigurations[currentRoomId];
-                if (currentConfig) {
-                    currentConfig.pendingLaptopRetry = true;
-                }
-                
-                closePopup();
-            }
-        }
-
-        const badge = document.getElementById('ai-attention-badge');
-        if (badge) {
-            badge.style.display = 'block';
-            if (typeof updateAttentionBadgePosition === "function") {
-                updateAttentionBadgePosition();
-            }
-        }
-    };
-
-    content.innerHTML = `
-    <div class="popup-layout-wrapper" style="font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 1.6cqw; font-weight: normal; background-color: #ffffff; color: #202124; box-sizing: border-box; width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column;">
-        
-        <div class="email-action-bar" style="display: flex; gap: 2.5cqw; align-items: center; border-bottom: 1px solid #f1f3f4; padding: 1.5cqh 3cqw; color: #5f6368; font-size: 1.8cqw;">
-            <span style="cursor: pointer; font-weight: bold;" onclick="closePopup()">←</span>
-            <span style="cursor: pointer;">📥</span>
-            <span style="cursor: pointer;">⚠️</span>
-            <span style="cursor: pointer;" onclick="window.handleEmailSubmission(1)">🗑️</span>
-            <span style="cursor: pointer; margin-left: auto;">✉️</span>
-            <span style="cursor: pointer;">🕒</span>
-            <span style="cursor: pointer; margin-left: 1cqw;">⋮</span>
-        </div>
-
-        <div style="padding: 3cqh 4cqw; flex-grow: 1;">
-            <div style="display: flex; align-items: center; gap: 1cqw; margin-bottom: 3cqh;">
-                <h2 style="margin: 0; font-size: 2.4cqw; font-weight: 400; color: #202124;">
-                    ${emailSubject}
-                </h2>
-                <span style="background-color: #e8eaed; color: #5f6368; font-size: 1.2cqw; padding: 2px 6px; border-radius: 4px; font-weight: 500;">
-                    Inbox
-                </span>
-            </div>
-
-            <div class="email-meta-row" style="display: flex; align-items: flex-start; margin-bottom: 4cqh; position: relative;">
-                <div style="width: 5cqw; height: 5cqw; border-radius: 50%; background-color: #007791; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 2cqw; margin-right: 2cqw; flex-shrink: 0;">
-                    ${emailSender.substring(0, 2).toUpperCase()}
-                </div>
-                
-                <div style="flex-grow: 1; min-width: 0;">
-                    <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%;">
-                        <div>
-                            <span style="font-weight: bold; color: #202124; font-size: 1.6cqw; margin-right: 0.5cqw;">${emailSender}</span>
-                            <span style="color: #5f6368; font-size: 1.4cqw;">&lt;${emailAddress}&gt;</span>
-                        </div>
-                        <div style="color: #5f6368; font-size: 1.3cqw; white-space: nowrap; margin-left: 2cqw;">
-                            Just now
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="email-body" style="font-size: 1.6cqw; line-height: 1.5; color: #202124; padding-left: 7cqw; margin-bottom: 6cqh; min-height: 12cqh;">
-                ${emailBody}
-            </div>
-
-            <div id="email-options" style="display: flex; gap: 1.5cqw; padding-left: 7cqw; border-top: 1px solid #f1f3f4; padding-top: 3cqh;">
-                <div class="email-option" id="opt-0" onclick="window.handleEmailSubmission(0)" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f7f8f9'" onmouseout="this.style.backgroundColor='transparent'">
-                    ↩️ RESPOND TO EMAIL
-                </div>
-                <div class="email-option" id="opt-1" onclick="window.handleEmailSubmission(1)" style="display: flex; align-items: center; gap: 1cqw; border: 1px solid #747775; padding: 1cqh 2.5cqw; border-radius: 100px; color: #1f1f1f; font-weight: 500; font-size: 1.4cqw; cursor: pointer; user-select: none; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f7f8f9'" onmouseout="this.style.backgroundColor='transparent'">
-                    ➡️ IGNORE / TRASH
-                </div>
-            </div>
-        </div>
-    </div>
-    `;
-
-    document.getElementById('popup-overlay').style.display = 'block';
-}
-
-/**
- * Custom Interactive Interface for Room 2: Changing Router Password
- */
-function showRouterPasswordPopup(paper) {
-    // If the paper is locked or attempts are exhausted, prevent opening
-    if (paper && (paper.locked || (laptopAttempts[currentRoomId] >= 3 && !paper.userWasCorrect))) {
-        closePopup();
-        return;
-    }
-
-    isPaused = true;
-    currentPaper = paper;
-    currentPaper.type = 'router_password';
-    showingAIDialogue = false;
-
-    const content = document.getElementById('popup-content');
-    content.className = '';
-    content.classList.add('center-modal-mode');
-
-    if (laptopAttempts[currentRoomId] === undefined) {
-        laptopAttempts[currentRoomId] = 0;
-    }
-
-    let remainingTries = 3 - laptopAttempts[currentRoomId];
-
-    content.innerHTML = `
-    <div class="popup-layout-wrapper" style="
-        font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
-        font-size: 1.5cqw;
-        background: #ffffff;
-        color: #1f2937;
-        box-sizing: border-box;
-        width: 100%;
-        max-width: 640px;
-        margin: 0 auto;
-        padding: 3.5cqh 3.5cqw;
-        border-radius: 16px;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-        display: flex;
-        flex-direction: column;
-        gap: 2.5cqh;
-    ">
-        
-        <!-- Header -->
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 1.8cqh;">
-            <div style="display: flex; align-items: center; gap: 0.8cqw;">
-                <span style="font-size: 2cqw;">⚙️</span>
-                <h2 style="margin: 0; font-size: 2cqw; font-weight: 700; color: #1e40af; letter-spacing: -0.02em;">
-                    Router Security Configuration
-                </h2>
-            </div>
-            <span style="cursor: pointer; font-size: 1.8cqw; color: #9ca3af; transition: color 0.2s;" 
-                  onmouseover="this.style.color='#111827'" 
-                  onmouseout="this.style.color='#9ca3af'" 
-                  onclick="closePopup()">✖</span>
-        </div>
-
-        <!-- Instruction Card -->
-        <div style="
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-left: 4px solid #2563eb;
-            padding: 2cqh 2.2cqw;
-            border-radius: 8px;
-            font-size: 1.4cqw;
-            line-height: 1.5;
-            color: #334155;
-        ">
-            <strong style="color: #1e293b; display: block; margin-bottom: 0.4cqh;">System Status: Vulnerable</strong>
-            The router is currently running with default credentials (<code style="background: #e2e8f0; padding: 0.2cqh 0.5cqw; border-radius: 4px; font-family: monospace; color: #0f172a;">admin123</code>). 
-            Enter a strong password below and press <kbd style="background: #e2e8f0; padding: 0.2cqh 0.6cqw; border-radius: 4px; font-size: 1.2cqw;">SPACE BAR</kbd> to apply updates.
-        </div>
-
-        <!-- Form Area -->
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 1.8cqh; margin-top: 0.5cqh;">
-            <input 
-                type="text" 
-                id="router-password-input" 
-                placeholder="Enter new strong password..." 
-                autocomplete="off"
-                style="
-                    width: 85%;
-                    padding: 1.4cqh 2cqw;
-                    font-size: 1.5cqw;
-                    border: 2px solid #cbd5e1;
-                    border-radius: 10px;
-                    outline: none;
-                    text-align: center;
-                    font-family: 'Courier New', Courier, monospace;
-                    letter-spacing: 0.05em;
-                    transition: border-color 0.2s, box-shadow 0.2s;
-                    background: #f8fafc;
-                "
-                onfocus="this.style.borderColor='#2563eb'; this.style.backgroundColor='#ffffff'; this.style.boxShadow='0 0 0 4px rgba(37, 99, 235, 0.1)';"
-                onblur="this.style.borderColor='#cbd5e1'; this.style.backgroundColor='#f8fafc'; this.style.boxShadow='none';"
-            />
-            
-            <div style="display: flex; align-items: center; gap: 0.5cqw; font-size: 1.3cqw; color: #64748b; font-weight: 500;">
-                Attempts remaining: 
-                <span id="tries-num" style="
-                    background: #fef2f2; 
-                    color: #dc2626; 
-                    padding: 0.2cqh 0.8cqw; 
-                    border-radius: 12px; 
-                    font-weight: 700;
-                    border: 1px solid #fecaca;
-                ">${remainingTries} / 3</span>
-            </div>
-
-            <div style="font-size: 1.1cqw; color: #94a3b8; font-style: italic;">
-                Press <b style="color: #64748b;">SPACE BAR</b> on your keyboard to submit
-            </div>
-        </div>
-    </div>
-    `;
-
-    document.getElementById('popup-overlay').style.display = 'block';
-
-    const inputEl = document.getElementById('router-password-input');
-    if (inputEl) {
-        inputEl.focus();
-
-        inputEl.addEventListener('keydown', function (event) {
-            if (event.code === 'Space' || event.key === ' ') {
-                event.preventDefault();
-                event.stopPropagation();
-                window.handleRouterPasswordSubmit(inputEl.value.trim());
-            }
-        });
-    }
-
-    window.handleRouterPasswordSubmit = function(enteredPassword) {
-        if (!currentPaper || laptopAttempts[currentRoomId] >= 3) return;
-
-        const currentConfig = roomConfigurations[currentRoomId];
-        const isStrong = enteredPassword.length >= 8 && 
-                         /[A-Z]/.test(enteredPassword) && 
-                         /[0-9]/.test(enteredPassword) && 
-                         /[^A-Za-z0-9]/.test(enteredPassword);
-
-        if (isStrong) {
-            laptopAttempts[currentRoomId] += 1;
-            currentPaper.userWasCorrect = true;
-            currentPaper.answered = true;
-            currentPaper.locked = true;
-            currentPaper.hasConsultedAI = false;
-
-            if (currentConfig) {
-                currentConfig.pendingLaptopRetry = false;
-                currentConfig.pendingLaptopSuccess = true;
-            }
-
-            // Standard close without triggering AI dialogue automatically
-            closePopup();
-
-        } else {
-            laptopAttempts[currentRoomId] += 1;
-            let triesLeft = 3 - laptopAttempts[currentRoomId];
-
-            if (triesLeft > 0) {
-                if (currentConfig) {
-                    currentConfig.pendingLaptopRetry = true;
-                }
-            } else {
-                currentPaper.userWasCorrect = false;
-                currentPaper.answered = true;
-                currentPaper.locked = true;
-                currentPaper.hasConsultedAI = false;
-
-                if (currentConfig) {
-                    currentConfig.pendingLaptopRetry = false;
-                    currentConfig.pendingLaptopExhausted = true;
-                }
-            }
-
-            // Standard close without triggering AI dialogue automatically
-            closePopup();
-        }
-    };
-}
 
 let hasCompletedPrinterTask = false;
 let printerTaskCorrect = false; 
@@ -2597,7 +2596,7 @@ function showAIDialoguePopup(state) {
     const hasPassedRoom3Phase1 = currentRoomId === 'room3' && (currentScore >= 80 || room3Phase > 1 || terminalState?.userWasCorrect);
     const hasPassedRoom3Phase2 = currentRoomId === 'room3' && (currentScore >= 100);
 
-    // Localized room printer status check
+    // Localized room printer/gaming console status check
     const roomPrinterCompleted = currentConfig.hasCompletedPrinterTask || (typeof hasCompletedPrinterTask !== 'undefined' ? hasCompletedPrinterTask : false);
     const roomPrinterCorrect = currentConfig.printerTaskCorrect || (typeof printerTaskCorrect !== 'undefined' ? printerTaskCorrect : false);
 
@@ -2605,76 +2604,76 @@ function showAIDialoguePopup(state) {
     // GLOBAL/CROSS-ROOM EXPLICIT OVERRIDES
     // =========================================================================
     if (state === "printer_unpowered") {
-        textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">PRINTER OFFLINE:</span> The printer is currently not powered on. You must resolve security tasks on the workstation laptop first to restore power infrastructure configurations!`;
+        textToShow = `<b>System Notification:</b><br><span style="color: #e63946; font-weight: bold;">DEVICE OFFLINE:</span> The secondary device is currently not powered on. You must resolve security tasks on the workstation laptop first to restore power infrastructure configurations!`;
     }
     else if (state === "printer_retry") {
-        textToShow = `<b>AI Guard [System]:</b><br><span style="color: #e63946; font-weight: bold;">Data Security Risk:</span> The documents are still exposed to unauthorized viewers! Re-examine the contents and try again.`;
+        textToShow = `<b>AI Guard [System]:</b><br><span style="color: #e63946; font-weight: bold;">Data Security Risk:</span> The configuration settings are still exposed to unauthorized viewers! Re-examine the contents and try again.`;
     }
     // =========================================================================
-    // STANDARD ROOM 1 FLOW (Bedroom)
+    // UPDATED ROOM 1 FLOW (Bedroom / Entry Foyer - Gaming Console & Password Task)
     // =========================================================================
     else if (currentConfig?.aiNPC?.messageType === 'room1_state') {
         if (state === "device_secure_success") {
-            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">PASS!</span> Phishing email spotted and reported successfully! Next, check the printer in the foyer.`;
+            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #52b788; font-weight: bold;">SUCCESS!</span> Fantastic work! You configured a robust, multi-character passcode. Your device is now locked down tight. Next, check the <span class="highlight-blue">Gaming Console</span> for your next security challenge.`;
         }
         else if (state === "laptop_retry") {
-            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #e63946; font-weight: bold;">SECURITY RISK:</span> That choice exposed the infrastructure or clicked a dangerous link! Read the hints carefully and try again.`;
+            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #c62828; font-weight: bold;">VULNERABLE PASSCODE (${triesLeft} ${triesLeft === 1 ? 'attempt' : 'attempts'} left)</span><br>That combination is too simple or predictable. Ensure your passcode includes at least 8 characters, a mix of upper and lowercase letters, numbers, and symbols!`;
         }
-        else if (state === "laptop_exhausted") {
-            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #c62828; font-weight: bold;">TASK FAILED:</span> You fell for the phishing email attack and exhausted your attempts! Be extra cautious next time. Head over to the <span class="highlight-blue">Printer</span> for your next task.`;
+        else if (state === "laptop_exhausted" || (laptopAttempts[currentRoomId] >= 3 && !terminalState?.userWasCorrect)) {
+            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #c62828; font-weight: bold;">LOCKOUT ENGAGED:</span> You've used all 3 passcode configuration attempts without success. Terminal locked. Proceed to the <span class="highlight-blue">Gaming Console</span> to continue your assessment!`;
         }
         else if (roomPrinterCompleted && (currentScore === 20 || currentScore === 30)) {
-            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Room Secured!</span> You've already processed the workstation and checked the printer assets here. Head through the doorway to advance to the next challenge!`;
+            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #52b788; font-weight: bold;">Sector Cleared!</span> You've successfully secured your workstation and the gaming console profile. Head through the exit doorway to advance to Room 2!`;
         }
         else if ((hasPassedRoom1Laptop || (terminalState && terminalState.answered && terminalState.userWasCorrect)) && !roomPrinterCompleted) {
             currentConfig.hasSeenLaptopFeedback = true; 
-            textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">Great eye!</span> You handled that phishing email perfectly. Now, look over at the <span class="highlight-blue">Printer</span>. Someone left a printout sitting out in the open—go decide how to secure it!`;
+            textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #52b788; font-weight: bold;">Perimeter Secured!</span> Excellent execution on setting that secure device passcode. Now, pivot your focus to the <span class="highlight-blue">Gaming Console</span>. There is an active profile setup waiting there that needs your protection.`;
         }
         else if (!roomPrinterCompleted && (!terminalState || !terminalState.answered)) {
             currentConfig.hasSeenRoomIntro = true; 
-            textToShow = `<b>AI Guard [Bedroom]:</b><br>Welcome to the Entry Foyer. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
+            textToShow = `<b>AI Guard [Room 1]:</b><br>Welcome, Operative! Your initial terminal scan shows your workstation device is currently wide open with a weak default configuration. Access the workstation laptop immediately to establish a strong passcode!`;
             laptopLocked = false; 
         } 
         else if (roomPrinterCompleted) {
             currentConfig.hasSeenPrinterFeedback = true; 
             if (roomPrinterCorrect) {
-                textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT PRINTER HYGIENE!</span> Shredding that network diagram was the perfect decision. Leaving default passwords and system IPs in a physical tray is a major physical-security risk. You've earned your points—let's move on to Room 2!`;
+                textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #52b788; font-weight: bold;">EXCELLENT CONSOLE SECURITY!</span> Safely logging out and protecting your gaming profile credentials was the exact right choice. Leaving online accounts exposed invites unauthorized access. You've earned your clearance points—let's push forward to Room 2!`;
             } else {
-                textToShow = `<b>AI Guard [Bedroom]:</b><br><span style="color: #e63946; font-weight: bold;">PRINTER LEAK DETECTED:</span> Oh no, you chose to leave the document on the tray! That printout had local network administration passwords on it. Remember to always shred sensitive papers! Let's keep trying!`;
+                textToShow = `<b>AI Guard [Room 1]:</b><br><span style="color: #e63946; font-weight: bold;">ACCOUNT SECURITY LEAK:</span> Warning! You left your gaming profile open and vulnerable. Anyone could compromise your linked credentials or saved payment info. Always secure your gaming sessions!`;
             }
         }
     } 
     // =========================================================================
-    // STANDARD ROOM 2 FLOW (Living Room)
+    // STANDARD ROOM 2 FLOW (Living Room - Email Phishing Task)
     // =========================================================================
     else if (currentConfig?.aiNPC?.messageType === 'room2_state') {
         if (state === "device_secure_success") {
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">PASS!</span> Excellent job! You created a strong, complex password. The router is now secured against unauthorized access. Next, head over to the <span class="highlight-blue">Printer</span> to complete the next task.`;
+            textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #52b788; font-weight: bold;">PASS!</span> Phishing email spotted and reported successfully! Next, check the printer in this room.`;
         }
         else if (state === "laptop_retry") {
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #c62828; font-weight: bold;">TRY AGAIN! (${triesLeft} ${triesLeft === 1 ? 'attempt' : 'attempts'} left)</span><br>That password is too weak. Make sure it has at least 8 characters, an uppercase letter, a number, and a special symbol (!@#$).`;
+            textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #e63946; font-weight: bold;">SECURITY RISK:</span> That choice exposed the infrastructure or clicked a dangerous link! Read the hints carefully and try again.`;
         }
-        else if (state === "laptop_exhausted" || (laptopAttempts[currentRoomId] >= 3 && !terminalState?.userWasCorrect)) {
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #c62828; font-weight: bold;">ACCESS DENIED!</span> You've exhausted all 3 attempts to set a strong router password. Terminal locked out. Head over to the <span class="highlight-blue">Printer</span> for the next task!`;
+        else if (state === "laptop_exhausted") {
+            textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #c62828; font-weight: bold;">TASK FAILED:</span> You fell for the phishing email attack and exhausted your attempts! Be extra cautious next time. Head over to the <span class="highlight-blue">Printer</span> for your next task.`;
         }
         else if (roomPrinterCompleted && (currentScore === 40 || currentScore === 50)) {
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Area Monitored!</span> Network traffic analysis and physical document checks for this room are complete. Head over to the Kitchen when ready!`;
+            textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #52b788; font-weight: bold;">Area Monitored!</span> Network traffic analysis and physical document checks for this room are complete. Head over to the Kitchen when ready!`;
         }
         else if ((hasPassedRoom2Laptop || (terminalState && terminalState.answered && terminalState.userWasCorrect)) && !roomPrinterCompleted) {
             currentConfig.hasSeenLaptopFeedback = true; 
-            textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">Nice defense!</span> You secured the router with a strong password! Now, run over to the <span class="highlight-blue">Printer</span>. We have a physical data privacy decision waiting for you there.`;
+            textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #52b788; font-weight: bold;">Great eye!</span> You handled that phishing email perfectly. Now, look over at the <span class="highlight-blue">Printer</span>. Someone left a printout sitting out in the open—go decide how to secure it!`;
         }
         else if (!roomPrinterCompleted && (!terminalState || !terminalState.answered)) {
             currentConfig.hasSeenRoomIntro = true; 
-            textToShow = `<b>AI Guard [Living Room]:</b><br>Alert! The router in this room is using a weak default password! Head over to the floor terminal right away and change it to a strong password!`;
+            textToShow = `<b>AI Guard [Room 2]:</b><br>Welcome to Room 2. Let's practice some digital safety skills! Head over to the <span class="highlight-blue">Workstation Laptop</span> and check out the inbox to see if you can spot any suspicious emails.`;
             laptopLocked = false;
         } 
         else if (roomPrinterCompleted) {
             currentConfig.hasSeenPrinterFeedback = true; 
             if (roomPrinterCorrect) {
-                textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #52b788; font-weight: bold;">PRIVACY PROTECTED!</span> Superb job shredding that student export document. Leaving full names, home addresses, and phone directories exposed violates privacy policies. You handled that like a true security analyst! Let's enter Room 3!`;
+                textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #52b788; font-weight: bold;">PRIVACY PROTECTED!</span> Superb job shredding that student export document. Leaving full names, home addresses, and phone directories exposed violates privacy policies. You handled that like a true security analyst! Let's enter Room 3!`;
             } else {
-                textToShow = `<b>AI Guard [Living Room]:</b><br><span style="color: #e63946; font-weight: bold;">DATA BREACH ALERT:</span> Leaving a complete physical database of student addresses on an open tray is a massive vulnerability. Identity thieves prey on papers like this. Remember, private databases must be destroyed!`;
+                textToShow = `<b>AI Guard [Room 2]:</b><br><span style="color: #e63946; font-weight: bold;">DATA BREACH ALERT:</span> Leaving a complete physical database of student addresses on an open tray is a massive vulnerability. Identity thieves prey on papers like this. Remember, private databases must be destroyed!`;
             }
         }
     } 
@@ -2699,7 +2698,7 @@ function showAIDialoguePopup(state) {
             }
         }
         else if (state === "laptop_exhausted" || (laptopAttempts[currentRoomId] >= 3 && !hasPassedRoom3Phase1)) {
-            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #e63946; font-weight: bold;">EVALUATION ENDED:</span> You exhausted all chat response attempts. Keep practicing to become a certified cybersecurity defender!`;
+            textToShow = `<b>AI Guard [Kitchen]:</b><br><span style="color: #c62828; font-weight: bold;">EVALUATION ENDED:</span> You exhausted all chat response attempts. Keep practicing to become a certified cybersecurity defender!`;
         }
         else if (terminalState && terminalState.answered) {
             currentConfig.hasSeenLaptopFeedback = true; 
@@ -2780,7 +2779,6 @@ function updateAttentionBadgePosition() {
     badge.style.left = `${leftPercent}%`;
     badge.style.top = `${topPercent}%`;
 }
-
 function closePopup() {
     if (showingAIDialogue) {
         const currentConfig = roomConfigurations[currentRoomId];
@@ -2856,7 +2854,8 @@ function closePopup() {
             }
         }
         
-        if (hasCompletedPrinterTask && currentPaper && currentPaper.type === 'printer_document' && !currentPaper.scoreProcessed) {
+        // Updated check to support both 'printer_document' and '2fa_document' task types
+        if (hasCompletedPrinterTask && currentPaper && (currentPaper.type === 'printer_document' || currentPaper.type === '2fa_document') && !currentPaper.scoreProcessed) {
             let earnedPoints = 0;
             if (currentPaper.userWasCorrect) {
                 earnedPoints = currentRoomId === 'room3' ? 20 : 10;
@@ -3097,7 +3096,8 @@ window.addEventListener('keydown', e => {
             }
 
             if (currentPaper) {
-                if (currentPaper.type === 'printer_document') {
+                // Fixed type check to match '2fa_document' used in showPrinterPopup
+                if (currentPaper.type === '2fa_document' || currentPaper.type === 'printer_document') {
                     if (!currentPaper.answered) {
                         // Move Selection Down
                         if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
@@ -3127,19 +3127,16 @@ window.addEventListener('keydown', e => {
                 } 
                 else if (currentPaper.type === 'chat') {
                     if (!currentPaper.answered) {
-                        // Move Selection Down
                         if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
                             e.preventDefault();
                             selectedChatOption = 1; 
                             if (typeof updateChatUI === 'function') updateChatUI(); 
                         }
-                        // Move Selection Up
                         if (e.code === 'ArrowUp' || e.code === 'KeyW') { 
                             e.preventDefault();
                             selectedChatOption = 0; 
                             if (typeof updateChatUI === 'function') updateChatUI(); 
                         }
-                        // Confirm Answer with Space (or Enter)
                         if (e.code === 'Space' || e.code === 'Enter') {
                             e.preventDefault();
                             if (typeof window.submitChatMessage === 'function') {
@@ -3155,19 +3152,16 @@ window.addEventListener('keydown', e => {
                 }
                 else {
                     if (!currentPaper.answered) {
-                        // Move Selection Down
                         if (e.code === 'ArrowDown' || e.code === 'KeyS') { 
                             e.preventDefault();
                             selectedEmailOption = 1; 
                             if (typeof updateEmailUI === 'function') updateEmailUI(); 
                         }
-                        // Move Selection Up
                         if (e.code === 'ArrowUp' || e.code === 'KeyW') { 
                             e.preventDefault();
                             selectedEmailOption = 0; 
                             if (typeof updateEmailUI === 'function') updateEmailUI(); 
                         }
-                        // Confirm Answer with Space (or Enter)
                         if (e.code === 'Space' || e.code === 'Enter') {
                             e.preventDefault();
                             if (typeof window.handleEmailSubmission === 'function') {
@@ -3226,87 +3220,24 @@ window.addEventListener('keydown', e => {
         }
     }
 });
-
-function interactWithPrinter() {
-    // If maximum retries hit or task completed, exit immediately without showing AI Avatar dialogue
-    if ((printerAttempts[currentRoomId] >= 3 && !printerTaskCorrect) || hasCompletedPrinterTask) {
-        return;
-    }
-
-    const activeConfig = roomConfigurations[currentRoomId];
-    const laptopPaper = activeConfig?.papers ? activeConfig.papers[0] : null;
-
-    // 1. HARD LOCK: If laptop doesn't exist or isn't answered yet, trigger unpowered message
-    if (!laptopPaper || !laptopPaper.answered) {
-        showAIDialoguePopup("printer_unpowered");
-        return;
-    }
-
-    // 2. STAGE PROGRESSION LOCK: Even if answered, lock the printer if they haven't talked to the AI Avatar
-    // It is ONLY unlocked if (laptopPaper.answered === true && laptopPaper.hasConsultedAI === true)
-    if (!laptopPaper.hasConsultedAI || activeConfig.pendingLaptopRetry === true) {
-        isPaused = true;
-        showingAIDialogue = true;
-        
-        const content = document.getElementById('popup-content');
-        if (content) {
-            content.className = ''; 
-            content.removeAttribute('style'); 
-            content.classList.add('dialogue-bubble-mode');
-            
-            content.innerHTML = `
-                <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
-                    <b>System Notification:</b><br>
-                    <span style="color: #ffaa00; font-weight: bold;">PRINTER ACCESS SUSPENDED:</span> 
-                    The system requires you to consult the AI Avatar first to process your recent workstation assessment before checking physical tray outputs!
-                </div>
-            `;
-        }
-        const popupOverlay = document.getElementById('popup-overlay');
-        if (popupOverlay) {
-            popupOverlay.style.display = 'block';
-        }
-        return; // Halt execution so the printer UI code below never fires
-    }
-
+function showPrinterPopup() {
     let poolRoom1 = [
         {
-            type: 'printer_document',
-            title: "Internal IP Network Diagram",
-            content: "CONFIDENTIAL INTERNAL IP NETWORK DIAGRAM\n\nGateway IP: 192.168.1.1\nDefault Admin User: admin\nDefault Admin Pass: Stu_Admin2026\n\nWarning: Distribution or exposure of this network layout violates safety policies. Dispose of immediately.",
+            type: '2fa_document',
+            title: "Suspicious Login Verification",
+            content: "SECURITY ALERT: Unrecognized login attempt from location: St. Petersburg, RU.\n\nDevice: Unknown Windows PC\nTimestamp: 2026-07-24 03:14 AM\n\nPrompt: Did you initiate this login request?",
             correctOption: 1
         },
         {
-            type: 'printer_document',
-            title: "Executive Payroll Summary",
-            content: "CONFIDENTIAL PAYROLL ALLOCATION\n\nCEO Compensation Matrix & Asset Keys.\nClear physical files to prevent unencrypted visual exposures.",
+            type: '2fa_document',
+            title: "Password Reset Confirmation",
+            content: "SECURITY NOTICE: A request has been made to reset your enterprise administrator master key.\n\nIf you requested this, click approve. If not, block immediately.",
             correctOption: 1
         },
         {
-            type: 'printer_document',
-            title: "Shared Printer Test Page",
-            content: "PRINTER STATUS REPORT: OK\n\nStandard postscript configuration dump. No sensitive properties discovered.",
-            correctOption: 0
-        }
-    ];
-
-    let poolRoom2 = [
-        {
-            type: 'printer_document',
-            title: "Student Database Export",
-            content: "SENSITIVE STUDENT DATABASE EXPORT\n\nRecord Count: 142 students\nFields: [Full Name, Date of Birth, Home Address]\n\nNote: Physical filing purposes only. Do not leave exposed.",
-            correctOption: 1
-        },
-        {
-            type: 'printer_document',
-            title: "Wi-Fi Pre-Shared Security Keys",
-            content: "ENTERPRISE SECURITY CREDENTIALS\n\nSSID: Corporate_Main_Secure\nWPA3 Key: 984hfsdkjhSFD7382\n\nDispose securely immediately.",
-            correctOption: 1
-        },
-        {
-            type: 'printer_document',
-            title: "Office Lunch Menu Printout",
-            content: "DAILY SPECIALS TRACKER\n\nMonday: Tacos\nTuesday: Pasta\nWednesday: Sandwiches\nNo sensitive records found.",
+            type: '2fa_document',
+            title: "Routine Token Sync",
+            content: "SYSTEM STATUS: Routine background cryptographic token synchronization.\n\nNo manual user intervention required. Status nominal.",
             correctOption: 0
         }
     ];
@@ -3315,13 +3246,11 @@ function interactWithPrinter() {
 
     if (currentRoomId === 'room1') {
         currentPaper = poolRoom1[attemptIndex];
-    } else if (currentRoomId === 'room2') {
-        currentPaper = poolRoom2[attemptIndex];
     } else {
         currentPaper = {
-            type: 'printer_document',
-            title: "Unidentified Print Job",
-            content: "CONFIDENTIAL CORPORATE DATA\n\nContains operational keys and private records. Ensure secure disposal.",
+            type: '2fa_document',
+            title: "Multi-Factor Authorization Prompt",
+            content: "AUTHENTICATION GATEWAY: Verify incoming identity clearance before letting through.",
             correctOption: 1
         };
     }
@@ -3348,7 +3277,7 @@ function interactWithPrinter() {
             currentPaper.userWasCorrect = (optionIndex === currentPaper.correctOption);
             printerAttempts[currentRoomId] = (printerAttempts[currentRoomId] || 0) + 1;
 
-            if (currentPaper.type === 'printer_document') {
+            if (currentPaper.type === '2fa_document') {
                 printerTaskCorrect = currentPaper.userWasCorrect;
                 if (printerTaskCorrect || printerAttempts[currentRoomId] >= 3) {
                     hasCompletedPrinterTask = true;
@@ -3384,11 +3313,11 @@ function interactWithPrinter() {
             optionsBlock.innerHTML = `
                 <button onclick="window.handlePrinterSubmission(0)" 
                         style="width: 100%; text-align: left; background: ${selectedPrinterOption === 0 ? '#eedec2' : '#fff'}; border: 2px solid ${selectedPrinterOption === 0 ? '#88765d' : '#bbb'}; padding: 12px 15px; border-radius: 4px; color: #222; font-family: 'Georgia', serif; font-size: 13px; cursor: pointer; transition: all 0.1s; font-weight: normal; line-height: 1.3; box-sizing: border-box;">
-                    ${selectedPrinterOption === 0 ? '[X]' : '[ ]'} Leave the hardcopy document directly inside the tray allocation pool.
+                    ${selectedPrinterOption === 0 ? '[X]' : '[ ]'} Approve the incoming 2FA prompt and grant access.
                 </button>
                 <button onclick="window.handlePrinterSubmission(1)" 
                         style="width: 100%; text-align: left; background: ${selectedPrinterOption === 1 ? '#eedec2' : '#fff'}; border: 2px solid ${selectedPrinterOption === 1 ? '#88765d' : '#bbb'}; padding: 12px 15px; border-radius: 4px; color: #222; font-family: 'Georgia', serif; font-size: 13px; cursor: pointer; transition: all 0.1s; font-weight: normal; line-height: 1.3; box-sizing: border-box;">
-                    ${selectedPrinterOption === 1 ? '[X]' : '[ ]'} Bring media file parameters immediately to physical cross-cut destruction shredder.
+                    ${selectedPrinterOption === 1 ? '[X]' : '[ ]'} Deny/Block the prompt and report the unauthorized attempt.
                 </button>
                 <div style="margin-top: 6px; font-size: 11px; color: #666; font-style: italic; text-align: center; width: 100%;">
                     Press W/S or Arrow Keys to change selection. Press Space or Enter to submit.
@@ -3404,7 +3333,7 @@ function interactWithPrinter() {
     <!-- Document Header -->
     <div style="border-bottom: 2px double #333; padding-bottom: 6px; margin-bottom: 10px; text-align: center; flex-shrink: 0;">
         <h2 style="margin: 0; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #111;">${currentPaper.title}</h2>
-        <span style="font-size: 9px; font-style: italic; color: #666; display: block; margin-top: 2px;">Classification Status: RESTRICTED DISTRIBUTION</span>
+        <span style="font-size: 9px; font-style: italic; color: #666; display: block; margin-top: 2px;">Console Status: SECURITY VERIFICATION REQUIRED</span>
     </div>
     
     <!-- Paper Content Box -->
@@ -3414,7 +3343,7 @@ function interactWithPrinter() {
     
     <!-- Options Footer -->
     <div style="margin-top: auto; border-top: 1px solid #ddd; padding-top: 8px; flex-shrink: 0;">
-        <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; font-family: 'Georgia', serif; color: #333; font-style: italic;">Select actionable handling mitigation step:</p>
+        <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; font-family: 'Georgia', serif; color: #333; font-style: italic;">Select authentication action:</p>
         <div id="printer-options" style="display: flex; flex-direction: column; gap: 6px;"></div>
     </div>
 </div>
@@ -3422,6 +3351,51 @@ function interactWithPrinter() {
         popupOverlay.style.display = 'block';
         window.updatePrinterUI();
     }
+}
+
+function interactWithPrinter() {
+    // If maximum retries hit or task completed, exit immediately without showing AI Avatar dialogue
+    if ((printerAttempts[currentRoomId] >= 3 && !printerTaskCorrect) || hasCompletedPrinterTask) {
+        return;
+    }
+
+    const activeConfig = roomConfigurations[currentRoomId];
+    const laptopPaper = activeConfig?.papers ? activeConfig.papers[0] : null;
+
+    // 1. HARD LOCK: If laptop doesn't exist or isn't answered yet, trigger unpowered message
+    if (!laptopPaper || !laptopPaper.answered) {
+        showAIDialoguePopup("printer_unpowered");
+        return;
+    }
+
+    // 2. STAGE PROGRESSION LOCK: Even if answered, lock the printer if they haven't talked to the AI Avatar
+    if (!laptopPaper.hasConsultedAI || activeConfig.pendingLaptopRetry === true) {
+        isPaused = true;
+        showingAIDialogue = true;
+        
+        const content = document.getElementById('popup-content');
+        if (content) {
+            content.className = ''; 
+            content.removeAttribute('style'); 
+            content.classList.add('dialogue-bubble-mode');
+            
+            content.innerHTML = `
+                <div style="width: 100%; font-size: 2.2cqw; margin: 0; padding: 0; line-height: 1.4; color: #1a1a1a;">
+                    <b>System Notification:</b><br>
+                    <span style="color: #ffaa00; font-weight: bold;">PRINTER ACCESS SUSPENDED:</span> 
+                    The system requires you to consult the AI Avatar first to process your recent workstation assessment before checking physical tray outputs!
+                </div>
+            `;
+        }
+        const popupOverlay = document.getElementById('popup-overlay');
+        if (popupOverlay) {
+            popupOverlay.style.display = 'block';
+        }
+        return; // Halt execution so the printer UI code below never fires
+    }
+
+    // Delegate paper pool initialization and popup display to showPrinterPopup
+    showPrinterPopup();
 }
 
 
